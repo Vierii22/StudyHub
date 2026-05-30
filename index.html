@@ -311,13 +311,12 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Dashboard logo */
 .dashboard-logo {
-  max-width: 320px;
+  max-width: 480px;
   width: 100%;
   height: auto;
-  margin-bottom: 20px;
-  border-radius: 16px;
+  margin-bottom: 12px;
+  border-radius: 20px;
   object-fit: contain;
-  opacity: 0.95;
   display: block;
 }
 
@@ -8473,7 +8472,7 @@ function App() {
 
             {!editMode && (
               <>
-                <img src={window.SH_LOGO_BANNER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad'%3E%3Cstop offset='0%25' style='stop-color:%23d946ef;stop-opacity:1'/%3E%3Cstop offset='100%25' style='stop-color:%237c3aed;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='48' fill='url(%23grad)'/%3E%3Ctext x='50' y='65' font-size='60' font-weight='800' fill='white' text-anchor='middle' font-family='sans-serif'%3ES%3C/text%3E%3C/svg%3E"} className="dashboard-logo" alt="StudyHub" title="StudyHub - Tu centro de estudio" style={{borderRadius:16}}/>
+                <img src="/assets/logo-dashboard.png" className="dashboard-logo" alt="StudyHub" title="StudyHub - Tu centro de estudio"/>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom:4}}>
                   <div style={{fontSize: 13, color: 'var(--text-3)'}}>
                     {dashMode === 'manana' ? '🌅' : dashMode === 'tarde' ? '☀️' : '🌙'}{' '}
