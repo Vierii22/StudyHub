@@ -70,7 +70,7 @@
 }
 
 * , *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; height: 100%; }
 body {
   font-family: var(--font-sans);
   color: var(--text);
@@ -121,11 +121,12 @@ input, textarea { font: inherit; color: inherit; }
 .page {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  height: 100vh;
   padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -190,7 +191,7 @@ input, textarea { font: inherit; color: inherit; }
   z-index: 1;
   flex: 1;
   min-height: 0;
-  align-content: start;
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -254,6 +255,10 @@ input, textarea { font: inherit; color: inherit; }
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 /* Widget grid (the dashboard composition) */
@@ -2068,6 +2073,10 @@ body.is-resizing * { cursor: nwse-resize !important; }
 }
 .edit-drawer__reset:hover { background: var(--inner-2); color: var(--text); }
 
+/* Sin panel derecho (secciones fuera del dashboard) */
+.shell--no-right { grid-template-columns: 200px 1fr; }
+:root[data-sidebar="collapsed"] .shell--no-right { grid-template-columns: 64px 1fr; }
+
 /* Edit mode: hide right column */
 .shell--editing { grid-template-columns: 200px 1fr 0; }
 .shell--editing .right { display: none; }
@@ -2934,7 +2943,7 @@ body.is-resizing * { cursor: nwse-resize !important; }
 }
 .pomo-ring {
   position: relative;
-  width: 120px; height: 120px;
+  width: 200px; height: 200px;
   flex-shrink: 0;
 }
 .pomo-ring svg { transform: rotate(-90deg); }
@@ -2947,8 +2956,8 @@ body.is-resizing * { cursor: nwse-resize !important; }
   align-items: center; justify-content: center;
   font-family: var(--font-display);
 }
-.pomo-time__min { font-size: 28px; font-weight: 700; line-height: 1; }
-.pomo-time__label { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+.pomo-time__min { font-size: 46px; font-weight: 700; line-height: 1; }
+.pomo-time__label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
 .pomo-controls { display: flex; gap: 8px; }
 .pomo-btn {
   padding: 8px 18px;
@@ -3298,6 +3307,17 @@ function LoginScreen({ onLogin }) {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [mode, setMode]         = useState('login');
+  const [showPass, setShowPass] = useState(false);
+  const [animating, setAnimating] = useState(false);
+
+  const switchMode = () => {
+    setAnimating(true);
+    setTimeout(() => {
+      setMode(m => m === 'login' ? 'register' : 'login');
+      setError('');
+      setAnimating(false);
+    }, 180);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -3331,7 +3351,9 @@ function LoginScreen({ onLogin }) {
     }}>
       <div style={{
         background:'#26262d', borderRadius:22, padding:'40px 36px', width:360,
-        boxShadow:'0 8px 40px rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.06)'
+        boxShadow:'0 8px 40px rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.06)',
+        opacity: animating ? 0 : 1, transform: animating ? 'translateY(8px)' : 'translateY(0)',
+        transition:'opacity 180ms ease, transform 180ms ease'
       }}>
         <div style={{textAlign:'center', marginBottom:28}}>
           <img src="/assets/logo-circle.png" alt="StudyHub"
@@ -3346,12 +3368,26 @@ function LoginScreen({ onLogin }) {
               background:'#1f1f25', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10,
               padding:'10px 14px', color:'#f5f5f7', fontSize:14, outline:'none', fontFamily:'inherit'
             }}/>
-          <input type="password" placeholder="Contraseña" value={password}
-            onChange={e => setPassword(e.target.value)} required
-            style={{
-              background:'#1f1f25', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10,
-              padding:'10px 14px', color:'#f5f5f7', fontSize:14, outline:'none', fontFamily:'inherit'
-            }}/>
+          <div style={{position:'relative'}}>
+            <input type={showPass ? 'text' : 'password'} placeholder="Contraseña" value={password}
+              onChange={e => setPassword(e.target.value)} required
+              style={{
+                width:'100%', boxSizing:'border-box',
+                background:'#1f1f25', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10,
+                padding:'10px 40px 10px 14px', color:'#f5f5f7', fontSize:14, outline:'none', fontFamily:'inherit'
+              }}/>
+            <button type="button" onClick={() => setShowPass(v => !v)}
+              style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
+                background:'none', border:'none', cursor:'pointer', color:'#7e7e8c', padding:4,
+                display:'flex', alignItems:'center', opacity:0.6, transition:'opacity 150ms'}}
+              onMouseEnter={e => e.currentTarget.style.opacity=1}
+              onMouseLeave={e => e.currentTarget.style.opacity=0.6}>
+              {showPass
+                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.9 17.4A10.6 10.6 0 0 1 12 20c-7 0-11-8-11-8a18.4 18.4 0 0 1 5.1-6.4M9.9 4.2A10 10 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2M1 1l22 22"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </button>
+          </div>
           {error && (
             <div style={{fontSize:12, color:'#f87171', background:'rgba(248,113,113,0.1)',
               borderRadius:8, padding:'8px 12px'}}>
@@ -3368,7 +3404,7 @@ function LoginScreen({ onLogin }) {
           </button>
         </form>
         <div style={{textAlign:'center', marginTop:16}}>
-          <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+          <button onClick={switchMode}
             style={{background:'none', border:'none', color:'#8b5cf6', fontSize:13,
               cursor:'pointer', fontFamily:'inherit'}}>
             {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
@@ -3962,6 +3998,8 @@ const Icons = {
   Flame: (p) => <Icon {...p}><path d="M12 2c2 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 4-1-3 0-5 0-7z"/></Icon>,
   Clock: (p) => <Icon {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></Icon>,
   Trophy: (p) => <Icon {...p}><path d="M6 4h12v4a6 6 0 0 1-12 0V4z"/><path d="M6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3M9 18h6M10 14v4M14 14v4"/></Icon>,
+  Eye: (p) => <Icon {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></Icon>,
+  EyeOff: (p) => <Icon {...p}><path d="M17.9 17.4A10.6 10.6 0 0 1 12 20c-7 0-11-8-11-8a18.4 18.4 0 0 1 5.1-6.4M9.9 4.2A10 10 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2M1 1l22 22"/><circle cx="12" cy="12" r="3" strokeDasharray="6 3"/></Icon>,
 };
 
 window.Icons = Icons;
@@ -4784,6 +4822,14 @@ function HistorialDiarioRoute() {
   const ENERGIA_LABELS = ['','Agotado','Cansado','Normal','Bien','Con pilas'];
   const energyColor = (v) => { if (!v) return 'var(--text-4)'; if (v <= 2) return '#f87171'; if (v === 3) return '#fbbf24'; return '#4ade80'; };
 
+  const deleteEntry = (date) => {
+    if (!confirm('¿Eliminar este registro?')) return;
+    const next = log.filter(e => e.date !== date);
+    setLog(next);
+    saveDailyLog(next);
+    if (selected?.date === date) setSelected(null);
+  };
+
   const fmt = (date) => {
     const d = new Date(date + 'T12:00:00');
     return d.toLocaleDateString('es-AR',{weekday:'long', day:'numeric', month:'long'});
@@ -4809,7 +4855,17 @@ function HistorialDiarioRoute() {
                   background: selected?.date===entry.date ? 'var(--card-2)' : 'var(--card)',
                   border: `1px solid ${selected?.date===entry.date ? 'var(--violet)' : 'var(--line)'}`,
                   borderRadius:12, padding:'14px 16px', cursor:'pointer', transition:'all 150ms',
+                  position:'relative',
                 }}>
+                <button onClick={e => { e.stopPropagation(); deleteEntry(entry.date); }}
+                  style={{position:'absolute', top:10, right:10, background:'none', border:'none',
+                    color:'var(--text-4)', cursor:'pointer', fontSize:14, padding:'2px 6px',
+                    borderRadius:6, lineHeight:1, transition:'color 120ms'}}
+                  title="Eliminar registro"
+                  onMouseEnter={e => e.currentTarget.style.color='#f87171'}
+                  onMouseLeave={e => e.currentTarget.style.color='var(--text-4)'}>
+                  ✕
+                </button>
                 <div style={{fontSize:12, color:'var(--text-3)', marginBottom:4}}>{fmt(entry.date)}</div>
                 <div style={{display:'flex', alignItems:'center', gap:10}}>
                   <span style={{fontSize:20}}>{entry.humor || '—'}</span>
@@ -6298,8 +6354,31 @@ function PomodoroWidget() {
   const [running, setRunning] = useState(false);
   const [secs, setSecs] = useState(25 * 60);
   const [sessions, setSessions] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
   const totalSecs = MODES[mode].mins * 60;
   const color = MODES[mode].color;
+
+  // Focus mode: overlay encima de todo, Esc para salir
+  const toggleFocus = () => {
+    const next = !focusMode;
+    setFocusMode(next);
+    if (next) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.().catch(() => {});
+  };
+
+  // Salir con Esc o cuando el timer termina
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && focusMode) { setFocusMode(false); document.exitFullscreen?.().catch(() => {}); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focusMode]);
+
+  React.useEffect(() => {
+    if (!running && secs === 0 && focusMode) {
+      setFocusMode(false);
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }, [running, secs]);
 
   // Switch mode resets timer
   const switchMode = (m) => { setMode(m); setSecs(MODES[m].mins * 60); setRunning(false); };
@@ -6326,11 +6405,18 @@ function PomodoroWidget() {
   const pct = 1 - secs / totalSecs;
 
   // SVG ring
-  const R = 52; const CIRC = 2 * Math.PI * R;
+  const R = 88; const CIRC = 2 * Math.PI * R;
   const offset = CIRC * (1 - pct);
 
-  return (
-    <div className="pomo-widget">
+  const totalSessions = Math.floor(sessions / 4);
+
+  // Portal de modo foco — se monta en body, tapa todo
+  const focusOverlay = focusMode ? ReactDOM.createPortal(
+    <div style={{
+      position:'fixed', inset:0, zIndex:99999,
+      background:'var(--bg)',
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:28
+    }}>
       <div className="pomo-modes">
         {Object.entries(MODES).map(([id, m]) => (
           <button key={id} className="pomo-mode-btn" data-on={mode === id} onClick={() => switchMode(id)}>
@@ -6338,32 +6424,156 @@ function PomodoroWidget() {
           </button>
         ))}
       </div>
-      <div className="pomo-ring">
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle className="pomo-ring__track" cx="60" cy="60" r={R} strokeWidth="8"/>
-          <circle className="pomo-ring__fill" cx="60" cy="60" r={R} strokeWidth="8"
+      <div className="pomo-ring" style={{width:260, height:260}}>
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <circle className="pomo-ring__track" cx="130" cy="130" r="110" strokeWidth="12"/>
+          <circle className="pomo-ring__fill" cx="130" cy="130" r="110" strokeWidth="12"
             stroke={color}
-            strokeDasharray={CIRC}
-            strokeDashoffset={offset}/>
+            strokeDasharray={2 * Math.PI * 110}
+            strokeDashoffset={2 * Math.PI * 110 * (1 - pct)}/>
         </svg>
         <div className="pomo-time">
-          <span className="pomo-time__min" style={{color}}>{String(mins).padStart(2,'0')}:{String(remSecs).padStart(2,'0')}</span>
-          <span className="pomo-time__label">{MODES[mode].label}</span>
+          <span style={{fontFamily:'var(--font-display)', fontSize:64, fontWeight:700, lineHeight:1, color}}>
+            {String(mins).padStart(2,'0')}:{String(remSecs).padStart(2,'0')}
+          </span>
+          <span style={{fontSize:14, color:'var(--text-3)', marginTop:6}}>{MODES[mode].label}</span>
         </div>
       </div>
-      <div className="pomo-controls">
+      <div style={{display:'flex', gap:12}}>
         <button className="pomo-btn" onClick={() => { setSecs(totalSecs); setRunning(false); }}>↺</button>
-        <button className="pomo-btn pomo-btn--primary" onClick={() => setRunning(r => !r)}>
-          {running ? '⏸ Pausar' : secs === totalSecs ? '▶ Iniciar' : '▶ Continuar'}
+        <button className="pomo-btn pomo-btn--primary" style={{padding:'12px 40px', fontSize:16}}
+          onClick={() => setRunning(r => !r)}>
+          {running ? '⏸ Pausar' : '▶ Continuar'}
         </button>
       </div>
       <div className="pomo-sessions">
         {Array.from({length:4}, (_,i) => (
           <div key={i} className="pomo-dot" data-done={i < sessions % 4}/>
         ))}
-        {sessions > 0 && <span style={{fontSize:11, color:'var(--text-3)', marginLeft:4}}>{sessions} sesión{sessions!==1?'es':''} hoy</span>}
+        {sessions > 0 && <span style={{fontSize:12, color:'var(--text-3)', marginLeft:8}}>{sessions} sesiones hoy</span>}
       </div>
+      <button onClick={toggleFocus}
+        style={{marginTop:8, padding:'10px 28px', fontSize:13, fontWeight:600,
+          color:'var(--text-2)', cursor:'pointer', background:'var(--inner)',
+          border:'1.5px solid var(--line-2)', borderRadius:10, transition:'all 150ms'}}
+        onMouseEnter={e=>{e.currentTarget.style.background='var(--card-2)';e.currentTarget.style.color='var(--text)';}}
+        onMouseLeave={e=>{e.currentTarget.style.background='var(--inner)';e.currentTarget.style.color='var(--text-2)';}}>
+        ✕ Salir del modo foco <span style={{opacity:0.45, fontSize:11, marginLeft:6}}>Esc</span>
+      </button>
+    </div>,
+    document.body
+  ) : null;
+
+  const timerPanel = (
+    <div className="pomo-widget" style={{justifyContent:'center', gap:24, padding:'40px 32px'}}>
+        {/* Mode selector */}
+        <div className="pomo-modes">
+          {Object.entries(MODES).map(([id, m]) => (
+            <button key={id} className="pomo-mode-btn" data-on={mode === id} onClick={() => switchMode(id)}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Ring */}
+        <div className="pomo-ring">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle className="pomo-ring__track" cx="100" cy="100" r={R} strokeWidth="10"/>
+            <circle className="pomo-ring__fill" cx="100" cy="100" r={R} strokeWidth="10"
+              stroke={color} strokeDasharray={CIRC} strokeDashoffset={offset}/>
+          </svg>
+          <div className="pomo-time">
+            <span className="pomo-time__min" style={{color}}>{String(mins).padStart(2,'0')}:{String(remSecs).padStart(2,'0')}</span>
+            <span className="pomo-time__label">{MODES[mode].label}</span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="pomo-controls">
+          <button className="pomo-btn" onClick={() => { setSecs(totalSecs); setRunning(false); }} title="Reiniciar">↺</button>
+          <button className="pomo-btn pomo-btn--primary" style={{padding:'10px 32px', fontSize:15}}
+            onClick={() => setRunning(r => !r)}>
+            {running ? '⏸ Pausar' : secs === totalSecs ? '▶ Iniciar' : '▶ Continuar'}
+          </button>
+        </div>
+
+        {/* Focus button */}
+        <button onClick={toggleFocus} style={{
+          display:'flex', alignItems:'center', gap:8, padding:'9px 20px',
+          borderRadius:10, border:`1.5px solid ${focusMode ? color : 'var(--line-2)'}`,
+          background: focusMode ? color + '18' : 'transparent',
+          color: focusMode ? color : 'var(--text-3)',
+          fontSize:13, fontWeight:600, cursor:'pointer', transition:'all 200ms'
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+          </svg>
+          {focusMode ? 'Salir del foco' : 'Modo foco — pantalla completa'}
+        </button>
+
+        {/* Session dots */}
+        <div className="pomo-sessions">
+          {Array.from({length:4}, (_,i) => (
+            <div key={i} className="pomo-dot" data-done={i < sessions % 4}/>
+          ))}
+          {sessions > 0 && <span style={{fontSize:11, color:'var(--text-3)', marginLeft:6}}>{sessions} sesión{sessions!==1?'es':''} hoy</span>}
+        </div>
+      </div>
+  );
+
+  return (
+    <>
+    {focusOverlay}
+    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:18, flex:1}}>
+      {timerPanel}
+
+      {/* RIGHT — info y tips (oculto en modo foco, pero el overlay ya cubre todo) */}
+      {!focusMode && <div style={{display:'flex', flexDirection:'column', gap:14}}>
+        {/* Stats */}
+        <div className="r-panel" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+          <div style={{textAlign:'center', padding:'16px 0'}}>
+            <div style={{fontSize:32, fontWeight:800, color:'var(--violet)'}}>{sessions}</div>
+            <div style={{fontSize:12, color:'var(--text-3)', marginTop:4}}>Sesiones hoy</div>
+          </div>
+          <div style={{textAlign:'center', padding:'16px 0'}}>
+            <div style={{fontSize:32, fontWeight:800, color:'var(--violet)'}}>{totalSessions}</div>
+            <div style={{fontSize:12, color:'var(--text-3)', marginTop:4}}>Ciclos completos</div>
+          </div>
+          <div style={{textAlign:'center', padding:'16px 0'}}>
+            <div style={{fontSize:32, fontWeight:800, color:'#4ade80'}}>{sessions * 25}</div>
+            <div style={{fontSize:12, color:'var(--text-3)', marginTop:4}}>Min de foco</div>
+          </div>
+          <div style={{textAlign:'center', padding:'16px 0'}}>
+            <div style={{fontSize:32, fontWeight:800, color:'#60a5fa'}}>{Math.round(sessions * 25 / 60 * 10) / 10}h</div>
+            <div style={{fontSize:12, color:'var(--text-3)', marginTop:4}}>Horas totales</div>
+          </div>
+        </div>
+
+        {/* Técnica Pomodoro */}
+        <div className="r-panel" style={{flex:1}}>
+          <div style={{fontSize:13, fontWeight:700, marginBottom:14, color:'var(--text-2)'}}>Técnica Pomodoro</div>
+          {[
+            { num:'1', text:'Trabajá 25 min sin interrupciones (Foco)', color:'var(--violet)' },
+            { num:'2', text:'Tomá 5 min de descanso', color:'#4ade80' },
+            { num:'3', text:'Después de 4 sesiones, descansá 15 min', color:'#60a5fa' },
+            { num:'4', text:'Repetí el ciclo para máxima productividad', color:'#fbbf24' },
+          ].map(s => (
+            <div key={s.num} style={{display:'flex', gap:12, alignItems:'flex-start', marginBottom:12}}>
+              <div style={{width:22, height:22, borderRadius:'50%', background:s.color+'22',
+                border:`1.5px solid ${s.color}`, display:'grid', placeItems:'center', flexShrink:0,
+                fontSize:11, fontWeight:700, color:s.color}}>{s.num}</div>
+              <span style={{fontSize:13, color:'var(--text-2)', lineHeight:1.5, paddingTop:2}}>{s.text}</span>
+            </div>
+          ))}
+
+          <div style={{marginTop:16, padding:'12px 14px', background:'var(--inner-2)', borderRadius:10,
+            fontSize:12, color:'var(--text-3)', lineHeight:1.6}}>
+            💡 <strong style={{color:'var(--text-2)'}}>Tip:</strong> Silenciá las notificaciones durante el foco para máxima concentración.
+          </div>
+        </div>
+      </div>}
     </div>
+    </>
   );
 }
 
@@ -6374,9 +6584,7 @@ function PomodoroRoute() {
   return (
     <>
       <RouteHead title="⏱ Pomodoro" sub="Temporizador de enfoque · 25 min foco / 5 min descanso"/>
-      <div style={{display:'flex', justifyContent:'center', padding:'40px 0'}}>
-        <PomodoroWidget/>
-      </div>
+      <PomodoroWidget/>
     </>
   );
 }
@@ -6762,12 +6970,12 @@ function MisionesRoute({ flash }) {
   const counts = groups.reduce((a,p) => ({...a, [p]: missions.filter(m=>!m.done && (m.priority||'medium')===p).length}), {});
   const completedList = missions.filter(m => m.done);
 
-  const MissionCard = ({m}) => {
+  const renderMissionCard = (m) => {
     const prio = MISSION_PRIORITY[m.priority||'medium'];
     const pct = getPct(m);
     const expanded = expandedId === m.id;
     return (
-      <div className="mission fade-up" style={{opacity:m.done?0.55:1, border:'1px solid var(--line)', borderRadius:14, padding:'14px 16px', marginBottom:10, background:'var(--card)'}}>
+      <div key={m.id} className="mission fade-up" style={{opacity:m.done?0.55:1, border:'1px solid var(--line)', borderRadius:14, padding:'14px 16px', marginBottom:10, background:'var(--card)'}}>
         <div style={{display:'flex', alignItems:'flex-start', gap:12}}>
           <div style={{width:10, height:10, borderRadius:'50%', background:prio.color, flexShrink:0, marginTop:5}}/>
           <div style={{flex:1, minWidth:0}}>
@@ -6835,7 +7043,7 @@ function MisionesRoute({ flash }) {
               <span style={{width:8,height:8,borderRadius:'50%',background:prio.color,display:'inline-block'}}/>
               {prio.label} prioridad · {group.length}
             </div>
-            {group.map(m => <MissionCard key={m.id} m={m}/>)}
+            {group.map(m => renderMissionCard(m))}
           </div>
         );
       })}
@@ -6845,7 +7053,7 @@ function MisionesRoute({ flash }) {
           <div className="mission-group__title" style={{background:'var(--inner)', color:'var(--text-3)'}}>
             ✓ Completadas · {completedList.length}
           </div>
-          {completedList.map(m => <MissionCard key={m.id} m={m}/>)}
+          {completedList.map(m => renderMissionCard(m))}
         </div>
       )}
 
@@ -8003,7 +8211,7 @@ function calcLevel(totalXp) {
 }
 
 function App() {
-  const [route, setRoute] = useState('dashboard');
+  const [route, setRoute] = useState(() => sessionStorage.getItem('sh_route') || 'dashboard');
   const [cfg, setCfg] = useState(() => loadConfig());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tasks, setTasks] = useState(() => loadTasks());
@@ -8015,16 +8223,25 @@ function App() {
   const [toast, setToast] = useState(null);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [parcialesMode, setParcialesMode] = useState(false);
-  const [dashMode, setDashMode] = useState('manana'); // 'manana' | 'tarde' | 'noche'
+  const [dashMode, setDashMode] = useState(() => {
+    const h = new Date().getHours();
+    return h >= 5 && h < 13 ? 'manana' : h >= 13 && h < 20 ? 'tarde' : 'noche';
+  }); // 'manana' | 'tarde' | 'noche'
   const [energyToday, setEnergyToday] = useState(() => {
     const today = new Date().toISOString().slice(0,10);
     const log = loadEnergyLog();
     return log.find(e => e.date === today) || null;
   });
 
-  // Daily morning modal — show once per day if not checked in yet
+  // Daily morning modal — show once per day, only after 5am
   const [showDailyModal, setShowDailyModal] = useState(() => {
-    const today = new Date().toISOString().slice(0,10);
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 5) return false; // antes de las 5am no mostrar
+    const today = now.toISOString().slice(0,10);
+    // Usamos localStorage directamente para que sea instantáneo (no depende de SupabaseStorage)
+    const shownKey = 'studyhub_morning_shown_' + today;
+    if (localStorage.getItem(shownKey)) return false;
     const dlog = loadDailyLog();
     return !dlog.find(e => e.date === today);
   });
@@ -8032,6 +8249,16 @@ function App() {
   const handleDailySave = (energyEntry) => {
     setEnergyToday(energyEntry);
     setShowDailyModal(false);
+    // Marcar como visto hoy en localStorage para que no vuelva a aparecer aunque se recargue
+    const today = new Date().toISOString().slice(0,10);
+    localStorage.setItem('studyhub_morning_shown_' + today, '1');
+  };
+
+  const handleDailyClose = () => {
+    setShowDailyModal(false);
+    // Si cierra sin completar, igual lo marcamos como visto para no molestar
+    const today = new Date().toISOString().slice(0,10);
+    localStorage.setItem('studyhub_morning_shown_' + today, '1');
   };
 
   const notisRef = useRef(null);
@@ -8168,7 +8395,8 @@ function App() {
     setWidgets([...currentWidgets, { id, span }]);
     flash(`"${WIDGET_CATALOG[id]?.title}" agregado`);
   };
-  const openEditor = () => { setRoute('dashboard'); setEditMode(true); };
+  const navigate = (r) => { setRoute(r); sessionStorage.setItem('sh_route', r); };
+  const openEditor = () => { navigate('dashboard'); setEditMode(true); };
   const exitEditor = () => setEditMode(false);
 
   const nameNode = cfg.greeting === 'italic'
@@ -8186,13 +8414,13 @@ function App() {
     tasks, search, newTask, setNewTask, addTask, toggleTask, deleteTask,
     completedCount, completedPct, totalXp,
     subjects: dashSubjects,
-    goTo: setRoute, flash, openSettings: () => setSettingsOpen(true),
+    goTo: navigate, flash, openSettings: () => setSettingsOpen(true),
     flashAdd: () => flash('Próximamente: agregar evento'),
     setEnergyToday,
   };
 
   const cmdCtx = {
-    goTo: setRoute,
+    goTo: navigate,
     flash,
     openSettings: () => setSettingsOpen(true),
     openEditor,
@@ -8414,13 +8642,13 @@ function App() {
       {/* DAILY MORNING MODAL */}
       {showDailyModal && (
         <DailyMorningModal
-          onClose={() => setShowDailyModal(false)}
+          onClose={handleDailyClose}
           onSave={handleDailySave}
         />
       )}
 
       {/* SHELL */}
-      <div className={"shell page-enter" + (editMode ? " shell--editing" : "")} key={route}>
+      <div className={"shell" + (editMode ? " shell--editing" : "") + (route !== 'dashboard' ? " shell--no-right" : "")}>
         {/* LEFT NAV */}
         <nav className="rail">
           {[
@@ -8433,7 +8661,7 @@ function App() {
           ].map(item => (
             <div key={item.id}
               className={"r-item" + (route===item.id ? " r-item--active" : "")}
-              onClick={() => setRoute(item.id)}
+              onClick={() => navigate(item.id)}
               title={cfg.sidebar === 'collapsed' ? item.label : ''}>
               <span className="r-item__icon"><item.icon size={17}/></span>
               <span>{item.label}</span>
@@ -8453,7 +8681,7 @@ function App() {
           ].map(item => (
             <div key={item.id}
               className={"r-item" + (route===item.id ? " r-item--active" : "")}
-              onClick={() => setRoute(item.id)}
+              onClick={() => navigate(item.id)}
               title={cfg.sidebar === 'collapsed' ? item.label : ''}>
               <span className="r-item__icon"><item.icon size={17}/></span>
               <span>{item.label}</span>
@@ -8487,10 +8715,10 @@ function App() {
 
         {/* CENTER */}
         <div className="center">
-          {/* SUMMARY STRIP — always visible */}
-          <div style={{display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:4}}>
+          {/* SUMMARY STRIP — solo en Dashboard */}
+          {route === 'dashboard' && <div style={{display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:4}}>
             {/* Task summary */}
-            <div className="topbar-summary" onClick={() => setRoute('tareas')} title="Ver tareas">
+            <div className="topbar-summary" onClick={() => navigate('tareas')} title="Ver tareas">
               <div className="tbs-item">
                 <div>
                   <div className={"tbs-item__num" + (tasks.filter(t=>!t.done && t.priority==='high').length > 0 ? ' tbs-item__num--warn' : '')}>
@@ -8516,7 +8744,7 @@ function App() {
             </div>
 
             {/* Energy pill */}
-            <div className="energy-pill" title="Energía de hoy" onClick={() => setRoute('dashboard')}>
+            <div className="energy-pill" title="Energía de hoy" onClick={() => navigate('dashboard')}>
               {energyToday ? (
                 <>
                   <span style={{fontSize:14}}>{energyToday.humor || '⚡'}</span>
@@ -8553,7 +8781,7 @@ function App() {
               <span className="parciales-toggle__dot"/>
               {parcialesMode ? '🎯 PARCIALES — ON' : 'Modo Parciales'}
             </button>
-          </div>
+          </div>}
 
           {parcialesMode && (
             <div className="parciales-banner">
@@ -8618,7 +8846,7 @@ function App() {
                         style={{display:'flex', alignItems:'center', gap:12, padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--line)', transition:'background 120ms'}}
                         onMouseEnter={e => e.currentTarget.style.background='var(--inner)'}
                         onMouseLeave={e => e.currentTarget.style.background=''}
-                        onClick={() => { setRoute(item.route); setSearch(''); }}>
+                        onClick={() => { navigate(item.route); setSearch(''); }}>
                         <span style={{fontSize:18}}>{item.emoji}</span>
                         <div style={{flex:1}}>
                           <div style={{fontSize:13, fontWeight:600}}>{item.label}</div>
@@ -8690,11 +8918,13 @@ function App() {
           </div>
 
           {/* ROUTE CONTENT */}
-          {renderRoute()}
+          <div key={route} className="page-enter">
+            {renderRoute()}
+          </div>
         </div>
 
-        {/* RIGHT */}
-        <aside className="right">
+        {/* RIGHT — solo en Dashboard */}
+        {route === 'dashboard' && <aside className="right">
           <div className="profile">
             <div className={"profile__avatar" + (cfg.photo?' profile__avatar--photo':'')}>
               {cfg.photo ? <img src={cfg.photo} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : cfg.initial}
@@ -8702,9 +8932,9 @@ function App() {
             <h3 className="profile__name">{cfg.name}</h3>
             <p className="profile__role">{cfg.career}</p>
             <div className="profile__actions">
-              <button className="profile__btn" onClick={() => setRoute('chat')} aria-label="Chat"><I.Chat size={16}/></button>
-              <button className="profile__btn" onClick={() => setRoute('cal')} aria-label="Calendario"><I.Calendar size={16}/></button>
-              <button className="profile__btn" onClick={() => setRoute('diario')} aria-label="Diario"><I.Edit size={16}/></button>
+              <button className="profile__btn" onClick={() => navigate('chat')} aria-label="Chat"><I.Chat size={16}/></button>
+              <button className="profile__btn" onClick={() => navigate('cal')} aria-label="Calendario"><I.Calendar size={16}/></button>
+              <button className="profile__btn" onClick={() => navigate('diario')} aria-label="Diario"><I.Edit size={16}/></button>
             </div>
           </div>
 
@@ -8715,7 +8945,7 @@ function App() {
             </p>
             <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:4}}>
               {PEOPLE.map((p, i) => (
-                <div key={i} className="p-row" onClick={() => { setRoute('facu'); flash('Abriendo ' + p.name); }}>
+                <div key={i} className="p-row" onClick={() => { navigate('facu'); flash('Abriendo ' + p.name); }}>
                   <div className={"p-row__av t-avatar--" + p.avClass}>{p.initials}</div>
                   <div style={{flex:1, minWidth:0}}>
                     <div className="p-row__name">{p.name}</div>
@@ -8733,7 +8963,7 @@ function App() {
             </div>
             <div className="send__value">{(9900 + totalXp).toLocaleString()}</div>
           </div>
-        </aside>
+        </aside>}
       </div>
 
       {/* SETTINGS MODAL */}
