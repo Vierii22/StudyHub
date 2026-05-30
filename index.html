@@ -7,8 +7,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="StudyHub"/>
-<meta name="theme-color" content="#18181d"/>
+<meta name="theme-color" content="#8b5cf6"/>
 <title>StudyHub</title>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/assets/logo-circle.png"/>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"/>
@@ -8211,7 +8220,10 @@ function calcLevel(totalXp) {
 }
 
 function App() {
-  const [route, setRoute] = useState(() => sessionStorage.getItem('sh_route') || 'dashboard');
+  const [route, setRoute] = useState(() => {
+    const param = new URLSearchParams(window.location.search).get('section');
+    return param || sessionStorage.getItem('sh_route') || 'dashboard';
+  });
   const [cfg, setCfg] = useState(() => loadConfig());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tasks, setTasks] = useState(() => loadTasks());
