@@ -1,0 +1,16 @@
+{
+  "name": "studyhub-web",
+  "version": "1.0.0",
+  "description": "StudyHub - Tu sistema de vida personal (Web App)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2"
+  }
+}
