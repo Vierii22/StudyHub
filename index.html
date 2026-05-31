@@ -6321,7 +6321,14 @@ function TasksTablePanel({ tasks, search, newTask, setNewTask, addTask, toggleTa
               </td>
               <td style={{color:'var(--text-2)'}}>{row.progress}</td>
               <td style={{fontWeight:500}}>+{row.xp} XP</td>
-              <td><span className={"t-status" + (row.statusTone ? " t-status--" + row.statusTone : "")}>{row.status}</span></td>
+              <td>
+                {row.dueDate ? (() => {
+                  const _t = new Date().toISOString().slice(0,10);
+                  const _d = Math.round((new Date(row.dueDate+'T12:00:00') - new Date(_t+'T12:00:00')) / (1000*60*60*24));
+                  const _c = row.done ? 'var(--text-4)' : _d < 0 ? '#f87171' : _d === 0 ? '#fbbf24' : _d <= 2 ? '#fb923c' : 'var(--text-3)';
+                  return <span style={{fontSize:10, color:_c, fontFamily:'var(--font-mono)', fontWeight:_d<=1&&!row.done?700:400}}>{_d<0?`-${Math.abs(_d)}d`:_d===0?'HOY':_d===1?'1d':`${_d}d`}</span>;
+                })() : <span className={"t-status" + (row.statusTone ? " t-status--" + row.statusTone : "")}>{row.status}</span>}
+              </td>
               <td style={{textAlign:'right'}}>
                 <button className="t-del" aria-label="Eliminar" onClick={() => deleteTask(row.id)}>
                   <I.X size={14}/>
