@@ -8230,6 +8230,61 @@ function CalendarioRoute({ flash }) {
   );
 }
 
+// ─── SIMPLE MARKDOWN RENDERER ────────────────────────────────
+function MdText({ src }) {
+  if (!src) return null;
+  const lines = src.split('\n');
+  const out = [];
+  let ulItems = [], olItems = [];
+  const flushUl = () => { if (ulItems.length) { out.push(React.createElement('ul', {key:'ul'+out.length,style:{margin:'6px 0 6px 18px',padding:0}}, ulItems)); ulItems = []; } };
+  const flushOl = () => { if (olItems.length) { out.push(React.createElement('ol', {key:'ol'+out.length,style:{margin:'6px 0 6px 18px',padding:0}}, olItems)); olItems = []; } };
+  const inline = (text, key) => {
+    const parts = []; let rest = text; let k = 0;
+    const push = (type, content) => parts.push(React.createElement(type, {key: key+'-'+k++}, content));
+    const pushText = (t) => { if (t) parts.push(t); };
+    while (rest.length) {
+      const bb = rest.indexOf('**');
+      const b = rest.indexOf('*');
+      const c = rest.indexOf('`');
+      const candidates = [[bb, '**'], [b=== bb ? -1 : b, '*'], [c, '`']].filter(x=>x[0]>=0).sort((a,z)=>a[0]-z[0]);
+      if (!candidates.length) { pushText(rest); break; }
+      const [pos, tok] = candidates[0];
+      const end = rest.indexOf(tok, pos + tok.length);
+      if (end === -1) { pushText(rest); break; }
+      pushText(rest.slice(0, pos));
+      const inner = rest.slice(pos + tok.length, end);
+      if (tok === '**') push('strong', inner);
+      else if (tok === '*') push('em', inner);
+      else push('code', inner);
+      rest = rest.slice(end + tok.length);
+    }
+    return parts.length === 1 ? parts[0] : React.createElement(React.Fragment, {key}, parts);
+  };
+  lines.forEach((line, i) => {
+    if (/^[-*] /.test(line)) {
+      flushOl();
+      ulItems.push(React.createElement('li', {key:i, style:{fontSize:13,lineHeight:1.6,marginBottom:2}}, inline(line.slice(2), 'li'+i)));
+    } else if (/^\d+\. /.test(line)) {
+      flushUl();
+      olItems.push(React.createElement('li', {key:i, style:{fontSize:13,lineHeight:1.6,marginBottom:2}}, inline(line.replace(/^\d+\. /,''), 'li'+i)));
+    } else if (/^### /.test(line)) {
+      flushUl(); flushOl();
+      out.push(React.createElement('div', {key:i, style:{fontSize:13,fontWeight:700,color:'var(--violet-2)',margin:'10px 0 4px'}}, line.slice(4)));
+    } else if (/^## /.test(line)) {
+      flushUl(); flushOl();
+      out.push(React.createElement('div', {key:i, style:{fontSize:14,fontWeight:700,margin:'12px 0 4px'}}, line.slice(3)));
+    } else if (line.trim() === '') {
+      flushUl(); flushOl();
+      out.push(React.createElement('div', {key:i, style:{height:6}}));
+    } else {
+      flushUl(); flushOl();
+      out.push(React.createElement('div', {key:i, style:{fontSize:13,lineHeight:1.65}}, inline(line, 'p'+i)));
+    }
+  });
+  flushUl(); flushOl();
+  return React.createElement('div', {style:{color:'var(--text)'}}, out);
+}
+
 // ============================================================
 // CHAT IA
 // ============================================================
@@ -8305,10 +8360,13 @@ function ChatRoute({ tasks, energyToday }) {
         <div style={{flex:1, maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 280px)' : 460, overflowY:'auto', paddingBottom:8}}>
           {msgs.map(m => (
             <div key={m.id} className={"chat-msg chat-msg--" + m.kind}>
-              <div className="chat-msg__av">{m.kind === 'me' ? 'V' : '✨'}</div>
+              <div className="chat-msg__av">{m.kind === 'me' ? (() => { try { return JSON.parse(localStorage.getItem('studyhub-config')||'{}').initial || 'V'; } catch(e){ return 'V'; } })() : '✨'}</div>
               <div className="chat-msg__body">
                 <div className="chat-msg__from">{m.from} <small>{m.time}</small></div>
-                {m.loading ? <span style={{opacity:0.5, fontStyle:'italic'}}>Pensando…</span> : m.body}
+                {m.loading
+                  ? <span style={{opacity:0.5, fontStyle:'italic'}}>Pensando…</span>
+                  : m.kind === 'ai' ? <MdText src={m.body}/> : m.body
+                }
               </div>
             </div>
           ))}
