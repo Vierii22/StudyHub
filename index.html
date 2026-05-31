@@ -1359,6 +1359,21 @@ input, textarea { font: inherit; color: inherit; }
 
   /* Tables → scroll horizontal */
   .tasks-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Misiones, Finanzas, Casa — cards más compactas */
+  .r-panel { padding: 12px 14px !important; }
+  .route-head { flex-wrap: wrap; gap: 8px; }
+  .route-head__actions { flex-wrap: wrap; }
+
+  /* Login card full width en mobile */
+  .login-card { width: 100% !important; margin: 16px !important; border-radius: 16px !important; }
+
+  /* Dropdown menus */
+  .dropdown { right: 0; left: auto; min-width: 260px; }
+
+  /* Ocultar topbar summary en mobile si hay poco espacio */
+  .topbar-summary { font-size: 12px; }
+  .tbs-item__num { font-size: 15px; }
 }
 
 /* ============================================================
@@ -8845,11 +8860,12 @@ function App() {
   const openEditor = () => { navigate('dashboard'); setEditMode(true); };
   const exitEditor = () => setEditMode(false);
 
+  const displayName = (cfg.name || 'Estudiante').split(' ')[0];
   const nameNode = cfg.greeting === 'italic'
-    ? <em style={{fontStyle:'italic', color:'var(--violet-2)'}}>{cfg.name.split(' ')[0]}</em>
+    ? <em style={{fontStyle:'italic', color:'var(--violet-2)'}}>{displayName}</em>
     : cfg.greeting === 'bold'
-      ? <b style={{fontWeight:700, color:'var(--violet-2)'}}>{cfg.name.split(' ')[0]}</b>
-      : <span style={{color:'var(--violet-2)'}}>{cfg.name.split(' ')[0]}</span>;
+      ? <b style={{fontWeight:700, color:'var(--violet-2)'}}>{displayName}</b>
+      : <span style={{color:'var(--violet-2)'}}>{displayName}</span>;
 
   // Load subjects for dashboard widget
   const [dashSubjects, setDashSubjects] = React.useState(() => loadSubjects());
@@ -9378,11 +9394,15 @@ function App() {
         {/* RIGHT — solo en Dashboard */}
         {route === 'dashboard' && <aside className="right">
           <div className="profile">
-            <div className={"profile__avatar" + (cfg.photo?' profile__avatar--photo':'')}>
-              {cfg.photo ? <img src={cfg.photo} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : cfg.initial}
+            <div className={"profile__avatar" + (cfg.photo?' profile__avatar--photo':'')}
+              onClick={() => setSettingsOpen(true)} title="Editar perfil" style={{cursor:'pointer'}}>
+              {cfg.photo ? <img src={cfg.photo} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (cfg.initial || '?')}
             </div>
-            <h3 className="profile__name">{cfg.name}</h3>
-            <p className="profile__role">{cfg.career}</p>
+            <h3 className="profile__name" style={{cursor:'pointer'}} onClick={() => setSettingsOpen(true)}>{cfg.name || 'Tu nombre'}</h3>
+            <p className="profile__role" style={{cursor: cfg.career ? 'default' : 'pointer', color: cfg.career ? '' : 'var(--violet-2)', fontSize:12}}
+              onClick={() => !cfg.career && setSettingsOpen(true)}>
+              {cfg.career || '+ Completar perfil'}
+            </p>
             <div className="profile__actions">
               <button className="profile__btn" onClick={() => navigate('chat')} aria-label="Chat"><I.Chat size={16}/></button>
               <button className="profile__btn" onClick={() => navigate('cal')} aria-label="Calendario"><I.Calendar size={16}/></button>
