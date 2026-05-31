@@ -5288,7 +5288,7 @@ function HistorialDiarioRoute() {
           <div style={{fontSize:13}}>Cada mañana al abrir StudyHub se guardará tu check-in acá.</div>
         </div>
       ) : (
-        <div style={{display:'grid', gridTemplateColumns:'300px 1fr', gap:20, height:'calc(100vh - 140px)'}}>
+        <div style={{display:'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '300px 1fr', gap:20, height: window.innerWidth < 768 ? 'auto' : 'calc(100vh - 140px)'}}>
           {/* Lista */}
           <div style={{overflowY:'auto', display:'flex', flexDirection:'column', gap:8}}>
             {log.map(entry => (
