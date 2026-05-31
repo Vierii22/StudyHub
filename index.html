@@ -4780,6 +4780,7 @@ const defaultConfig = {
 
 // Widget catalogue — picker uses this for label/desc/icon.
 const WIDGET_CATALOG = {
+  'today-agenda':  { title: 'Agenda de hoy',      desc: 'Eventos del día + tareas urgentes',     iconKey: 'Calendar',    span: 6 },
   'stat-xp':       { title: 'Total XP',           desc: 'Card grande con tu XP acumulado',       iconKey: 'Trophy',      span: 6 },
   'stat-tasks':    { title: 'Tareas completas',   desc: 'Card grande con porcentaje del día',    iconKey: 'CheckSquare', span: 6 },
   'stat-hours':    { title: 'Horas estudiadas',   desc: 'Stat de tiempo dedicado esta semana',   iconKey: 'Clock',       span: 6 },
@@ -6251,7 +6252,44 @@ function renderWidgetContent(id, ctx) {
     case 'energy':
       return <EnergyWidget onCheckin={(entry) => { if(ctx.setEnergyToday) ctx.setEnergyToday(entry); }}/>;
     case 'procra':
-      return <ProcraSection tasks={ctx.tasks || []} onGoToTareas={() => ctx.goTo('tareas')}/>;
+      return <ProcraSection tasks={ctx.tasks || []} onGoToTareas={() => ctx.goTo('tareas')} onToggleTask={ctx.toggleTask}/>;
+    case 'today-agenda': {
+      const _today = new Date().toISOString().slice(0,10);
+      const _events = (() => { try { const r = AppStorage.getItem('studyhub_v3_calendar'); return r ? JSON.parse(r) : []; } catch(e){ return []; } })();
+      const _todayEvs = _events.filter(e => e.date === _today);
+      const _urgentTasks = (ctx.tasks||[]).filter(t => !t.done && t.priority === 'high').slice(0,3);
+      const _dueSoon = (ctx.tasks||[]).filter(t => !t.done && t.dueDate && (() => {
+        const d = Math.round((new Date(t.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24));
+        return d >= 0 && d <= 1;
+      })()).slice(0,2);
+      const hasContent = _todayEvs.length > 0 || _urgentTasks.length > 0 || _dueSoon.length > 0;
+      return (
+        <div className="panel" style={{display:'flex', flexDirection:'column', gap:12}}>
+          <div className="panel__head" style={{margin:0}}>
+            <h3 className="panel__title panel__title--left">Agenda de hoy</h3>
+            <button className="panel__more" onClick={() => ctx.goTo('cal')}><I.Calendar size={14}/></button>
+          </div>
+          {!hasContent && <div style={{fontSize:12, color:'var(--text-3)', textAlign:'center', padding:'12px 0'}}>Día libre 🎉 Sin eventos ni urgentes.</div>}
+          {_todayEvs.map(ev => (
+            <div key={ev.id} style={{display:'flex', gap:10, alignItems:'center', padding:'8px 10px', background:'rgba(139,92,246,0.08)', borderRadius:10, border:'1px solid rgba(139,92,246,0.15)'}}>
+              <span style={{fontSize:14}}>📅</span>
+              <span style={{fontSize:13, fontWeight:500, flex:1}}>{ev.title}</span>
+              <span style={{fontSize:11, color:'var(--violet-2)', fontWeight:600}}>HOY</span>
+            </div>
+          ))}
+          {[..._dueSoon, ..._urgentTasks].filter((t,i,a) => a.findIndex(x=>x.id===t.id)===i).map(t => {
+            const _d = t.dueDate ? Math.round((new Date(t.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24)) : null;
+            return (
+              <div key={t.id} style={{display:'flex', gap:10, alignItems:'center', padding:'8px 10px', background:'rgba(248,113,113,0.06)', borderRadius:10, border:'1px solid rgba(248,113,113,0.15)'}}>
+                <span style={{fontSize:14}}>🔴</span>
+                <span style={{fontSize:13, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{t.name}</span>
+                <span style={{fontSize:10, color:'#f87171', fontWeight:700, flexShrink:0}}>{_d === 0 ? 'HOY' : _d === 1 ? '1d' : 'urgente'}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
     case 'casa-widget':
       return <CasaWidget onGoToCasa={() => ctx.goTo('casa')}/>;
     default:
@@ -6870,7 +6908,7 @@ function EnergyWidget({ onCheckin }) {
 // ============================================================
 // ANTI-PROCRASTINACIÓN SECTION
 // ============================================================
-function ProcraSection({ tasks, onGoToTareas }) {
+function ProcraSection({ tasks, onGoToTareas, onToggleTask }) {
   const today = new Date();
   const now = today.getTime();
   // Use createdAt if available; fall back to id only if it looks like a valid timestamp (> 1e12)
@@ -6898,12 +6936,17 @@ function ProcraSection({ tasks, onGoToTareas }) {
       {evitadas.length === 0 ? (
         <div className="procra-empty">✅ No tenés tareas pendientes hace tiempo. Bien hecho.</div>
       ) : evitadas.map(t => (
-        <div key={t.id} className="procra-item">
+        <div key={t.id} className="procra-item" style={{gap:8}}>
           <span className={"procra-item__days" + (t.days >= 5 ? '' : ' procra-item__days--medium')}>
-            {t.days}d sin tocar
+            {t.days}d
           </span>
-          <span className="procra-item__name">{t.name}</span>
-          <span style={{fontSize:10, color:'var(--text-4)'}}>{t.status}</span>
+          <span className="procra-item__name" style={{flex:1}}>{t.name}</span>
+          {onToggleTask && (
+            <button onClick={() => { onToggleTask(t.id); playSound('tick'); }}
+              style={{fontSize:10, fontWeight:600, color:'#4ade80', background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.2)', borderRadius:6, padding:'2px 8px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0}}>
+              ✓ Listo
+            </button>
+          )}
         </div>
       ))}
     </div>
