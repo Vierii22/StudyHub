@@ -6089,15 +6089,20 @@ function renderWidgetContent(id, ctx) {
         </div>
       );
     }
-    case 'stat-level':
+    case 'stat-level': {
+      const _lv = calcLevel(ctx.totalXp);
       return (
         <div className="mini-stat">
           <span className="mini-stat__icon"><I.Zap size={16}/></span>
           <p className="mini-stat__label">Nivel actual</p>
-          <p className="mini-stat__value">Nv <em>{String(calcLevel(ctx.totalXp).level).padStart(2,'0')}</em></p>
-          <p className="mini-stat__sub">{calcLevel(ctx.totalXp).xpForNext - calcLevel(ctx.totalXp).xpInLevel} XP para nivel {calcLevel(ctx.totalXp).level + 1}</p>
+          <p className="mini-stat__value">Nv <em>{String(_lv.level).padStart(2,'0')}</em></p>
+          <p className="mini-stat__sub">{_lv.xpForNext - _lv.xpInLevel} XP para nivel {_lv.level + 1}</p>
+          <div style={{height:3, background:'var(--inner-2)', borderRadius:2, overflow:'hidden', marginTop:6}}>
+            <div style={{height:'100%', width:_lv.pct+'%', background:'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius:2, transition:'width 800ms'}}/>
+          </div>
         </div>
       );
+    }
     case 'chart-week': {
       const _today = new Date();
       const _dow = _today.getDay(); // 0=Sun,1=Mon...
@@ -9613,7 +9618,17 @@ function App() {
                   </div>
                 </div>
 
-                {!parcialesMode && (
+                {!parcialesMode && completedPct === 100 && tasks.length > 0 && (
+                  <div style={{background:'linear-gradient(135deg,rgba(74,222,128,0.1),rgba(52,211,153,0.06))', border:'1px solid rgba(74,222,128,0.25)', borderRadius:12, padding:'12px 16px', marginBottom:8, display:'flex', gap:12, alignItems:'center'}}>
+                    <span style={{fontSize:22}}>🎉</span>
+                    <div>
+                      <div style={{fontSize:13, fontWeight:700, color:'#4ade80'}}>¡Día completado!</div>
+                      <div style={{fontSize:12, color:'var(--text-3)'}}>Todas las tareas listas. Buen trabajo, {cfg.name?.split(' ')[0] || 'campeón'}.</div>
+                    </div>
+                  </div>
+                )}
+
+                {!parcialesMode && completedPct < 100 && (
                   <MentalLoadBanner tasks={tasks} energyToday={energyToday}/>
                 )}
 
@@ -10239,10 +10254,13 @@ function App() {
 
           <div className="send">
             <div className="send__left">
-              <p className="send__label">Total XP</p>
-              <p className="send__sub">Nivel {String(calcLevel(totalXp).level).padStart(2,'0')}</p>
+              <p className="send__label">Total XP · {(9900 + totalXp).toLocaleString()}</p>
+              <p className="send__sub">Nivel {String(calcLevel(totalXp).level).padStart(2,'0')} · {calcLevel(totalXp).xpForNext - calcLevel(totalXp).xpInLevel} XP para subir</p>
             </div>
-            <div className="send__value">{(9900 + totalXp).toLocaleString()}</div>
+            <div className="send__value" style={{fontSize:22, fontWeight:800}}>{calcLevel(totalXp).level}</div>
+          </div>
+          <div style={{height:4, background:'var(--inner-2)', borderRadius:2, marginTop:-8, overflow:'hidden'}}>
+            <div style={{height:'100%', width:calcLevel(totalXp).pct+'%', background:'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius:2, transition:'width 800ms cubic-bezier(0.22,1,0.36,1)'}}/>
           </div>
         </aside>}
       </div>
