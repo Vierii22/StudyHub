@@ -8945,6 +8945,7 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
                 <th style={{width:60}}>Prior.</th>
                 <th>Descripción</th>
                 <th>XP</th>
+                <th style={{width:70}}>Vence</th>
                 <th>Estado</th>
                 <th style={{width:60}}></th>
               </tr>
@@ -9475,6 +9476,36 @@ function App() {
                 {!parcialesMode && (
                   <MentalLoadBanner tasks={tasks} energyToday={energyToday}/>
                 )}
+
+                {!parcialesMode && (() => {
+                  const _today = new Date().toISOString().slice(0,10);
+                  const _urgent = tasks.filter(t => !t.done && t.dueDate && (() => {
+                    const diff = Math.round((new Date(t.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24));
+                    return diff <= 2;
+                  })()).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+                  if (_urgent.length === 0) return null;
+                  return (
+                    <div style={{background:'rgba(251,191,36,0.07)', border:'1px solid rgba(251,191,36,0.2)', borderRadius:12, padding:'12px 16px', marginBottom:8, display:'flex', gap:12, alignItems:'flex-start'}}>
+                      <span style={{fontSize:18, flexShrink:0}}>⏰</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12, fontWeight:700, color:'#fbbf24', marginBottom:6}}>Vencen pronto</div>
+                        <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+                          {_urgent.map(t => {
+                            const _diff = Math.round((new Date(t.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24));
+                            return (
+                              <span key={t.id} onClick={() => navigate('tareas')} style={{cursor:'pointer', background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.25)', borderRadius:8, padding:'3px 10px', fontSize:12, color:'#fbbf24', display:'flex', alignItems:'center', gap:5}}>
+                                <span style={{color:_diff<0?'#f87171':_diff===0?'#fb923c':'#fbbf24', fontFamily:'var(--font-mono)', fontSize:10, fontWeight:700}}>
+                                  {_diff<0?`-${Math.abs(_diff)}d`:_diff===0?'HOY':'1d'}
+                                </span>
+                                {t.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {parcialesMode && (() => {
                   const highTasks   = tasks.filter(t => !t.done && t.priority === 'high');
