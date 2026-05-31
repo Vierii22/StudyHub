@@ -8968,7 +8968,23 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
   const [modal, setModal] = useState(null);
   const [newTask, setNewTask] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
+  const [sortBy, setSortBy] = useState('creacion'); // 'creacion' | 'prioridad' | 'fecha' | 'nombre'
+  const [showDone, setShowDone] = useState(true);
   const AV_PALETTE = ['v1','v2','v3','v4'];
+
+  const PRIO_ORDER = { high:0, medium:1, low:2, none:3, undefined:2 };
+  const sortedTasks = [...tasks]
+    .filter(t => showDone || !t.done)
+    .sort((a, b) => {
+      if (sortBy === 'prioridad') return (PRIO_ORDER[a.priority]||2) - (PRIO_ORDER[b.priority]||2);
+      if (sortBy === 'fecha') {
+        const _far = '9999-99-99';
+        const da = a.dueDate || _far, db = b.dueDate || _far;
+        return da.localeCompare(db);
+      }
+      if (sortBy === 'nombre') return a.name.localeCompare(b.name);
+      return (b.id || 0) - (a.id || 0); // creacion = newest first
+    });
 
   const addTask = () => {
     const name = newTask.trim();
@@ -8996,6 +9012,15 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
     <>
       <RouteHead title="Tareas" sub={`${tasks.length} en total · ${completedCount} completas`}
         actions={<>
+          <select className="cfg-input" style={{fontSize:12, padding:'5px 8px', width:'auto'}} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="creacion">↕ Creación</option>
+            <option value="prioridad">🔴 Prioridad</option>
+            <option value="fecha">📅 Fecha límite</option>
+            <option value="nombre">🔤 Nombre</option>
+          </select>
+          <button className={"editor-toolbar__btn" + (!showDone?' editor-toolbar__btn--active':'')} onClick={() => setShowDone(s=>!s)} title={showDone?'Ocultar completadas':'Mostrar completadas'}>
+            {showDone ? '✓ Ocultar listas' : '⊘ Mostrando activas'}
+          </button>
           <button className={"editor-toolbar__btn" + (viewMode==='table'?' editor-toolbar__btn--active':'')} onClick={() => setViewMode('table')} title="Vista tabla">☰ Tabla</button>
           <button className={"editor-toolbar__btn" + (viewMode==='cards'?' editor-toolbar__btn--active':'')} onClick={() => setViewMode('cards')} title="Vista cards">⊞ Cards</button>
         </>}/>
@@ -9016,10 +9041,10 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
               </tr>
             </thead>
             <tbody>
-              {tasks.length === 0 && (
+              {sortedTasks.length === 0 && (
                 <tr><td colSpan={7}><div className="tbl-empty">No tenés tareas. Agregá una abajo.</div></td></tr>
               )}
-              {tasks.map(row => (
+              {sortedTasks.map(row => (
                 <tr key={row.id} className={row.done ? 'tbl__row--done' : ''}>
                   <td>
                     <span className="tbl__check" data-done={row.done} onClick={() => toggleTask(row.id)} style={{cursor:'pointer'}}>
@@ -9069,10 +9094,10 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
       {viewMode === 'cards' && (
         <div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12, marginBottom:12}}>
-            {tasks.length === 0 && (
+            {sortedTasks.length === 0 && (
               <div style={{gridColumn:'1/-1', textAlign:'center', padding:'40px 0', color:'var(--text-3)'}}>No tenés tareas.</div>
             )}
-            {tasks.map(row => (
+            {sortedTasks.map(row => (
               <div key={row.id} className={"tarea-card" + (row.done?' tarea-card--done':'')}>
                 <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
                   <span className={"t-avatar t-avatar--" + row.avClass} style={{width:30,height:30,fontSize:11}}>{row.initials}</span>
