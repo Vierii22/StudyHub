@@ -3828,6 +3828,9 @@ function OnboardingScreen({ onDone }) {
   const [materias, setMaterias] = useState('');
   const [foto, setFoto] = useState('');
   const [saving, setSaving] = useState(false);
+  const [tgCode, setTgCode] = useState('');
+  const [tgCopied, setTgCopied] = useState(false);
+  const [tgLoading, setTgLoading] = useState(false);
 
   const handleFoto = (e) => {
     const file = e.target.files[0];
@@ -3857,6 +3860,34 @@ function OnboardingScreen({ onDone }) {
     } catch(e) {}
     setSaving(false);
     onDone();
+  };
+
+  const generateTgCode = async () => {
+    const sb = window._supabase;
+    if (!sb) return;
+    setTgLoading(true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let suffix = '';
+      for (let i = 0; i < 4; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+      const newCode = 'SH-' + suffix;
+      await sb.from('telegram_links').delete().eq('user_id', session.user.id);
+      const { error } = await sb.from('telegram_links').insert(
+        { user_id: session.user.id, link_code: newCode, linked: false, created_at: new Date().toISOString() }
+      );
+      if (!error) setTgCode(newCode);
+    } catch(e) {}
+    setTgLoading(false);
+  };
+
+  const copyTgCode = () => {
+    if (!tgCode) return;
+    navigator.clipboard.writeText(tgCode).then(() => {
+      setTgCopied(true);
+      setTimeout(() => setTgCopied(false), 2000);
+    });
   };
 
   const inputStyle = {
@@ -3911,6 +3942,43 @@ function OnboardingScreen({ onDone }) {
             <input style={inputStyle} placeholder="Ej: Análisis, Álgebra, Programación..." value={materias} onChange={e=>setMaterias(e.target.value)}/>
             <div style={{fontSize:11,color:'#5a5a6e',marginTop:4}}>Separalas con comas. Podés editarlo después.</div>
           </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Conectá Telegram 📱', sub: 'Mandá tareas y recibí alertas desde el chat',
+      content: (
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
+            <ol style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:8,fontSize:13,color:'#c4b5fd',lineHeight:1.5}}>
+              <li>Generá tu código de vinculación abajo</li>
+              <li>Abrí Telegram y buscá <b style={{color:'#a78bfa'}}>@StudyHubBot</b></li>
+              <li>Enviá el código al bot</li>
+              <li>¡Listo! Quedás conectado automáticamente</li>
+            </ol>
+          </div>
+          {!tgCode ? (
+            <button onClick={generateTgCode} disabled={tgLoading} style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:'11px 0',color:'#fff',fontSize:14,fontWeight:600,cursor:tgLoading?'not-allowed':'pointer',fontFamily:'inherit',opacity:tgLoading?0.7:1,boxShadow:'0 4px 16px rgba(139,92,246,0.3)'}}>
+              {tgLoading ? 'Generando...' : '⚡ Generar código'}
+            </button>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <div style={{flex:1,background:'#1a1a20',border:'1px solid rgba(139,92,246,0.35)',borderRadius:10,padding:'12px 16px',fontFamily:'JetBrains Mono,monospace',fontSize:22,fontWeight:700,color:'#c4b5fd',letterSpacing:3,textAlign:'center'}}>
+                  {tgCode}
+                </div>
+                <button onClick={copyTgCode} style={{background:tgCopied?'rgba(34,197,94,0.15)':'rgba(139,92,246,0.15)',border:`1px solid ${tgCopied?'rgba(34,197,94,0.4)':'rgba(139,92,246,0.3)'}`,borderRadius:10,padding:'12px 14px',color:tgCopied?'#4ade80':'#a78bfa',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'all 200ms'}}>
+                  {tgCopied ? '✓ Copiado' : '📋 Copiar'}
+                </button>
+              </div>
+              <a href="https://t.me/StudyHubBot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none',transition:'background 150ms'}}
+                onMouseEnter={e=>e.currentTarget.style.background='rgba(0,136,204,0.2)'}
+                onMouseLeave={e=>e.currentTarget.style.background='rgba(0,136,204,0.12)'}>
+                Abrir @StudyHubBot en Telegram →
+              </a>
+            </div>
+          )}
+          <div style={{textAlign:'center',fontSize:12,color:'#4a4a5a'}}>Podés conectarlo también desde Configuración → Integraciones</div>
         </div>
       ),
     },
@@ -4864,6 +4932,7 @@ function TelegramLinkCard() {
 
 function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
   const [tab, setTab] = useStateS('apariencia');
+  const [soundsOn, setSoundsOn] = useStateS(() => localStorage.getItem('studyhub_sounds') !== 'off');
   const I = window.Icons;
 
   useEffectS(() => {
@@ -4951,6 +5020,19 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
                     <div className="cfg-row__desc">Transiciones, entradas, hover effects</div>
                   </div>
                   <button className="switch" data-on={cfg.animations} onClick={() => set('animations', !cfg.animations)}/>
+                </div>
+                <div className="cfg-row">
+                  <div className="cfg-row__main">
+                    <div className="cfg-row__label">Sonidos de interfaz</div>
+                    <div className="cfg-row__desc">Feedback sonoro al completar tareas y guardar</div>
+                  </div>
+                  <button className="switch" data-on={soundsOn}
+                    onClick={() => {
+                      const next = !soundsOn;
+                      localStorage.setItem('studyhub_sounds', next ? 'on' : 'off');
+                      setSoundsOn(next);
+                      if (next) playSound('tick');
+                    }}/>
                 </div>
               </section>
             </>
@@ -5231,6 +5313,37 @@ Object.assign(window, { SettingsModal, applyConfig, loadConfig, saveConfig, defa
 const { useState, useEffect, useMemo, useRef } = React;
 const I = window.Icons;
 
+// ─── AUDIO FEEDBACK ──────────────────────────────────────────
+const _sfx = (() => {
+  let ctx = null;
+  const getCtx = () => { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } return ctx; };
+  const play = (freq, type, dur, gain, delay = 0) => {
+    const c = getCtx(); if (!c) return;
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    osc.connect(env); env.connect(c.destination);
+    osc.type = type; osc.frequency.value = freq;
+    const t = c.currentTime + delay;
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(gain, t + 0.01);
+    env.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.start(t); osc.stop(t + dur);
+  };
+  return {
+    tick:     () => { play(880, 'sine', 0.08, 0.18); },
+    complete: () => { play(523, 'sine', 0.18, 0.22); play(659, 'sine', 0.18, 0.22, 0.1); play(784, 'sine', 0.28, 0.2, 0.2); },
+    save:     () => { play(440, 'sine', 0.12, 0.15); play(550, 'sine', 0.18, 0.12, 0.08); },
+    error:    () => { play(220, 'sawtooth', 0.15, 0.12); },
+  };
+})();
+
+const playSound = (name) => {
+  try {
+    if (localStorage.getItem('studyhub_sounds') === 'off') return;
+    _sfx[name]?.();
+  } catch(e) {}
+};
+
 // ============================================================
 // Reusable SVG chart components
 // ============================================================
@@ -5347,6 +5460,22 @@ const saveEnergyLog = (d) => { try { AppStorage.setItem(ENERGY_KEY, JSON.stringi
 const DAILY_KEY = 'studyhub_daily_v1';
 const loadDailyLog = () => { try { const r = AppStorage.getItem(DAILY_KEY); if(r) return JSON.parse(r); } catch(e){} return []; };
 const saveDailyLog = (d) => { try { AppStorage.setItem(DAILY_KEY, JSON.stringify(d)); } catch(e){} };
+
+const getStreak = () => {
+  try {
+    const log = loadDailyLog();
+    if (!log.length) return 0;
+    const dates = new Set(log.map(e => e.date));
+    const today = new Date();
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      if (dates.has(key)) { streak++; } else { break; }
+    }
+    return streak;
+  } catch(e) { return 0; }
+};
 
 // ============================================================
 // DAILY MORNING MODAL
@@ -7074,7 +7203,12 @@ function PomodoroWidget() {
       setSecs(s => {
         if (s <= 1) {
           setRunning(false);
-          if (mode === 'foco') setSessions(n => n + 1);
+          if (mode === 'foco') {
+            setSessions(n => n + 1);
+            playSound('complete');
+          } else {
+            playSound('save');
+          }
           return 0;
         }
         return s - 1;
@@ -7502,30 +7636,35 @@ function FacultadRoute({ flash }) {
         </div>
       )}
       <div className="widget-grid">
-        {subjects.map((s, i) => (
-          <div key={s.id} className="widget widget--s4">
-            <div className="subject" onClick={() => setOpenSubject(s)} style={{cursor:'pointer'}}>
-              <div className="subject__head">
-                <div style={{width:42,height:42,borderRadius:12,display:'grid',placeItems:'center',fontSize:11,fontWeight:800,color:'white',flexShrink:0,letterSpacing:'0.04em',background:getColor(s)}}>{getInitials(s)}</div>
-                <div style={{flex:1, minWidth:0}}>
-                  <h3 className="subject__name">{s.name}</h3>
-                  <p className="subject__meta">{s.prof}</p>
-                </div>
+        {subjects.map((s, i) => {
+          const color = getColor(s);
+          return (
+          <div key={s.id} className="widget widget--s4" style={{overflow:'hidden', padding:0}}>
+            <div onClick={() => setOpenSubject(s)} style={{cursor:'pointer', height:'100%', display:'flex', flexDirection:'column'}}>
+              {/* Color header strip */}
+              <div style={{background:color, padding:'16px 16px 12px', position:'relative', overflow:'hidden'}}>
+                <div style={{position:'absolute', right:-10, top:-10, width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.1)'}}/>
+                <div style={{position:'absolute', right:20, top:10, width:30, height:30, borderRadius:'50%', background:'rgba(255,255,255,0.08)'}}/>
+                <div style={{fontSize:22, fontWeight:800, color:'rgba(255,255,255,0.95)', letterSpacing:'-0.02em', lineHeight:1.1, position:'relative', zIndex:1}}>{s.name}</div>
+                {s.prof && <div style={{fontSize:11, color:'rgba(255,255,255,0.7)', marginTop:4, position:'relative', zIndex:1}}>{s.prof}</div>}
               </div>
-              <div className="subject__foot" style={{marginTop:8}}>
-                <span style={{fontSize:12, color:'var(--text-3)'}}>{s.next}</span>
-                <div style={{display:'flex', gap:8}} onClick={e => e.stopPropagation()}>
-                  <button className="dash-mini-btn" onClick={() => setModal({type:'edit', s})} title="Editar"><I.Edit size={13}/></button>
-                  <button className="dash-mini-btn dash-mini-btn--danger" onClick={() => { if(confirm('¿Eliminar '+s.name+'?')) del(s.id); }} title="Eliminar"><I.X size={13}/></button>
+              {/* Content */}
+              <div style={{padding:'12px 16px 14px', flex:1, display:'flex', flexDirection:'column', gap:8}}>
+                <CalCountdown subjectName={s.name}/>
+                {s.next && <div style={{fontSize:11, color:'var(--text-3)'}}>{s.next}</div>}
+                <div style={{flex:1}}/>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                  <div style={{display:'flex', gap:6}} onClick={e => e.stopPropagation()}>
+                    <button className="dash-mini-btn" onClick={() => setModal({type:'edit', s})} title="Editar"><I.Edit size={13}/></button>
+                    <button className="dash-mini-btn dash-mini-btn--danger" onClick={() => { if(confirm('¿Eliminar '+s.name+'?')) del(s.id); }} title="Eliminar"><I.X size={13}/></button>
+                  </div>
+                  <span style={{fontSize:11, color:'var(--violet-2)', fontFamily:'var(--font-mono)', fontWeight:600}}>Abrir →</span>
                 </div>
-              </div>
-              <CalCountdown subjectName={s.name}/>
-              <div style={{marginTop:10, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8}}>
-                <span style={{fontSize:11, color:'var(--violet-2)', fontFamily:'var(--font-mono)'}}>Abrir →</span>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {modal?.type === 'new'  && <SubjectModal onSave={save} onClose={() => setModal(null)}/>}
@@ -7638,13 +7777,21 @@ function MisionesRoute({ flash }) {
   const del = (id) => { const next = missions.filter(x => x.id !== id); setMissions(next); saveMissions(next); flash('Misión eliminada'); };
   
   const toggleDone = (id) => {
+    const m = missions.find(x => x.id === id);
+    if (m && !m.done) playSound('complete');
     const next = missions.map(x => x.id === id ? {...x, done:!x.done} : x);
     setMissions(next); saveMissions(next);
   };
   const toggleTask = (mId, tId) => {
+    playSound('tick');
     const next = missions.map(m => {
       if (m.id !== mId) return m;
       const tasks = (m.tasks||[]).map(t => t.id===tId ? {...t, done:!t.done} : t);
+      const allDone = tasks.length > 0 && tasks.every(t => t.done);
+      if (allDone && !m.done) {
+        setTimeout(() => { playSound('complete'); flash('¡Misión completada! 🎉'); }, 300);
+        return {...m, tasks, done: true};
+      }
       return {...m, tasks};
     });
     setMissions(next); saveMissions(next);
@@ -7660,17 +7807,19 @@ function MisionesRoute({ flash }) {
     const pct = getPct(m);
     const expanded = expandedId === m.id;
     return (
-      <div key={m.id} className="mission fade-up" style={{opacity:m.done?0.55:1, border:'1px solid var(--line)', borderRadius:14, padding:'14px 16px', marginBottom:10, background:'var(--card)'}}>
-        <div style={{display:'flex', alignItems:'flex-start', gap:12}}>
-          <div style={{width:10, height:10, borderRadius:'50%', background:prio.color, flexShrink:0, marginTop:5}}/>
+      <div key={m.id} className="mission fade-up" style={{opacity:m.done?0.5:1, borderRadius:14, padding:'0', marginBottom:10, background:'var(--card)', overflow:'hidden', boxShadow: m.done ? 'none' : `0 2px 12px ${prio.color}18`, transition:'box-shadow 200ms,opacity 200ms'}}>
+        <div style={{borderLeft:`3px solid ${prio.color}`, padding:'14px 16px', display:'flex', alignItems:'flex-start', gap:12}}>
+          <div style={{width:32, height:32, borderRadius:10, background:prio.bg, display:'grid', placeItems:'center', flexShrink:0, fontSize:15}}>
+            {m.done ? '✓' : m.priority==='high' ? '🔥' : m.priority==='medium' ? '⚡' : '🌱'}
+          </div>
           <div style={{flex:1, minWidth:0}}>
             <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:4}}>
               <h3 className="mission__title" style={{flex:1, textDecoration:m.done?'line-through':'none', margin:0}}>{m.title}</h3>
-              <span style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--violet-2)', fontWeight:600}}>{pct}%</span>
+              <span style={{fontFamily:'var(--font-mono)', fontSize:12, color:pct===100?'#4ade80':prio.color, fontWeight:700, background:pct===100?'rgba(74,222,128,0.1)':prio.bg, padding:'2px 8px', borderRadius:6}}>{pct}%</span>
             </div>
             {m.desc && <p className="mission__desc" style={{margin:'0 0 8px'}}>{m.desc}</p>}
             <div className="mission__bar" style={{marginBottom: expanded && (m.tasks||[]).length ? 10 : 0}}>
-              <div className="mission__bar-fill" style={{width:pct+'%', background:prio.color+'cc'}}/>
+              <div className="mission__bar-fill" style={{width:pct+'%', background:pct===100?'#4ade80':prio.color, transition:'width 400ms cubic-bezier(0.22,1,0.36,1)'}}/>
             </div>
             {expanded && (m.tasks||[]).length > 0 && (
               <div style={{display:'flex', flexDirection:'column', gap:4, marginTop:8, padding:'8px 0', borderTop:'1px solid var(--line)'}}>
@@ -7685,8 +7834,8 @@ function MisionesRoute({ flash }) {
               </div>
             )}
           </div>
-          <div style={{display:'flex', flexDirection:'column', gap:4, flexShrink:0}}>
-            <span style={{fontFamily:'var(--font-mono)', fontSize:11, color:'var(--text-3)', textAlign:'right'}}>+{m.xp} XP</span>
+          <div style={{display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end'}}>
+            <span style={{fontFamily:'var(--font-mono)', fontSize:11, fontWeight:700, color:m.done?'#4ade80':'#a78bfa', background:m.done?'rgba(74,222,128,0.1)':'rgba(139,92,246,0.12)', padding:'2px 8px', borderRadius:6, whiteSpace:'nowrap'}}>+{m.xp} XP</span>
             <div style={{display:'flex', gap:4, justifyContent:'flex-end'}}>
               {(m.tasks||[]).length > 0 && (
                 <button className="dash-mini-btn" onClick={() => setExpandedId(expanded ? null : m.id)} title={expanded?'Cerrar':'Ver tareas'}>
@@ -7706,10 +7855,27 @@ function MisionesRoute({ flash }) {
   };
 
   const activeCount = missions.filter(m=>!m.done).length;
+  const totalXp = missions.reduce((a,m) => a + (m.done ? m.xp : 0), 0);
+  const pendingXp = missions.filter(m=>!m.done).reduce((a,m) => a + m.xp, 0);
   return (
     <>
       <RouteHead title="Misiones" sub={`${activeCount} activas · ${completedList.length} completadas`}
         actions={<button className="btn-primary" onClick={() => setModal({type:'new'})}><I.Plus size={14}/> Nueva misión</button>}/>
+
+      <div style={{display:'flex', gap:10, marginBottom:14, flexWrap:'wrap'}}>
+        <div style={{flex:1, minWidth:120, background:'linear-gradient(135deg,rgba(139,92,246,0.12),rgba(99,102,241,0.08))', border:'1px solid rgba(139,92,246,0.2)', borderRadius:12, padding:'12px 16px', display:'flex', flexDirection:'column', gap:2}}>
+          <span style={{fontSize:11, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.07em', fontWeight:600}}>XP ganado</span>
+          <span style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:700, color:'#a78bfa'}}>+{totalXp}</span>
+        </div>
+        <div style={{flex:1, minWidth:120, background:'rgba(251,191,36,0.06)', border:'1px solid rgba(251,191,36,0.18)', borderRadius:12, padding:'12px 16px', display:'flex', flexDirection:'column', gap:2}}>
+          <span style={{fontSize:11, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.07em', fontWeight:600}}>XP disponible</span>
+          <span style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:700, color:'#fbbf24'}}>+{pendingXp}</span>
+        </div>
+        <div style={{flex:1, minWidth:120, background:'rgba(52,211,153,0.06)', border:'1px solid rgba(52,211,153,0.18)', borderRadius:12, padding:'12px 16px', display:'flex', flexDirection:'column', gap:2}}>
+          <span style={{fontSize:11, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.07em', fontWeight:600}}>Completadas</span>
+          <span style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:700, color:'#34d399'}}>{completedList.length} / {missions.length}</span>
+        </div>
+      </div>
 
       {missions.length === 0 && (
         <div className="r-panel" style={{textAlign:'center', padding:48, color:'var(--text-3)'}}>
@@ -8121,6 +8287,7 @@ function DiarioRoute({ flash }) {
       setEntries(next); saveDiaryEntries(next);
     }
     setDraft(''); // Clear textarea after save
+    playSound('save');
     flash('Entrada guardada en el historial ✓');
   };
 
@@ -8664,6 +8831,8 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
     setTasks(next); setNewTask(''); flash('Tarea agregada');
   };
   const toggleTask = (id) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && !t.done) playSound('tick');
     setTasks(ts => ts.map(t => t.id===id ? {...t, done:!t.done, status:!t.done?'Lista':'En progreso', statusTone:!t.done?'ok':''} : t));
   };
   const deleteTask = (id) => { setTasks(ts => ts.filter(t => t.id!==id)); flash('Tarea eliminada'); };
@@ -9175,14 +9344,22 @@ function App() {
                     <p className="banner-tagline">Tu centro de estudio</p>
                   </div>
                 </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom:4}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom:4, gap:10, flexWrap:'wrap'}}>
                   <div style={{fontSize: 13, color: 'var(--text-3)'}}>
                     {dashMode === 'manana' ? '🌅' : dashMode === 'tarde' ? '☀️' : '🌙'}{' '}
                     Hola, {nameNode}. Tenés <b style={{color:'var(--text)'}}>{tasks.filter(t=>!t.done).length}</b> tareas activas y <b style={{color:'var(--text)'}}>{completedPct}%</b> del día listo.
                   </div>
-                  <button className="btn-edit-pulse" onClick={() => setEditMode(true)}>
-                    <I.Edit size={13}/> Editar dashboard
-                  </button>
+                  <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                    {(() => { const s = getStreak(); return s > 0 ? (
+                      <div title={`${s} día${s!==1?'s':''} consecutivo${s!==1?'s':''} usando StudyHub`}
+                        style={{display:'flex', alignItems:'center', gap:5, background:'rgba(251,191,36,0.1)', border:'1px solid rgba(251,191,36,0.25)', borderRadius:8, padding:'4px 10px', fontSize:12, fontWeight:700, color:'#fbbf24', cursor:'default'}}>
+                        🔥 {s} {s === 1 ? 'día' : 'días'}
+                      </div>
+                    ) : null; })()}
+                    <button className="btn-edit-pulse" onClick={() => setEditMode(true)}>
+                      <I.Edit size={13}/> Editar dashboard
+                    </button>
+                  </div>
                 </div>
 
                 {!parcialesMode && (
