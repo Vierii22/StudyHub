@@ -6170,24 +6170,48 @@ function renderWidgetContent(id, ctx) {
         />
       );
     case 'next-event':
+    {
+      const _today = new Date().toISOString().slice(0,10);
+      const _events = (() => { try { const r = AppStorage.getItem('studyhub_v3_calendar'); return r ? JSON.parse(r) : []; } catch(e){ return []; } })();
+      const _upcoming = _events
+        .filter(e => e.date >= _today)
+        .sort((a,b) => a.date.localeCompare(b.date));
+      const _next = _upcoming[0];
+      const _daysUntil = _next ? Math.round((new Date(_next.date+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24)) : null;
+      const _evColor = _next ? (EVENT_COLORS?.find(c=>c.id===_next.color)?.css || '#8b5cf6') : '#8b5cf6';
       return (
         <div className="panel" style={{display:'flex', flexDirection:'column', gap: 12}}>
           <div className="panel__head" style={{margin: 0}}>
             <h3 className="panel__title panel__title--left" style={{textAlign:'left'}}>Próximo evento</h3>
           </div>
-          <div style={{display:'flex', alignItems:'center', gap:14}}>
-            <div className="upgrade__planet" style={{width:48, height:48, margin:0}}><I.Calendar size={20}/></div>
-            <div>
-              <div style={{fontFamily:'var(--font-display)', fontWeight:600, fontSize:18}}>Parcial · Álgebra Lineal</div>
-              <div style={{fontSize:12, color:'var(--text-3)', marginTop:4}}>Lunes 9 de junio · 18:00 · Aula 304</div>
+          {_next ? (
+            <>
+              <div style={{display:'flex', alignItems:'center', gap:14}}>
+                <div style={{width:48, height:48, borderRadius:14, background:_evColor+'22', border:`2px solid ${_evColor}44`, display:'grid', placeItems:'center', flexShrink:0}}>
+                  <I.Calendar size={20} color={_evColor}/>
+                </div>
+                <div>
+                  <div style={{fontFamily:'var(--font-display)', fontWeight:600, fontSize:16, lineHeight:1.2}}>{_next.title}</div>
+                  {_next.desc && <div style={{fontSize:11, color:'var(--text-3)', marginTop:3}}>{_next.desc}</div>}
+                </div>
+              </div>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:11, color:'var(--text-3)', fontFamily:'var(--font-mono)', borderTop:'1px solid var(--line)', paddingTop:10}}>
+                <span style={{color: _daysUntil === 0 ? '#f87171' : _daysUntil <= 2 ? '#fbbf24' : 'var(--text-3)'}}>
+                  {_daysUntil === 0 ? '¡Hoy!' : _daysUntil === 1 ? 'Mañana' : `En ${_daysUntil} días`}
+                  {_upcoming.length > 1 && <span style={{color:'var(--text-4)', marginLeft:8}}>+{_upcoming.length-1} más</span>}
+                </span>
+                <span style={{color:'var(--violet-2)', cursor:'pointer'}} onClick={() => ctx.goTo('cal')}>Ir al calendario →</span>
+              </div>
+            </>
+          ) : (
+            <div style={{textAlign:'center', padding:'16px 0', color:'var(--text-3)', fontSize:13}}>
+              Sin eventos próximos.{' '}
+              <span style={{color:'var(--violet-2)', cursor:'pointer'}} onClick={() => ctx.goTo('cal')}>Agregar →</span>
             </div>
-          </div>
-          <div style={{display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--text-3)', fontFamily:'var(--font-mono)', borderTop:'1px solid var(--line)', paddingTop:10}}>
-            <span>Quedan 5 días</span>
-            <span style={{color:'var(--violet-2)', cursor:'pointer'}} onClick={() => ctx.goTo('cal')}>Ir al calendario →</span>
-          </div>
+          )}
         </div>
       );
+    }
     case 'subjects':
       return (
         <div className="panel">
@@ -7231,7 +7255,10 @@ function PomodoroWidget() {
 
   // Salir con Esc o cuando el timer termina
   React.useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && focusMode) { setFocusMode(false); document.exitFullscreen?.().catch(() => {}); } };
+    const onKey = (e) => {
+      if (e.key === 'Escape' && focusMode) { setFocusMode(false); document.exitFullscreen?.().catch(() => {}); }
+      if (e.key === ' ' && focusMode && e.target === document.body) { e.preventDefault(); setRunning(r => !r); }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [focusMode]);
@@ -9193,12 +9220,18 @@ function App() {
   useEffect(() => { applyConfig(cfg); saveConfig(cfg); }, [cfg]);
   useEffect(() => { saveTasks(tasks); }, [tasks]);
 
-  // Ctrl+K Command Palette
+  // Ctrl+K Command Palette + nav shortcuts
   useEffect(() => {
+    const NAV_KEYS = { '1':'dashboard','2':'tareas','3':'pomodoro','4':'calendario','5':'misiones' };
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         setCmdOpen(open => !open);
+      }
+      // Ctrl+1..5 quick navigation (when not typing in an input)
+      if ((e.ctrlKey || e.metaKey) && NAV_KEYS[e.key] && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        navigate(NAV_KEYS[e.key]);
       }
     };
     window.addEventListener('keydown', handler);
