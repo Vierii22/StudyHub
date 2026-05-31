@@ -7302,6 +7302,7 @@ function PomodoroWidget() {
   const [secs, setSecs] = useState(25 * 60);
   const [sessions, setSessions] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
+  const [focusTask, setFocusTask] = useState(() => { try { return localStorage.getItem('studyhub_pomo_task') || ''; } catch(e){ return ''; } });
   const totalSecs = MODES[mode].mins * 60;
   const color = MODES[mode].color;
 
@@ -7380,6 +7381,16 @@ function PomodoroWidget() {
           </button>
         ))}
       </div>
+      {mode === 'foco' && (
+        <input
+          value={focusTask}
+          onChange={e => { setFocusTask(e.target.value); try { localStorage.setItem('studyhub_pomo_task', e.target.value); } catch(ex){} }}
+          placeholder="¿Qué estás estudiando?"
+          style={{background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'10px 18px', color:'var(--text)', fontSize:14, fontFamily:'var(--font-display)', textAlign:'center', width:300, outline:'none', transition:'border-color 200ms'}}
+          onFocus={e => e.target.style.borderColor='rgba(139,92,246,0.4)'}
+          onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.1)'}
+        />
+      )}
       <div className="pomo-ring" style={{width:260, height:260}}>
         <svg width="260" height="260" viewBox="0 0 260 260">
           <circle className="pomo-ring__track" cx="130" cy="130" r="110" strokeWidth="12"/>
