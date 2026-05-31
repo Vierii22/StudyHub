@@ -1374,6 +1374,18 @@ input, textarea { font: inherit; color: inherit; }
   /* Ocultar topbar summary en mobile si hay poco espacio */
   .topbar-summary { font-size: 12px; }
   .tbs-item__num { font-size: 15px; }
+
+  /* Tabla de tareas — scroll horizontal */
+  .table-panel { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tbl { min-width: 500px; }
+
+  /* Chat */
+  .chat-msg__av { width: 28px !important; height: 28px !important; font-size: 11px !important; flex-shrink: 0; }
+
+  /* Formularios en onboarding/login full width */
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="time"] {
+    font-size: 16px !important; /* previene zoom en iOS al enfocar */
+  }
 }
 
 /* ============================================================
@@ -7827,7 +7839,7 @@ function ChatRoute({ tasks, energyToday }) {
             </button>
           ))}
         </div>
-        <div style={{flex:1, maxHeight:460, overflowY:'auto', paddingBottom:8}}>
+        <div style={{flex:1, maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 280px)' : 460, overflowY:'auto', paddingBottom:8}}>
           {msgs.map(m => (
             <div key={m.id} className={"chat-msg chat-msg--" + m.kind}>
               <div className="chat-msg__av">{m.kind === 'me' ? 'V' : '✨'}</div>
