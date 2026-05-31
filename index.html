@@ -8302,10 +8302,12 @@ function ChatRoute({ tasks, energyToday }) {
   useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}); }, [msgs]);
 
   const QUICK_PROMPTS = [
-    { label:'🗓 Plan del día', text:'Planificá mi día con mis tareas pendientes' },
-    { label:'⚡ Priorizar', text:'Ayudame a priorizar mis tareas de hoy' },
-    { label:'😴 Estoy cansado', text:'Tengo poca energía hoy, qué debería hacer primero' },
-    { label:'📊 Resumen', text:'Haceme un resumen de lo que tengo pendiente' },
+    { label:'🗓 Plan del día', text:'Planificá mi día con mis tareas pendientes y dame horarios sugeridos' },
+    { label:'⚡ Priorizar', text:'Ayudame a priorizar mis tareas de hoy usando la matriz de Eisenhower' },
+    { label:'😴 Estoy cansado', text:'Tengo poca energía hoy, qué debería hacer primero y cómo arrancar' },
+    { label:'📊 Resumen', text:'Haceme un resumen de lo que tengo pendiente y qué va a vencer próximamente' },
+    { label:'🎯 Técnica Pomodoro', text:'Armame un plan de trabajo con Pomodoros para las tareas urgentes de hoy' },
+    { label:'📚 Parcial mañana', text:'Tengo un parcial mañana, dame una estrategia de repaso para las últimas horas' },
   ];
 
   const buildContext = (userText) => {
@@ -8404,8 +8406,10 @@ function DiarioRoute({ flash }) {
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [showHistory, setShowHistory] = useState(false);
 
-  // draft: what you're currently typing (not saved yet)
-  const [draft, setDraft] = useState('');
+  // draft: persisted in sessionStorage to survive accidental refreshes
+  const DRAFT_KEY = 'studyhub_diary_draft';
+  const [draft, setDraft] = useState(() => { try { return sessionStorage.getItem(DRAFT_KEY) || ''; } catch(e){ return ''; } });
+  const updateDraft = (v) => { setDraft(v); try { sessionStorage.setItem(DRAFT_KEY, v); } catch(e){} };
   const entryDates = Object.keys(entries).filter(k => entries[k].trim()).sort().reverse();
   const wordCount = draft.trim().split(/\s+/).filter(Boolean).length;
 
@@ -8433,7 +8437,7 @@ function DiarioRoute({ flash }) {
       const next = { ...entries, [saveKey]: draft.trim() };
       setEntries(next); saveDiaryEntries(next);
     }
-    setDraft(''); // Clear textarea after save
+    setDraft(''); try { sessionStorage.removeItem('studyhub_diary_draft'); } catch(e){}
     playSound('save');
     flash('Entrada guardada en el historial ✓');
   };
@@ -8451,7 +8455,10 @@ function DiarioRoute({ flash }) {
       <RouteHead title="Diario"
         sub={viewingEntry ? 'Leyendo: ' + formatDateLabel(viewingEntry) : 'Hoy · ' + formatDateLabel(todayKey)}
         actions={<>
-          <span style={{fontFamily:'var(--font-mono)', fontSize:11, color:'var(--text-3)'}}>{wordCount} palabras</span>
+          <span style={{fontFamily:'var(--font-mono)', fontSize:11, color: wordCount > 50 ? 'var(--violet-2)' : 'var(--text-3)', transition:'color 300ms'}}>
+            {wordCount} {wordCount === 1 ? 'palabra' : 'palabras'}
+            {draft && <span style={{color:'rgba(139,92,246,0.5)', marginLeft:6}}>· borrador guardado</span>}
+          </span>
           <button className="editor-toolbar__btn" onClick={() => { setShowHistory(!showHistory); setViewingEntry(null); }}>
             <I.Book size={13}/> Historial ({entryDates.length})
           </button>
@@ -8480,7 +8487,7 @@ function DiarioRoute({ flash }) {
                   style={{minHeight: 320}}
                   placeholder={`${formatDateLabel(todayKey)}\n\n¿Cómo fue el día? ¿Qué pensaste mientras estudiabas? Anotá lo que sea…\n\nAl guardar, esto se archiva en el historial y el diario queda en blanco.`}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => updateDraft(e.target.value)}
                   autoFocus
                 />
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:12}}>
