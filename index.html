@@ -5461,6 +5461,33 @@ const DAILY_KEY = 'studyhub_daily_v1';
 const loadDailyLog = () => { try { const r = AppStorage.getItem(DAILY_KEY); if(r) return JSON.parse(r); } catch(e){} return []; };
 const saveDailyLog = (d) => { try { AppStorage.setItem(DAILY_KEY, JSON.stringify(d)); } catch(e){} };
 
+const POMO_LOG_KEY = 'studyhub_pomo_log';
+const addPomoMinutes = (mins) => {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const raw = localStorage.getItem(POMO_LOG_KEY);
+    const log = raw ? JSON.parse(raw) : [];
+    const existing = log.find(e => e.date === today);
+    if (existing) { existing.mins = (existing.mins||0) + mins; }
+    else { log.push({ date: today, mins }); }
+    localStorage.setItem(POMO_LOG_KEY, JSON.stringify(log.slice(-30)));
+  } catch(e) {}
+};
+const getPomoWeekMins = () => {
+  try {
+    const log = JSON.parse(localStorage.getItem(POMO_LOG_KEY) || '[]');
+    const today = new Date();
+    let total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const entry = log.find(e => e.date === key);
+      if (entry) total += entry.mins || 0;
+    }
+    return total;
+  } catch(e) { return 0; }
+};
+
 const getStreak = () => {
   try {
     const log = loadDailyLog();
@@ -6021,24 +6048,46 @@ function renderWidgetContent(id, ctx) {
           <Donut pct={ctx.completedPct} label={`${ctx.completedPct}%`}/>
         </div>
       );
-    case 'stat-hours':
+    case 'stat-hours': {
+      const _weekMins = getPomoWeekMins();
+      const _h = Math.floor(_weekMins / 60);
+      const _m = _weekMins % 60;
       return (
         <div className="mini-stat">
           <span className="mini-stat__icon"><I.Clock size={16}/></span>
-          <p className="mini-stat__label">Horas · semana</p>
-          <p className="mini-stat__value"><em>14</em>h</p>
-          <p className="mini-stat__sub">+3h vs semana pasada</p>
+          <p className="mini-stat__label">Foco · esta semana</p>
+          <p className="mini-stat__value"><em>{_h > 0 ? `${_h}h ${_m}m` : `${_weekMins}m`}</em></p>
+          <p className="mini-stat__sub">{_weekMins === 0 ? 'Usá el Pomodoro para registrar' : `${Math.round(_weekMins/7)} min/día promedio`}</p>
         </div>
       );
-    case 'stat-streak':
+    }
+    case 'stat-streak': {
+      const _streak = getStreak();
+      const _allLogs = loadDailyLog();
+      const _maxStreak = (() => {
+        if (!_allLogs.length) return 0;
+        const _ds = [...new Set(_allLogs.map(e=>e.date))].sort();
+        let max = 0, cur = 0;
+        for (let i = 0; i < _ds.length; i++) {
+          if (i === 0) { cur = 1; }
+          else {
+            const prev = new Date(_ds[i-1]+'T12:00:00'), curr = new Date(_ds[i]+'T12:00:00');
+            const diff = Math.round((curr-prev)/(1000*60*60*24));
+            cur = diff === 1 ? cur+1 : 1;
+          }
+          max = Math.max(max, cur);
+        }
+        return max;
+      })();
       return (
         <div className="mini-stat">
           <span className="mini-stat__icon"><I.Flame size={16}/></span>
           <p className="mini-stat__label">Racha actual</p>
-          <p className="mini-stat__value"><em>12</em> días</p>
-          <p className="mini-stat__sub">tu récord es 18 días</p>
+          <p className="mini-stat__value"><em>{_streak}</em> {_streak === 1 ? 'día' : 'días'}</p>
+          <p className="mini-stat__sub">{_maxStreak > _streak ? `récord: ${_maxStreak} días` : _streak > 0 ? '¡racha máxima!' : 'empezá hoy 🔥'}</p>
         </div>
       );
+    }
     case 'stat-level':
       return (
         <div className="mini-stat">
@@ -7205,6 +7254,7 @@ function PomodoroWidget() {
           setRunning(false);
           if (mode === 'foco') {
             setSessions(n => n + 1);
+            addPomoMinutes(25);
             playSound('complete');
           } else {
             playSound('save');
@@ -9170,6 +9220,8 @@ function App() {
     setTasks([next, ...tasks]); setNewTask(''); flash('Tarea agregada');
   };
   const toggleTask = (id) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && !t.done) playSound('tick');
     setTasks(ts => ts.map(t => t.id === id ? {...t, done: !t.done, status: !t.done ? 'Lista' : 'En progreso', statusTone: !t.done ? 'ok' : ''} : t));
   };
   const deleteTask = (id) => { setTasks(ts => ts.filter(t => t.id !== id)); flash('Tarea eliminada'); };
