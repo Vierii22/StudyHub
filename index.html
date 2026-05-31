@@ -17,6 +17,10 @@
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
   }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window._pwaPrompt = e;
+  });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -3367,6 +3371,7 @@ function LoginScreen({ onLogin }) {
   const [mode, setMode]         = useState('login');
   const [showPass, setShowPass] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const switchMode = () => {
     setAnimating(true);
@@ -3392,7 +3397,7 @@ function LoginScreen({ onLogin }) {
       if (result.error) {
         setError(result.error.message);
       } else if (mode === 'register' && !result.data.session) {
-        setError('Revisá tu email para confirmar tu cuenta.');
+        setEmailSent(true);
       } else {
         onLogin(result.data.session);
       }
@@ -3401,6 +3406,23 @@ function LoginScreen({ onLogin }) {
     }
     setLoading(false);
   };
+
+  if (emailSent) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#18181d',fontFamily:'Outfit,sans-serif'}}>
+      <div style={{background:'#26262d',borderRadius:24,padding:'48px 40px',width:360,textAlign:'center',boxShadow:'0 8px 40px rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.06)'}}>
+        <div style={{fontSize:52,marginBottom:16}}>📬</div>
+        <div style={{fontSize:20,fontWeight:700,color:'#f5f5f7',marginBottom:10}}>Revisá tu email</div>
+        <div style={{fontSize:14,color:'#9898a6',lineHeight:1.6,marginBottom:28}}>
+          Te mandamos un link de confirmación a <b style={{color:'#c4b5fd'}}>{email}</b>.<br/>
+          Tocalo para activar tu cuenta y poder ingresar.
+        </div>
+        <div style={{fontSize:12,color:'#5a5a6e',marginBottom:24}}>¿No lo ves? Revisá la carpeta de spam.</div>
+        <button onClick={() => setEmailSent(false)} style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:'10px 28px',color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+          Volver al login
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{
@@ -3473,9 +3495,152 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+function OnboardingScreen({ onDone }) {
+  const [step, setStep] = useState(0);
+  const [nombre, setNombre] = useState('');
+  const [carrera, setCarrera] = useState('');
+  const [facultad, setFacultad] = useState('');
+  const [materias, setMaterias] = useState('');
+  const [foto, setFoto] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleFoto = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2*1024*1024) { alert('Máx 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setFoto(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleDone = () => {
+    if (!nombre.trim()) { alert('Ingresá tu nombre'); return; }
+    setSaving(true);
+    try {
+      const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
+      const updated = {
+        ...cfg,
+        name: nombre.trim(),
+        career: carrera.trim(),
+        facultad: facultad.trim(),
+        materias: materias.trim(),
+        initial: nombre.trim()[0]?.toUpperCase() || '?',
+        photo: foto,
+        _onboardingDone: true,
+      };
+      localStorage.setItem('studyhub-config', JSON.stringify(updated));
+    } catch(e) {}
+    setSaving(false);
+    onDone();
+  };
+
+  const inputStyle = {
+    width:'100%', boxSizing:'border-box',
+    background:'#1f1f25', border:'1px solid rgba(255,255,255,0.1)',
+    borderRadius:10, padding:'10px 14px', color:'#f5f5f7',
+    fontSize:14, outline:'none', fontFamily:'inherit', marginTop:6,
+  };
+  const labelStyle = { fontSize:13, color:'#9898a6', fontWeight:500 };
+
+  const steps = [
+    {
+      title: 'Bienvenido/a 👋', sub: 'Contanos un poco sobre vos',
+      content: (
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div>
+            <div style={labelStyle}>Tu nombre *</div>
+            <input style={inputStyle} placeholder="Ej: Lautaro" value={nombre} onChange={e=>setNombre(e.target.value)} autoFocus/>
+          </div>
+          <div>
+            <div style={labelStyle}>Foto de perfil (opcional)</div>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginTop:6}}>
+              {foto
+                ? <img src={foto} style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid #8b5cf6'}} alt="foto"/>
+                : <div style={{width:52,height:52,borderRadius:'50%',background:'#2e2e38',display:'grid',placeItems:'center',fontSize:22,border:'2px dashed rgba(139,92,246,0.4)'}}>{nombre[0]?.toUpperCase()||'?'}</div>
+              }
+              <label style={{cursor:'pointer'}}>
+                <input type="file" accept="image/*" style={{display:'none'}} onChange={handleFoto}/>
+                <span style={{background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.3)',borderRadius:8,padding:'7px 14px',color:'#a78bfa',fontSize:13,cursor:'pointer'}}>
+                  {foto ? 'Cambiar foto' : 'Subir foto'}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Tu carrera 🎓', sub: '¿Dónde y qué estudiás?',
+      content: (
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div>
+            <div style={labelStyle}>Facultad / Universidad</div>
+            <input style={inputStyle} placeholder="Ej: UTN, UBA, UNC..." value={facultad} onChange={e=>setFacultad(e.target.value)} autoFocus/>
+          </div>
+          <div>
+            <div style={labelStyle}>Carrera y año</div>
+            <input style={inputStyle} placeholder="Ej: Ing. Informática · 3°" value={carrera} onChange={e=>setCarrera(e.target.value)}/>
+          </div>
+          <div>
+            <div style={labelStyle}>Materias que cursás ahora</div>
+            <input style={inputStyle} placeholder="Ej: Análisis, Álgebra, Programación..." value={materias} onChange={e=>setMaterias(e.target.value)}/>
+            <div style={{fontSize:11,color:'#5a5a6e',marginTop:4}}>Separalas con comas. Podés editarlo después.</div>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const current = steps[step];
+
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#18181d',fontFamily:'Outfit,sans-serif',padding:20}}>
+      <div style={{background:'#26262d',borderRadius:24,padding:'40px 36px',width:400,maxWidth:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.06)'}}>
+        {/* Progress dots */}
+        <div style={{display:'flex',gap:6,marginBottom:28,justifyContent:'center'}}>
+          {steps.map((_,i) => (
+            <div key={i} style={{width: i===step?24:8,height:8,borderRadius:4,background:i===step?'#8b5cf6':'rgba(139,92,246,0.25)',transition:'all 300ms'}}/>
+          ))}
+        </div>
+
+        <div style={{textAlign:'center',marginBottom:28}}>
+          <div style={{fontSize:22,fontWeight:700,color:'#f5f5f7'}}>{current.title}</div>
+          <div style={{fontSize:13,color:'#7e7e8c',marginTop:4}}>{current.sub}</div>
+        </div>
+
+        {current.content}
+
+        <div style={{display:'flex',gap:10,marginTop:28}}>
+          {step > 0 && (
+            <button onClick={() => setStep(s=>s-1)} style={{flex:1,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:11,color:'#c4b5fd',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+              Atrás
+            </button>
+          )}
+          {step < steps.length - 1 ? (
+            <button onClick={() => { if(!nombre.trim()){alert('Ingresá tu nombre');return;} setStep(s=>s+1); }} style={{flex:1,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:11,color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+              Siguiente →
+            </button>
+          ) : (
+            <button onClick={handleDone} disabled={saving} style={{flex:1,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:11,color:'#fff',fontSize:14,fontWeight:600,cursor: saving?'not-allowed':'pointer',fontFamily:'inherit',opacity:saving?0.7:1}}>
+              {saving ? 'Guardando...' : '¡Empezar! 🚀'}
+            </button>
+          )}
+        </div>
+
+        <div style={{textAlign:'center',marginTop:16}}>
+          <button onClick={onDone} style={{background:'none',border:'none',color:'#5a5a6e',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
+            Completar después
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuthWrapper() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const sb = window._supabase;
@@ -3485,6 +3650,13 @@ function AuthWrapper() {
       setLoading(false);
     });
     const { data: listener } = sb.auth.onAuthStateChange((_event, sess) => {
+      if (sess && !_event === 'SIGNED_OUT') {
+        // Check if onboarding done
+        try {
+          const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
+          if (!cfg._onboardingDone && !cfg.name) setShowOnboarding(true);
+        } catch(e) {}
+      }
       setSession(sess);
       setLoading(false);
     });
@@ -3497,7 +3669,8 @@ function AuthWrapper() {
       <div style={{color:'#7e7e8c', fontFamily:'Outfit,sans-serif', fontSize:14}}>Cargando...</div>
     </div>
   );
-  if (!session) return <LoginScreen onLogin={setSession} />;
+  if (!session) return <LoginScreen onLogin={(sess) => { setSession(sess); }} />;
+  if (showOnboarding) return <OnboardingScreen onDone={() => setShowOnboarding(false)} />;
   return <App />;
 }
 
@@ -4166,10 +4339,13 @@ const defaultConfig = {
   animations: true,
   sidebar: 'expanded',
   greeting: 'italic',
-  name: 'Lautaro Bonadeo',
-  initial: 'L',
+  name: '',
+  initial: '',
   bgDeco: true,
-  career: 'Ing. Informática · 3°',
+  career: '',
+  facultad: '',
+  materias: '',
+  photo: '',
   widgets: DEFAULT_WIDGETS,
 };
 
@@ -4535,7 +4711,15 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
                     <div className="cfg-row__desc">Aparece en el panel derecho</div>
                   </div>
                   <input className="cfg-input" type="text" value={cfg.name}
-                    onChange={(e) => set('name', e.target.value)}/>
+                    onChange={(e) => { set('name', e.target.value); if(!cfg.initial && e.target.value) set('initial', e.target.value[0].toUpperCase()); }}/>
+                </div>
+                <div className="cfg-row">
+                  <div className="cfg-row__main">
+                    <div className="cfg-row__label">Facultad / Universidad</div>
+                    <div className="cfg-row__desc">Ej: UTN, UBA, UNC...</div>
+                  </div>
+                  <input className="cfg-input" type="text" value={cfg.facultad || ''}
+                    onChange={(e) => set('facultad', e.target.value)}/>
                 </div>
                 <div className="cfg-row">
                   <div className="cfg-row__main">
@@ -4547,8 +4731,17 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
                 </div>
                 <div className="cfg-row">
                   <div className="cfg-row__main">
+                    <div className="cfg-row__label">Materias</div>
+                    <div className="cfg-row__desc">Separadas por coma</div>
+                  </div>
+                  <input className="cfg-input" type="text" value={cfg.materias || ''}
+                    placeholder="Análisis, Álgebra, Programación..."
+                    onChange={(e) => set('materias', e.target.value)}/>
+                </div>
+                <div className="cfg-row">
+                  <div className="cfg-row__main">
                     <div className="cfg-row__label">Inicial del avatar</div>
-                    <div className="cfg-row__desc">Letra que va en tu avatar circular (1 caracter)</div>
+                    <div className="cfg-row__desc">Letra en tu avatar (1 caracter)</div>
                   </div>
                   <input className="cfg-input" type="text" maxLength={1} style={{width: 60, textAlign:'center'}}
                     value={cfg.initial} onChange={(e) => set('initial', e.target.value.toUpperCase())}/>
@@ -4584,6 +4777,52 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
                       </button>
                     )}
                   </div>
+                </div>
+              </section>
+
+              <section className="cfg-section">
+                <h3 className="cfg-section__title">Instalar la app</h3>
+                <div style={{fontSize:13,color:'var(--text-3)',marginBottom:14,lineHeight:1.5}}>
+                  Instalá StudyHub como app en tu dispositivo para acceder sin el navegador.
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  <button
+                    onClick={() => {
+                      if (window._pwaPrompt) {
+                        window._pwaPrompt.prompt();
+                        window._pwaPrompt.userChoice.then(() => { window._pwaPrompt = null; });
+                      } else {
+                        alert('Para instalar en PC: en Chrome, buscá el ícono ⊕ a la derecha de la barra de dirección y hacé click en "Instalar".');
+                      }
+                    }}
+                    style={{display:'flex',alignItems:'center',gap:12,background:'rgba(139,92,246,0.12)',border:'1px solid rgba(139,92,246,0.3)',borderRadius:12,padding:'12px 16px',cursor:'pointer',textAlign:'left',width:'100%'}}>
+                    <span style={{fontSize:22}}>🖥️</span>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>Instalar en PC</div>
+                      <div style={{fontSize:12,color:'var(--text-3)'}}>Abrí como programa de escritorio</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (/android/i.test(navigator.userAgent)) {
+                        if (window._pwaPrompt) {
+                          window._pwaPrompt.prompt();
+                        } else {
+                          alert('En Android: tocá los 3 puntos del navegador → "Añadir a pantalla de inicio"');
+                        }
+                      } else if (/iphone|ipad/i.test(navigator.userAgent)) {
+                        alert('En iPhone/iPad: tocá el botón Compartir (□↑) → "Añadir a pantalla de inicio"');
+                      } else {
+                        alert('Abrí esta página desde tu celular para instalarla como app.');
+                      }
+                    }}
+                    style={{display:'flex',alignItems:'center',gap:12,background:'rgba(217,70,239,0.1)',border:'1px solid rgba(217,70,239,0.25)',borderRadius:12,padding:'12px 16px',cursor:'pointer',textAlign:'left',width:'100%'}}>
+                    <span style={{fontSize:22}}>📱</span>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>Instalar en el celular</div>
+                      <div style={{fontSize:12,color:'var(--text-3)'}}>Añadir a pantalla de inicio como app</div>
+                    </div>
+                  </button>
                 </div>
               </section>
             </>
