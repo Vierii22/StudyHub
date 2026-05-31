@@ -6220,16 +6220,21 @@ function renderWidgetContent(id, ctx) {
             <button className="panel__more" onClick={() => ctx.goTo('facu')}><I.ArrowRight size={14}/></button>
           </div>
           <div style={{display:'flex', flexDirection:'column', gap:10}}>
-            {(ctx.subjects || []).slice(0,4).map(s => (
-              <div key={s.id||s.code} onClick={() => ctx.goTo('facu')} style={{display:'flex', alignItems:'center', gap:12, cursor:'pointer', padding:'8px 0', borderBottom:'1px solid var(--line)'}}>
-                <div className={`subject__badge t-avatar--${s.color||'v1'}`} style={{width:34, height:34, fontSize:12, display:'grid', placeItems:'center', borderRadius:8}}>{s.code}</div>
+            {(ctx.subjects || []).slice(0,4).map(s => {
+              const _initials = s.code || s.name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase();
+              const _color = (SUBJECT_COLORS.find(c=>c.id===(s.color||'v1'))||SUBJECT_COLORS[0]).css;
+              return (
+              <div key={s.id} onClick={() => ctx.goTo('facu')} style={{display:'flex', alignItems:'center', gap:12, cursor:'pointer', padding:'8px 0', borderBottom:'1px solid var(--line)'}}>
+                <div style={{width:34, height:34, borderRadius:8, background:_color, display:'grid', placeItems:'center', fontSize:10, fontWeight:800, color:'white', flexShrink:0, letterSpacing:'0.04em'}}>{_initials}</div>
                 <div style={{flex:1, minWidth:0}}>
-                  <div style={{fontSize:13, fontWeight:500}}>{s.name}</div>
-                  <div style={{fontSize:11, color:'var(--text-3)', marginTop:2}}>{s.next}</div>
+                  <div style={{fontSize:13, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.name}</div>
+                  {s.next && <div style={{fontSize:11, color:'var(--text-3)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.next}</div>}
                 </div>
-                <div style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--violet-2)'}}>{s.pct}%</div>
+                {s.pct != null && <div style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--violet-2)', flexShrink:0}}>{s.pct}%</div>}
               </div>
-            ))}
+              );
+            })}
+            {(ctx.subjects||[]).length === 0 && <div style={{fontSize:12, color:'var(--text-3)', textAlign:'center', padding:'12px 0'}}>Sin materias. <span style={{color:'var(--violet-2)', cursor:'pointer'}} onClick={()=>ctx.goTo('facu')}>Agregar →</span></div>}
           </div>
         </div>
       );
@@ -8879,6 +8884,10 @@ function TaskDetailModal({ task, onSave, onClose }) {
           <input type="number" min={1} max={999} className="cfg-input" style={{width:'100%'}} value={form.xp} onChange={e => set('xp', Number(e.target.value))}/>
         </div>
       </div>
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:12, fontWeight:600, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6}}>Fecha límite (opcional)</div>
+        <input type="date" className="cfg-input" style={{width:'100%'}} value={form.dueDate||''} onChange={e => set('dueDate', e.target.value)}/>
+      </div>
       <div style={{display:'flex', justifyContent:'flex-end', gap:10}}>
         <button className="editor-toolbar__btn" onClick={onClose}>Cancelar</button>
         <button className="btn-primary" onClick={() => { onSave(form); onClose(); }}>Guardar cambios</button>
@@ -8964,6 +8973,15 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
                   </td>
                   <td style={{color:'var(--text-2)', fontSize:12, maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{row.desc||row.progress}</td>
                   <td style={{fontWeight:500}}>+{row.xp}</td>
+                  <td>
+                    {row.dueDate && (() => {
+                      const _today = new Date().toISOString().slice(0,10);
+                      const _diff = Math.round((new Date(row.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24));
+                      const _color = row.done ? 'var(--text-4)' : _diff < 0 ? '#f87171' : _diff === 0 ? '#fbbf24' : _diff <= 2 ? '#fb923c' : 'var(--text-3)';
+                      const _label = row.done ? row.dueDate : _diff < 0 ? `Vencida (${Math.abs(_diff)}d)` : _diff === 0 ? '¡Hoy!' : _diff === 1 ? 'Mañana' : `${_diff}d`;
+                      return <span style={{fontSize:11, color:_color, fontFamily:'var(--font-mono)', fontWeight:_diff<=1&&!row.done?700:400}}>{_label}</span>;
+                    })()}
+                  </td>
                   <td><span className={"t-status" + (row.statusTone ? " t-status--"+row.statusTone : "")}>{row.status}</span></td>
                   <td style={{display:'flex', gap:4, justifyContent:'flex-end'}}>
                     <button className="dash-mini-btn" onClick={() => setModal({task:row})} title="Editar"><I.Edit size={13}/></button>
@@ -8998,6 +9016,13 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
                   <div style={{width:10,height:10,borderRadius:'50%',background:PRIORITY_COLOR[row.priority||'medium'],flexShrink:0}} title={PRIORITY_LABEL[row.priority||'medium']}/>
                 </div>
                 {row.desc && <div className="tarea-card__desc">{row.desc}</div>}
+                {row.dueDate && (() => {
+                  const _today = new Date().toISOString().slice(0,10);
+                  const _diff = Math.round((new Date(row.dueDate+'T12:00:00') - new Date(_today+'T12:00:00')) / (1000*60*60*24));
+                  const _col = row.done ? 'var(--text-4)' : _diff < 0 ? '#f87171' : _diff === 0 ? '#fbbf24' : _diff <= 2 ? '#fb923c' : 'var(--text-3)';
+                  const _lbl = row.done ? row.dueDate : _diff < 0 ? `⚠️ Vencida (${Math.abs(_diff)}d)` : _diff === 0 ? '⏰ ¡Hoy!' : _diff === 1 ? '📅 Mañana' : `📅 ${_diff}d`;
+                  return <div style={{fontSize:11, color:_col, fontWeight:_diff<=1&&!row.done?600:400, marginTop:4}}>{_lbl}</div>;
+                })()}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8}}>
                   <span className={"t-status" + (row.statusTone ? " t-status--"+row.statusTone : "")}>{row.status}</span>
                   <div style={{display:'flex', gap:4}}>
