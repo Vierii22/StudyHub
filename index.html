@@ -1224,22 +1224,132 @@ input, textarea { font: inherit; color: inherit; }
   .shell { grid-template-columns: 180px 1fr 260px; }
 }
 @media (max-width: 960px) {
-  .shell { grid-template-columns: 1fr; }
-  .rail { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-  .r-item--active::before { display: none; }
-  .right { order: 3; }
-  .header { padding: 14px 20px; gap: 12px; flex-wrap: wrap; }
-  .header__title { font-size: 16px; letter-spacing: 0.2em; }
-  .header__dash { display: none; }
-  .header__tabs { gap: 12px; font-size: 11px; }
-  .bg-deco { display: none; }
+  .shell { grid-template-columns: 180px 1fr; }
+  .right { display: none; }
 }
-@media (max-width: 640px) {
-  .page { padding: 14px; gap: 14px; }
-  .stat-row, .mid-row, .bot-row { grid-template-columns: 1fr; }
-  .stat { padding: 18px 22px; min-height: 120px; }
-  .stat__value { font-size: 28px; }
-  .stat__donut { width: 64px; height: 64px; right: 18px; }
+
+/* ============================================================
+   MOBILE — bottom tab bar layout
+   ============================================================ */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Root layout */
+  body { padding-bottom: 0 !important; }
+
+  .shell {
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    min-height: 100dvh;
+    padding-bottom: 64px !important;
+  }
+
+  /* Hide desktop sidebar */
+  .rail { display: none !important; }
+
+  /* Hide right panel */
+  .right { display: none !important; }
+
+  /* Center content takes full width */
+  .center {
+    padding: 12px 14px 0 !important;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Top row — compact */
+  .top-row { gap: 8px; margin-bottom: 8px; }
+  .search { font-size: 13px; }
+  .search-cmd-hint { display: none; }
+
+  /* Banner — más pequeño */
+  .banner { height: 80px !important; padding: 0 16px !important; gap: 12px !important; border-radius: 12px !important; }
+  .banner-logo { width: 56px !important; height: 56px !important; }
+  .banner-title { font-size: 28px !important; letter-spacing: -1.5px !important; }
+  .banner-tagline { font-size: 9px !important; letter-spacing: 3px !important; margin-top: 4px !important; }
+
+  /* Widget grid — una columna */
+  .widget-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .widget { grid-column: span 1 !important; }
+
+  /* Stats */
+  .stat { padding: 16px 18px; min-height: 100px; }
+  .stat__value { font-size: 26px; }
+  .stat__donut { width: 60px; height: 60px; right: 14px; }
+
+  /* Topbar summary — scroll horizontal */
+  .topbar-summary { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Cards y secciones */
+  .page { padding: 0; gap: 12px; }
+  .r-panel { padding: 14px; border-radius: 14px; }
+  .route-head { padding: 0 0 12px 0; }
+  .route-head__title { font-size: 18px; }
+
+  /* Modales full-screen en mobile */
+  .modal__box {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 90dvh !important;
+    overflow-y: auto !important;
+  }
+  .modal__wrap {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* Bottom nav */
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    z-index: 200;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .mobile-nav__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    color: var(--text-3);
+    transition: color 150ms;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 8px 4px;
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav__item:active { background: var(--inner); }
+  .mobile-nav__item--active { color: var(--violet-2); }
+  .mobile-nav__item--active svg { color: var(--violet-2); }
+  .mobile-nav__label { font-size: 10px; font-weight: 500; }
+
+  /* Pomodoro fullscreen fix */
+  .pomodoro-focus-portal { padding-bottom: 64px !important; }
+
+  /* Tables → scroll horizontal */
+  .tasks-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
 /* ============================================================
@@ -3637,6 +3747,13 @@ function OnboardingScreen({ onDone }) {
   );
 }
 
+function needsOnboarding() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
+    return !cfg._onboardingDone && !cfg.name;
+  } catch(e) { return true; }
+}
+
 function AuthWrapper() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -3646,17 +3763,15 @@ function AuthWrapper() {
     const sb = window._supabase;
     if (!sb) { setLoading(false); return; }
     sb.auth.getSession().then(({ data }) => {
+      if (data.session && needsOnboarding()) setShowOnboarding(true);
       setSession(data.session);
       setLoading(false);
     });
-    const { data: listener } = sb.auth.onAuthStateChange((_event, sess) => {
-      if (sess && !_event === 'SIGNED_OUT') {
-        // Check if onboarding done
-        try {
-          const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
-          if (!cfg._onboardingDone && !cfg.name) setShowOnboarding(true);
-        } catch(e) {}
+    const { data: listener } = sb.auth.onAuthStateChange((event, sess) => {
+      if (sess && event !== 'SIGNED_OUT') {
+        if (needsOnboarding()) setShowOnboarding(true);
       }
+      if (event === 'SIGNED_OUT') setShowOnboarding(false);
       setSession(sess);
       setLoading(false);
     });
@@ -3669,7 +3784,10 @@ function AuthWrapper() {
       <div style={{color:'#7e7e8c', fontFamily:'Outfit,sans-serif', fontSize:14}}>Cargando...</div>
     </div>
   );
-  if (!session) return <LoginScreen onLogin={(sess) => { setSession(sess); }} />;
+  if (!session) return <LoginScreen onLogin={(sess) => {
+    setSession(sess);
+    if (needsOnboarding()) setShowOnboarding(true);
+  }} />;
   if (showOnboarding) return <OnboardingScreen onDone={() => setShowOnboarding(false)} />;
   return <App />;
 }
@@ -9245,20 +9363,30 @@ function App() {
           </div>
 
           <div className="about">
-            <h4 className="about__title">Resumen</h4>
-            <p className="about__desc">
-              Centro de mando de tu cuatri: misiones, calendario, apuntes y vida cotidiana en un solo lugar.
-            </p>
+            <h4 className="about__title">Mis materias</h4>
+            {cfg.facultad && <p className="about__desc" style={{marginBottom:8}}>📍 {cfg.facultad}</p>}
             <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:4}}>
-              {PEOPLE.map((p, i) => (
-                <div key={i} className="p-row" onClick={() => { navigate('facu'); flash('Abriendo ' + p.name); }}>
-                  <div className={"p-row__av t-avatar--" + p.avClass}>{p.initials}</div>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div className="p-row__name">{p.name}</div>
-                    <div className="p-row__role">{p.role}</div>
+              {(() => {
+                const avClasses = ['v1','v2','v3','v4','pink'];
+                const rawMaterias = (cfg.materias || '').split(',').map(m => m.trim()).filter(Boolean);
+                if (rawMaterias.length === 0) return (
+                  <div style={{fontSize:13,color:'var(--text-3)',padding:'8px 0'}}>
+                    Agregá tus materias en <b style={{color:'var(--violet-2)',cursor:'pointer'}} onClick={() => setSettingsOpen(true)}>Configuración → Perfil</b>
                   </div>
-                </div>
-              ))}
+                );
+                return rawMaterias.map((m, i) => {
+                  const initials = m.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+                  return (
+                    <div key={i} className="p-row" onClick={() => { navigate('facu'); flash('Abriendo ' + m); }}>
+                      <div className={"p-row__av t-avatar--" + avClasses[i % avClasses.length]}>{initials}</div>
+                      <div style={{flex:1, minWidth:0}}>
+                        <div className="p-row__name">{m}</div>
+                        <div className="p-row__role">Ver en Facultad →</div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
 
@@ -9295,6 +9423,24 @@ function App() {
 
       {/* TOAST */}
       {toast && <div className="toast"><I.Sparkles size={14}/> {toast}</div>}
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="mobile-nav">
+        {[
+          { id: 'dashboard', icon: I.Home,        label: 'Inicio' },
+          { id: 'tareas',    icon: I.CheckSquare, label: 'Tareas' },
+          { id: 'pomodoro',  icon: I.Clock,       label: 'Foco' },
+          { id: 'cal',       icon: I.Calendar,    label: 'Agenda' },
+          { id: 'misiones',  icon: I.Zap,         label: 'Misiones' },
+        ].map(item => (
+          <button key={item.id}
+            className={'mobile-nav__item' + (route === item.id ? ' mobile-nav__item--active' : '')}
+            onClick={() => navigate(item.id)}>
+            <item.icon size={20}/>
+            <span className="mobile-nav__label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
