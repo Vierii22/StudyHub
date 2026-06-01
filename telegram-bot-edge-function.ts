@@ -194,7 +194,11 @@ Respondé SOLO con un JSON (sin markdown, sin explicación):
 Si el mensaje es muy ambiguo (confidence < 0.6), poné "needs_clarification": true y en "data.clarification" la pregunta a hacerle al usuario.`
           }]
         }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 400 }
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
       })
     })
 
