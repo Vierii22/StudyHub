@@ -168,3 +168,30 @@ CREATE TABLE app_data (
 );
 ALTER TABLE app_data ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "user_own_data" ON app_data FOR ALL USING (auth.uid() = user_id);
+
+-- 13. TELEGRAM_LINKS (vinculación de cuentas Telegram ↔ usuario)
+CREATE TABLE IF NOT EXISTS telegram_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  link_code text NOT NULL,
+  linked boolean DEFAULT false,
+  telegram_chat_id text,
+  auto_save boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- Agregar columnas si ya existía la tabla sin ellas
+ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS telegram_chat_id text;
+ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS auto_save boolean DEFAULT false;
+ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE telegram_links ENABLE ROW LEVEL SECURITY;
+-- El bot usa service_role (bypassa RLS). El frontend solo lee su propio vínculo.
+CREATE POLICY IF NOT EXISTS "user_own_telegram" ON telegram_links FOR ALL USING (auth.uid() = user_id);
+
+-- 14. TELEGRAM_STATE (estado de conversación multi-turno del bot)
+CREATE TABLE IF NOT EXISTS telegram_state (
+  chat_id text PRIMARY KEY,
+  state jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+-- Sin RLS — accedida solo por el bot con service_role_key

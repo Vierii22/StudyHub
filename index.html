@@ -5034,7 +5034,7 @@ function TelegramLinkCard() {
   );
 }
 
-function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
+function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard, onClearData }) {
   const [tab, setTab] = useStateS('apariencia');
   const [soundsOn, setSoundsOn] = useStateS(() => localStorage.getItem('studyhub_sounds') !== 'off');
   const I = window.Icons;
@@ -5396,9 +5396,16 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard }) {
         </div>
 
         <div className="modal__foot">
-          <button className="btn-danger" onClick={() => {
-            if (confirm('¿Restablecer todas las preferencias a sus valores por defecto?')) onReset();
-          }}>Restablecer todo</button>
+          <div style={{display:'flex', gap:8, alignItems:'center', flex:1}}>
+            <button className="btn-danger" onClick={() => {
+              if (confirm('¿Restablecer todas las preferencias a sus valores por defecto?')) onReset();
+            }}>Restablecer preferencias</button>
+            {onClearData && (
+              <button className="btn-danger" onClick={onClearData} title="Borra tareas, materias, misiones, calendario y todo tu contenido">
+                🗑️ Borrar todos mis datos
+              </button>
+            )}
+          </div>
           <button className="btn-primary" onClick={onClose}>
             Listo
           </button>
@@ -5879,16 +5886,7 @@ function HistorialDiarioRoute() {
 // ESTADO DE LA CASA — storage
 // ============================================================
 const CASA_KEY = 'studyhub_casa_v1';
-const CASA_DEFAULTS = [
-  { id:'limpieza', emoji:'🧹', label:'Limpieza general', done:false, lastDone:null },
-  { id:'basura',   emoji:'🗑️', label:'Sacar basura',     done:false, lastDone:null },
-  { id:'ropa',     emoji:'👕', label:'Lavar ropa',       done:false, lastDone:null },
-  { id:'compras',  emoji:'🛒', label:'Hacer compras',    done:false, lastDone:null },
-  { id:'platos',   emoji:'🍽️', label:'Lavar platos',     done:false, lastDone:null },
-  { id:'piso',     emoji:'🫧', label:'Barrer/trapear',   done:false, lastDone:null },
-  { id:'bano',     emoji:'🚿', label:'Limpiar baño',     done:false, lastDone:null },
-  { id:'agua',     emoji:'💧', label:'Comprar agua',     done:false, lastDone:null },
-];
+const CASA_DEFAULTS = [];
 const loadCasa = () => { try { const r = AppStorage.getItem(CASA_KEY); if(r) return JSON.parse(r); } catch(e){} return CASA_DEFAULTS; };
 const saveCasa = (d) => { try { AppStorage.setItem(CASA_KEY, JSON.stringify(d)); } catch(e){} };
 
@@ -5905,12 +5903,9 @@ const FIN_CATS = [
   { id:'otros',      emoji:'💸', label:'Otros',       color:'#fbbf24' },
 ];
 const FIN_DEFAULTS = {
-  presupuesto: 80000,
+  presupuesto: 0,
   gastos: [],
-  metas: [
-    { id:1, emoji:'💻', name:'Notebook nueva', objetivo:300000, actual:45000 },
-    { id:2, emoji:'✈️', name:'Viaje de egresados', objetivo:150000, actual:12000 },
-  ],
+  metas: [],
   mes: new Date().getMonth(),
   anio: new Date().getFullYear(),
 };
@@ -5921,12 +5916,7 @@ const saveFin = (d) => { try { AppStorage.setItem(FIN_KEY, JSON.stringify(d)); }
 // RECETAS — storage
 // ============================================================
 const RECIPES_KEY = 'studyhub_recipes_v1';
-const RECIPES_DEFAULTS = [
-  { id:1, emoji:'🍳', name:'Huevos revueltos', tiempo:10, costo:'bajo', ingredientes:['huevos','manteca','sal'], tags:['rápido','proteína'], pasos:'Batir huevos. Calentar sartén con manteca. Cocinar a fuego bajo revolviendo.' },
-  { id:2, emoji:'🍝', name:'Fideos con tuco', tiempo:20, costo:'bajo', ingredientes:['fideos','tomate','ajo'], tags:['fácil','carbohidratos'], pasos:'Hervir fideos. Sofreír ajo, agregar tomate. Mezclar.' },
-  { id:3, emoji:'🥪', name:'Sándwich de atún', tiempo:5, costo:'bajo', ingredientes:['pan','atún','mayonesa','lechuga'], tags:['rápido','proteína'], pasos:'Abrir pan. Mezclar atún con mayo. Armar.' },
-  { id:4, emoji:'🍚', name:'Arroz con verduras', tiempo:25, costo:'bajo', ingredientes:['arroz','zanahoria','arvejas','cebolla'], tags:['nutritivo','económico'], pasos:'Sofreír verduras. Agregar arroz y caldo. Cocinar 18min.' },
-];
+const RECIPES_DEFAULTS = [];
 const loadRecipes = () => { try { const r = AppStorage.getItem(RECIPES_KEY); if(r) return JSON.parse(r); } catch(e){} return RECIPES_DEFAULTS; };
 const saveRecipes = (d) => { try { AppStorage.setItem(RECIPES_KEY, JSON.stringify(d)); } catch(e){} };
 
@@ -5948,12 +5938,7 @@ const OCIO_STATUSES = [
   { id:'terminado',   label:'Terminado',   emoji:'✅' },
   { id:'abandonado',  label:'Abandonado',  emoji:'🗑️' },
 ];
-const OCIO_DEFAULTS = [
-  { id:1, emoji:'📺', title:'The Last of Us', type:'serie',  status:'terminado',   score:9, note:'Brutal.' },
-  { id:2, emoji:'🎮', title:'Hollow Knight',  type:'juego',  status:'en_progreso', score:0, note:'' },
-  { id:3, emoji:'📚', title:'Atomic Habits',  type:'libro',  status:'pendiente',   score:0, note:'' },
-  { id:4, emoji:'⛩️', title:'Attack on Titan',type:'anime',  status:'terminado',   score:10,note:'Lo mejor.' },
-];
+const OCIO_DEFAULTS = [];
 const loadOcio = () => { try { const r = AppStorage.getItem(OCIO_KEY); if(r) return JSON.parse(r); } catch(e){} return OCIO_DEFAULTS; };
 const saveOcio = (d) => { try { AppStorage.setItem(OCIO_KEY, JSON.stringify(d)); } catch(e){} };
 
@@ -6056,63 +6041,11 @@ function exportToICS(events) {
   return out.join('\r\n');
 }
 
-const PEOPLE = [
-  { name: "Análisis Matemático", role: "Parcial · lun 18:00", avClass: "v1", initials: "AM" },
-  { name: "Álgebra Lineal",       role: "TP entregado · ✓",   avClass: "v2", initials: "ÁL" },
-  { name: "Programación I",       role: "Cap. 4 pendiente",   avClass: "v3", initials: "PR" },
-];
-const SUBJECT_ROWS = [
-  { name: "Análisis Matemático", code: "ANA", pct: 62, prof: "Dra. Méndez",    next: "Parcial · lun 18hs" },
-  { name: "Álgebra Lineal",      code: "ÁLG", pct: 78, prof: "Ing. Ortega",    next: "TP entregado · ✓" },
-  { name: "Programación I",      code: "PRG", pct: 88, prof: "Lic. Calderón",  next: "Cap. 4 pendiente" },
-];
-const MISSIONS = [
-  { id: 1, title: "Resolver 10 ejercicios de Álgebra", desc: "Práctica 5, ejercicios 1-10", pct: 60, xp: 40, alt: false },
-  { id: 2, title: "Leer capítulo 4 de Programación",   desc: "Estructuras de datos básicas", pct: 30, xp: 25, alt: true  },
-  { id: 3, title: "Repaso flashcards Análisis",        desc: "Set de 24 cards generadas con IA", pct: 0, xp: 15, alt: false },
-  { id: 4, title: "Cerrar TP grupal de Álgebra",       desc: "Coordinar con Mateo y Juli", pct: 80, xp: 60, alt: true  },
-];
-const CALENDAR_EVENTS = {
-  3: 'Cap. 4 Prog',
-  9: 'Parcial Álgebra',
-  14: 'TP grupal',
-  19: 'Entrega Análisis',
-  24: 'Final Cocina',
-  27: 'Estudio IA',
-};
-const KITCHEN = [
-  { id: 1, title: 'Pollo al horno', sub: 'Heladera · vence en 2 días', tag: 'CARNE',   warn: false },
-  { id: 2, title: 'Yogur natural', sub: 'Vence mañana',                 tag: 'LÁCTEO',  warn: true  },
-  { id: 3, title: 'Tomates',       sub: 'Lista compras',                 tag: 'VERDURA', warn: false },
-  { id: 4, title: 'Empanadas',     sub: 'Plan jueves',                   tag: 'CENA',    warn: false },
-  { id: 5, title: 'Leche',         sub: 'Vence en 4 días',               tag: 'LÁCTEO',  warn: false },
-];
 
-const TASKS_SEED = (() => {
-  const now = Date.now();
-  const day = 86400000;
-  return [
-    { id: now - 2*day, name: "TP2 · Análisis",       avClass: "v1", initials: "TP", progress: "Cumplir entrega",     xp: 40, status: "En progreso", statusTone: "",     done: false, createdAt: now - 2*day },
-    { id: now - 1*day, name: "Práctica 5 · Álgebra", avClass: "v2", initials: "P5", progress: "En curso",            xp: 25, status: "Pendiente",   statusTone: "blue", done: false, createdAt: now - 1*day },
-    { id: now,         name: "Estudio IA · Resumen", avClass: "v3", initials: "IA", progress: "Listo para repasar",  xp: 15, status: "Lista",       statusTone: "ok",   done: false, createdAt: now },
-  ];
-})();
-const NOTIS_SEED = [
-  { id: 1, dot: "v1", text: "Te quedan **5 días** para el parcial de Álgebra Lineal.", time: "hace 2h", unread: true },
-  { id: 2, dot: "v2", text: "Sumaste **+40 XP** por completar el TP de Análisis.",      time: "ayer",   unread: true },
-  { id: 3, dot: "v3", text: "Nuevo recordatorio de cocina: empanadas el jueves.",        time: "lun",    unread: false },
-];
-const CHATS_SEED = [
-  { id: 1, dot: "v1", text: "**Estudio IA**: Tu resumen de Análisis está listo.",        time: "hace 5m" , unread: true },
-  { id: 2, dot: "v2", text: "**Coordinación**: Cambió el horario del parcial a las 19h.", time: "hace 1h" , unread: true },
-  { id: 3, dot: "v3", text: "**Lautaro (vos)**: anotar pregunta de la unidad 4.",         time: "ayer"    , unread: false },
-  { id: 4, dot: "v1", text: "**Sistema**: backup automático completado.",                  time: "mar"     , unread: false },
-];
-const CHAT_INITIAL = [
-  { id: 1, from: "Estudio IA",     time: "hace 5m", body: "Tu resumen de Análisis está listo. ¿Querés que te genere flashcards también?", kind: "ai" },
-  { id: 2, from: "Lautaro (vos)",  time: "hace 4m", body: "Sí, generá 20 flashcards de las unidades 3 y 4.",                              kind: "me" },
-  { id: 3, from: "Estudio IA",     time: "hace 3m", body: "Hecho. 20 flashcards creadas. Las encontrás en Estudio IA → Flashcards.",      kind: "ai" },
-];
+const TASKS_SEED = [];
+const NOTIS_SEED = [];
+const CHATS_SEED = [];
+const CHAT_INITIAL = [];
 
 const TASKS_KEY = 'studyhub_v3_tasks';
 const DIARY_KEY = 'studyhub_v3_diary';
@@ -6557,11 +6490,7 @@ function ModalField({ label, value, onChange, type='text', placeholder='', min, 
 // FACULTAD — agregar, editar, abrir materias
 // ============================================================
 const SUBJECTS_KEY = 'studyhub_v3_subjects';
-const loadSubjects = () => { try { const r = AppStorage.getItem(SUBJECTS_KEY); if (r) return JSON.parse(r); } catch(e){} return [
-  { id:1, name:'Análisis Matemático', code:'ANA', pct:62, prof:'Dra. Méndez',   next:'Parcial · lun 18hs', color:'v1', notes:'', tp:[] },
-  { id:2, name:'Álgebra Lineal',      code:'ÁLG', pct:78, prof:'Ing. Ortega',   next:'TP entregado · ✓',   color:'v2', notes:'', tp:[] },
-  { id:3, name:'Programación I',      code:'PRG', pct:88, prof:'Lic. Calderón', next:'Cap. 4 pendiente',   color:'v3', notes:'', tp:[] },
-]; };
+const loadSubjects = () => { try { const r = AppStorage.getItem(SUBJECTS_KEY); if (r) return JSON.parse(r); } catch(e){} return []; };
 const saveSubjects = (s) => { try { AppStorage.setItem(SUBJECTS_KEY, JSON.stringify(s)); } catch(e){} };
 
 // 8 color swatches for subjects
@@ -7930,12 +7859,7 @@ function FacultadRoute({ flash }) {
 const MISSIONS_KEY = 'studyhub_v3_missions';
 // priority: 'high' | 'medium' | 'low'
 // tasks: [{id, text, done}]
-const loadMissions = () => { try { const r = AppStorage.getItem(MISSIONS_KEY); if(r) return JSON.parse(r); } catch(e){} return [
-  { id:1, title:'Resolver 10 ejercicios de Álgebra', desc:'Práctica 5, ejercicios 1-10', priority:'high',   xp:40, done:false, tasks:[{id:1,text:'Ejercicio 1-3',done:true},{id:2,text:'Ejercicio 4-7',done:false},{id:3,text:'Ejercicio 8-10',done:false}] },
-  { id:2, title:'Leer capítulo 4 de Programación',   desc:'Estructuras de datos básicas', priority:'medium', xp:25, done:false, tasks:[{id:1,text:'Leer sección 4.1',done:true},{id:2,text:'Tomar notas',done:false}] },
-  { id:3, title:'Repaso flashcards Análisis',         desc:'Set de 24 cards con IA',      priority:'low',    xp:15, done:false, tasks:[{id:1,text:'Cards 1-12',done:false},{id:2,text:'Cards 13-24',done:false}] },
-  { id:4, title:'Cerrar TP grupal de Álgebra',        desc:'Coordinar con compañeros',    priority:'high',   xp:60, done:false, tasks:[{id:1,text:'Reunión grupal',done:true},{id:2,text:'Escribir intro',done:true},{id:3,text:'Conclusiones',done:false}] },
-]; };
+const loadMissions = () => { try { const r = AppStorage.getItem(MISSIONS_KEY); if(r) return JSON.parse(r); } catch(e){} return []; };
 const saveMissions = (m) => { try { AppStorage.setItem(MISSIONS_KEY, JSON.stringify(m)); } catch(e){} };
 
 const MISSION_PRIORITY = {
@@ -8170,21 +8094,7 @@ function MisionesRoute({ flash }) {
 // CALENDARIO — navegación, agregar/editar/eliminar eventos
 // ============================================================
 const CAL_KEY = 'studyhub_v3_calendar';
-const _calSeed = (() => {
-  const d = (offset) => {
-    const dt = new Date();
-    dt.setDate(dt.getDate() + offset);
-    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
-  };
-  return [
-    { id:1, title:'Estudio Programación',  date:d(2),  color:'v1' },
-    { id:2, title:'Parcial Álgebra',       date:d(7),  color:'v2' },
-    { id:3, title:'TP grupal',             date:d(12), color:'v3' },
-    { id:4, title:'Entrega Análisis',      date:d(18), color:'v1' },
-    { id:5, title:'Final materia',         date:d(25), color:'v2' },
-  ];
-})();
-const loadCalEvents = () => { try { const r = AppStorage.getItem(CAL_KEY); if(r) return JSON.parse(r); } catch(e){} return _calSeed; };
+const loadCalEvents = () => { try { const r = AppStorage.getItem(CAL_KEY); if(r) return JSON.parse(r); } catch(e){} return []; };
 const saveCalEvents = (e) => { try { AppStorage.setItem(CAL_KEY, JSON.stringify(e)); } catch(e){} };
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -8699,26 +8609,10 @@ const KITCHEN_KEY = 'studyhub_v3_kitchen';
 const ALMACEN_KEY = 'studyhub_v3_almacen';
 const FREEZER_KEY = 'studyhub_v3_freezer';
 const GROCERIES_KEY = 'studyhub_v3_groceries';
-const loadKitchen = () => { try { const r = AppStorage.getItem(KITCHEN_KEY); if(r) return JSON.parse(r); } catch(e){} return [
-  { id:1, title:'Pollo al horno', sub:'Vence en 2 días', tag:'CARNE',   warn:false, section:'heladera' },
-  { id:2, title:'Yogur natural',  sub:'Vence mañana',    tag:'LÁCTEO',  warn:true,  section:'heladera' },
-  { id:3, title:'Tomates',        sub:'Frescos',          tag:'VERDURA', warn:false, section:'heladera' },
-  { id:4, title:'Leche',          sub:'Vence en 4 días', tag:'LÁCTEO',  warn:false, section:'heladera' },
-]; };
-const loadAlmacen = () => { try { const r = AppStorage.getItem(ALMACEN_KEY); if(r) return JSON.parse(r); } catch(e){} return [
-  { id:1, title:'Arroz', sub:'2 kg', tag:'CEREAL', warn:false, section:'almacen' },
-  { id:2, title:'Aceite de girasol', sub:'1.5 L', tag:'ACEITE', warn:false, section:'almacen' },
-]; };
-const loadFreezer = () => { try { const r = AppStorage.getItem(FREEZER_KEY); if(r) return JSON.parse(r); } catch(e){} return [
-  { id:1, title:'Empanadas', sub:'Plan jueves', tag:'CENA', warn:false, section:'freezer' },
-]; };
-const loadGroceries = () => { try { const r = AppStorage.getItem(GROCERIES_KEY); if(r) return JSON.parse(r); } catch(e){} return [
-  { id:1, title:'Aceite de oliva', done:false },
-  { id:2, title:'Pan integral',    done:false },
-  { id:3, title:'Huevos x12',      done:false },
-  { id:4, title:'Queso cremoso',   done:false },
-  { id:5, title:'Café',            done:false },
-]; };
+const loadKitchen  = () => { try { const r = AppStorage.getItem(KITCHEN_KEY);  if(r) return JSON.parse(r); } catch(e){} return []; };
+const loadAlmacen  = () => { try { const r = AppStorage.getItem(ALMACEN_KEY);  if(r) return JSON.parse(r); } catch(e){} return []; };
+const loadFreezer  = () => { try { const r = AppStorage.getItem(FREEZER_KEY);  if(r) return JSON.parse(r); } catch(e){} return []; };
+const loadGroceries= () => { try { const r = AppStorage.getItem(GROCERIES_KEY);if(r) return JSON.parse(r); } catch(e){} return []; };
 const saveKitchen  = (k) => { try { AppStorage.setItem(KITCHEN_KEY,  JSON.stringify(k)); } catch(e){} };
 const saveAlmacen  = (k) => { try { AppStorage.setItem(ALMACEN_KEY,  JSON.stringify(k)); } catch(e){} };
 const saveFreezer  = (k) => { try { AppStorage.setItem(FREEZER_KEY,  JSON.stringify(k)); } catch(e){} };
@@ -10302,6 +10196,20 @@ function App() {
           onClose={() => setSettingsOpen(false)}
           onReset={() => { setCfg(defaultConfig); flash('Preferencias restablecidas'); }}
           onEditDashboard={() => { setSettingsOpen(false); openEditor(); }}
+          onClearData={() => {
+            if (!confirm('⚠️ Esto borrará TODOS tus datos (tareas, materias, misiones, calendario, cocina, finanzas, etc.) de esta cuenta.\n\n¿Estás seguro?')) return;
+            const SH_KEYS = [
+              'studyhub_v3_tasks','studyhub_v3_subjects','studyhub_v3_missions',
+              'studyhub_v3_calendar','studyhub_v3_diary','studyhub_v3_diary_entries',
+              'studyhub_energy_v1','studyhub_daily_v1','studyhub_pomo_log','studyhub_pomo_task',
+              'studyhub_casa_v1','studyhub_fin_v1','studyhub_recipes_v1','studyhub_ocio_v1',
+              'studyhub_v3_kitchen','studyhub_v3_almacen','studyhub_v3_freezer','studyhub_v3_groceries',
+              'studyhub_v3_config','studyhub_sounds','studyhub_tg_banner_dismissed','studyhub_pwa_banner_dismissed',
+            ];
+            SH_KEYS.forEach(k => AppStorage.removeItem(k));
+            try { localStorage.removeItem('studyhub-config'); } catch(e) {}
+            setTimeout(() => window.location.reload(), 800);
+          }}
         />
       )}
 
