@@ -114,15 +114,60 @@ async function appendToDiary(supabase: ReturnType<typeof createClient>, userId: 
   )
 }
 
-// Clasificar con Gemini
-async function classifyWithGemini(text: string, geminiKey: string): Promise<Record<string, unknown>> {
-  const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: `Sos un asistente de la app de estudio StudyHub. Analizá este mensaje y clasificalo.
+// Clasificador por palabras clave (fallback si Gemini falla)
+function classifyByKeywords(text: string): Record<string, unknown> {
+  const t = text.toLowerCase()
+
+  // Finanzas — monto explícito o palabras de gasto
+  if (/gasté|gaste|pagué|pague|compré por|costó|costo|me cobró|\$\d|\d+\s*pesos/.test(t)) {
+    const amountMatch = text.match(/\d+/)
+    return { section: "finanzas", confidence: 0.8, data: { title: text, amount: amountMatch ? parseInt(amountMatch[0]) : null, type: "gasto", priority: "medium", xp: 5 } }
+  }
+
+  // Compras — lista de compras
+  if (/^comprar\s|necesito comprar|lista de compras|me falta|falta\s/.test(t)) {
+    return { section: "compras", confidence: 0.85, data: { title: text, priority: "medium", xp: 5 } }
+  }
+
+  // Calendario — evento con fecha
+  if (/parcial|final|examen|entrega|reunión|reunion|clase\s+el|evento/.test(t)) {
+    return { section: "calendario", confidence: 0.8, data: { title: text, priority: "high", xp: 20 } }
+  }
+
+  // Misiones — objetivo grande
+  if (/misión|mision|quiero terminar|quiero hacer|proyecto|objetivo|meta/.test(t)) {
+    return { section: "misiones", confidence: 0.8, data: { title: text, priority: "medium", xp: 20 } }
+  }
+
+  // Diario — nota personal
+  if (/anotar|nota:|diario|recordar que|pensar en|reflexión|reflexion/.test(t)) {
+    return { section: "diario", confidence: 0.85, data: { title: text, priority: "low", xp: 5 } }
+  }
+
+  // Tareas — estudiar, hacer, leer
+  if (/estudiar|leer|hacer|tp |trabajo práctico|práctica|practica|repasar|capítulo|capitulo|ejercicio|resolver/.test(t)) {
+    return { section: "tareas", confidence: 0.8, data: { title: text, priority: "medium", xp: 10 } }
+  }
+
+  return { section: null, confidence: 0.3, data: { title: text } }
+}
+
+// Clasificar con Gemini (con fallback a keywords y debug de errores)
+async function classifyWithGemini(text: string, geminiKey: string): Promise<Record<string, unknown> & { _geminiError?: string }> {
+  // Si no hay API key, usar keywords directamente
+  if (!geminiKey) {
+    console.log("GEMINI_API_KEY no configurado, usando clasificador por keywords")
+    return classifyByKeywords(text)
+  }
+
+  try {
+    const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Sos un asistente de la app de estudio StudyHub. Analizá este mensaje y clasificalo.
 
 ${SECTION_INFO}
 
@@ -138,29 +183,43 @@ Respondé SOLO con un JSON (sin markdown, sin explicación):
     "desc": "descripción adicional si la hay (o vacío)",
     "date": "YYYY-MM-DD si hay fecha mencionada, o null",
     "priority": "high|medium|low (según urgencia implícita)",
-    "xp": número entre 5 y 60 según importancia,
-    "amount": número si es gasto/ingreso (o null),
-    "type": "gasto|ingreso si es finanzas (o null)"
+    "xp": 10,
+    "amount": null,
+    "type": null
   },
-  "confidence": número entre 0 y 1,
+  "confidence": 0.9,
   "needs_clarification": false
 }
 
 Si el mensaje es muy ambiguo (confidence < 0.6), poné "needs_clarification": true y en "data.clarification" la pregunta a hacerle al usuario.`
-        }]
-      }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 400 }
+          }]
+        }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 400 }
+      })
     })
-  })
 
-  const json = await response.json()
-  const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
-  try {
-    // Limpiar posibles backticks de markdown que Gemini a veces agrega
+    const json = await response.json()
+
+    // Debug: loguear respuesta completa de Gemini
+    console.log("Gemini status:", response.status)
+    console.log("Gemini response:", JSON.stringify(json).slice(0, 500))
+
+    // Si hay error de API (clave inválida, quota, etc.)
+    if (json.error) {
+      console.log("Gemini API error:", json.error.message)
+      const fallback = classifyByKeywords(text)
+      return { ...fallback, _geminiError: json.error.message }
+    }
+
+    const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-    return JSON.parse(cleaned)
-  } catch {
-    return { confidence: 0 }
+    const parsed = JSON.parse(cleaned)
+    return parsed
+
+  } catch (e) {
+    console.log("Gemini fetch error:", (e as Error).message)
+    // Fallback a keywords
+    return classifyByKeywords(text)
   }
 }
 
@@ -637,6 +696,11 @@ serve(async (req) => {
 
     // ── PASO 5: Clasificar con Gemini y empezar flujo ────────────────────────
     const intent = await classifyWithGemini(text, geminiKey)
+
+    // Debug temporal: si Gemini tuvo error, avisarlo
+    if (intent._geminiError) {
+      console.log("Gemini error (usando fallback keywords):", intent._geminiError)
+    }
 
     if (!intent.section || (intent.confidence as number) < 0.5) {
       await sendMessage(chatId, telegramToken,
