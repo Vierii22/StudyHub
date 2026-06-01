@@ -206,7 +206,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: var(--r-xl);
   padding: 22px;
   display: grid;
-  grid-template-columns: 200px 1fr 280px;
+  grid-template-columns: 200px 1fr;
   gap: 18px;
   box-shadow: var(--shadow-card);
   position: relative;
@@ -214,6 +214,125 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+/* ============================================================
+   Rail brand (logo at top of sidebar)
+   ============================================================ */
+.rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px 14px;
+  flex-shrink: 0;
+}
+.rail-brand__logo {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.rail-brand__text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+:root[data-sidebar="collapsed"] .rail-brand { padding: 4px 0 14px; justify-content: center; }
+:root[data-sidebar="collapsed"] .rail-brand__text { display: none; }
+
+/* ============================================================
+   Topbar profile mini (left of top-row)
+   ============================================================ */
+.topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  transition: background var(--d-fast) var(--ease);
+}
+.topbar-profile:hover { background: var(--inner-2); }
+.topbar-profile__av {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--grad-1);
+  display: grid; place-items: center;
+  font-size: 15px; font-weight: 600; color: white;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(139,92,246,0.2);
+  position: relative;
+}
+.topbar-profile__av::after {
+  content: "";
+  position: absolute;
+  right: 2px; bottom: 2px;
+  width: 9px; height: 9px;
+  background: #4ade80;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--card);
+}
+.topbar-profile__av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.topbar-profile__name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.2; }
+.topbar-profile__role { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+/* ============================================================
+   Topbar banner (compact banner in top-row)
+   ============================================================ */
+.topbar-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #0d0d12 0%, #150d26 55%, #0d0d12 100%);
+  border-radius: var(--r-md);
+  padding: 10px 20px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(139,92,246,0.12);
+}
+.topbar-banner::before {
+  content: '';
+  position: absolute;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.13) 0%, transparent 70%);
+  top: -80px; left: -40px;
+  pointer-events: none;
+}
+.topbar-banner__logo {
+  width: 34px; height: 34px;
+  position: relative; z-index: 1;
+  flex-shrink: 0;
+}
+.topbar-banner__title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  margin: 0;
+  position: relative; z-index: 1;
+}
+.topbar-banner__title span {
+  background: linear-gradient(90deg, #8b5cf6 0%, #d946ef 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.topbar-banner__sub {
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 4px 0 0 0;
+  position: relative; z-index: 1;
 }
 
 /* ============================================================
@@ -1230,11 +1349,7 @@ input, textarea { font: inherit; color: inherit; }
    Responsive
    ============================================================ */
 @media (max-width: 1180px) {
-  .shell { grid-template-columns: 180px 1fr 260px; }
-}
-@media (max-width: 960px) {
   .shell { grid-template-columns: 180px 1fr; }
-  .right { display: none; }
 }
 
 /* ============================================================
@@ -1276,12 +1391,8 @@ input, textarea { font: inherit; color: inherit; }
   .top-row { gap: 8px; margin-bottom: 8px; }
   .search { font-size: 13px; }
   .search-cmd-hint { display: none; }
-
-  /* Banner — más pequeño */
-  .banner { height: 80px !important; padding: 0 16px !important; gap: 12px !important; border-radius: 12px !important; }
-  .banner-logo { width: 56px !important; height: 56px !important; }
-  .banner-title { font-size: 28px !important; letter-spacing: -1.5px !important; }
-  .banner-tagline { font-size: 9px !important; letter-spacing: 3px !important; margin-top: 4px !important; }
+  .topbar-profile { display: none; }
+  .topbar-banner { display: none; }
 
   /* Widget grid — una columna */
   .widget-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
@@ -1901,7 +2012,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* Sidebar collapsed */
-:root[data-sidebar="collapsed"] .shell { grid-template-columns: 64px 1fr 280px; }
+:root[data-sidebar="collapsed"] .shell { grid-template-columns: 64px 1fr; }
 :root[data-sidebar="collapsed"] .r-item { justify-content: center; padding: 11px 0; }
 :root[data-sidebar="collapsed"] .r-item > span:not(.r-item__icon),
 :root[data-sidebar="collapsed"] .r-item__chev { display: none; }
@@ -1909,7 +2020,7 @@ input, textarea { font: inherit; color: inherit; }
 :root[data-sidebar="collapsed"] .quick-toggle { flex-direction: column; padding: 6px 4px; }
 
 @media (max-width: 1180px) {
-  :root[data-sidebar="collapsed"] .shell { grid-template-columns: 64px 1fr 260px; }
+  :root[data-sidebar="collapsed"] .shell { grid-template-columns: 64px 1fr; }
 }
 
 /* ============================================================
@@ -2285,17 +2396,9 @@ body.is-resizing * { cursor: nwse-resize !important; }
 }
 .edit-drawer__reset:hover { background: var(--inner-2); color: var(--text); }
 
-/* Sin panel derecho (secciones fuera del dashboard) */
-.shell--no-right { grid-template-columns: 200px 1fr; }
-:root[data-sidebar="collapsed"] .shell--no-right { grid-template-columns: 64px 1fr; }
-
-/* Edit mode: hide right column */
-.shell--editing { grid-template-columns: 200px 1fr 0; }
-.shell--editing .right { display: none; }
-:root[data-sidebar="collapsed"] .shell--editing { grid-template-columns: 64px 1fr 0; }
-@media (max-width: 1180px) {
-  :root[data-sidebar="collapsed"] .shell--editing { grid-template-columns: 64px 1fr 0; }
-}
+/* Edit mode */
+.shell--editing { grid-template-columns: 200px 1fr; }
+:root[data-sidebar="collapsed"] .shell--editing { grid-template-columns: 64px 1fr; }
 
 /* Pulse hint on Editar button */
 .btn-edit-pulse {
@@ -9604,17 +9707,29 @@ function App() {
 
             {!editMode && (
               <>
-                <div className="banner">
-                  <img src="/assets/icon.png" className="banner-logo" alt="StudyHub"/>
-                  <div>
-                    <h1 className="banner-title">Study<span>Hub</span></h1>
-                    <p className="banner-tagline">Tu centro de estudio</p>
-                  </div>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom:4, gap:10, flexWrap:'wrap'}}>
-                  <div style={{fontSize: 13, color: 'var(--text-3)'}}>
-                    {dashMode === 'manana' ? '🌅' : dashMode === 'tarde' ? '☀️' : '🌙'}{' '}
-                    Hola, {nameNode}. Tenés <b style={{color:'var(--text)'}}>{tasks.filter(t=>!t.done).length}</b> tareas activas y <b style={{color:'var(--text)'}}>{completedPct}%</b> del día listo.
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0 4px', marginBottom:4, gap:10, flexWrap:'wrap'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+                    <div style={{fontSize:13, color:'var(--text-3)'}}>
+                      {dashMode === 'manana' ? '🌅' : dashMode === 'tarde' ? '☀️' : '🌙'}{' '}
+                      Hola, {nameNode}. Tenés <b style={{color:'var(--text)'}}>{tasks.filter(t=>!t.done).length}</b> tareas activas y <b style={{color:'var(--text)'}}>{completedPct}%</b> del día listo.
+                    </div>
+                    {/* Modo día */}
+                    <div style={{display:'flex', gap:2, background:'var(--inner)', borderRadius:10, padding:'3px'}}>
+                      {[['manana','🌅'],['tarde','☀️'],['noche','🌙']].map(([id,emoji]) => (
+                        <button key={id} onClick={() => setDashMode(id)}
+                          style={{padding:'4px 9px', borderRadius:7, fontSize:12, background: dashMode===id ? 'var(--card-2)' : 'transparent',
+                            color: dashMode===id ? 'var(--text)' : 'var(--text-3)', fontWeight: dashMode===id ? 600 : 400, transition:'all 120ms', cursor:'pointer'}}>
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Parciales toggle */}
+                    <button className="parciales-toggle" data-on={parcialesMode}
+                      onClick={() => setParcialesMode(!parcialesMode)}
+                      title={parcialesMode ? 'Desactivar modo parciales' : 'Activar modo parciales'}>
+                      <span className="parciales-toggle__dot"/>
+                      {parcialesMode ? '🎯 PARCIALES — ON' : 'Modo Parciales'}
+                    </button>
                   </div>
                   <div style={{display:'flex', gap:8, alignItems:'center'}}>
                     {(() => { const s = getStreak(); return s > 0 ? (
@@ -9628,6 +9743,21 @@ function App() {
                     </button>
                   </div>
                 </div>
+
+                {parcialesMode && (
+                  <div className="parciales-banner">
+                    <span className="parciales-banner__dot"/>
+                    <strong>Modo Parciales activo</strong> — Solo ves lo crítico. Enfocate.
+                    <button style={{marginLeft:'auto', fontSize:11, color:'#fca5a5', cursor:'pointer'}} onClick={() => setParcialesMode(false)}>Desactivar</button>
+                  </div>
+                )}
+                {!parcialesMode && tasks.filter(t=>!t.done && t.priority==='high').length >= 5 && (
+                  <div style={{background:'rgba(248,113,113,0.06)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:'var(--r-sm)', padding:'8px 16px', display:'flex', alignItems:'center', gap:10, fontSize:12, color:'#fca5a5', marginBottom:4}}>
+                    🚨 <strong>Semana de emergencia:</strong> tenés {tasks.filter(t=>!t.done && t.priority==='high').length} tareas urgentes.
+                    <button style={{marginLeft:'auto', fontSize:11, cursor:'pointer', color:'#f87171', fontWeight:600}}
+                      onClick={() => setParcialesMode(true)}>Activar Modo Parciales →</button>
+                  </div>
+                )}
 
                 {!parcialesMode && completedPct === 100 && tasks.length > 0 && (
                   <div style={{background:'linear-gradient(135deg,rgba(74,222,128,0.1),rgba(52,211,153,0.06))', border:'1px solid rgba(74,222,128,0.25)', borderRadius:12, padding:'12px 16px', marginBottom:8, display:'flex', gap:12, alignItems:'center'}}>
@@ -9941,9 +10071,15 @@ function App() {
       )}
 
       {/* SHELL */}
-      <div className={"shell" + (editMode ? " shell--editing" : "") + (route !== 'dashboard' ? " shell--no-right" : "")}>
+      <div className={"shell" + (editMode ? " shell--editing" : "")}>
         {/* LEFT NAV */}
         <nav className="rail">
+          {/* Brand logo */}
+          <div className="rail-brand">
+            <img src="/assets/icon.png" className="rail-brand__logo" alt="S"/>
+            <span className="rail-brand__text">StudyHub</span>
+          </div>
+
           {[
             { id: 'dashboard', icon: I.Home,        label: 'Dashboard' },
             { id: 'facu',      icon: I.Book,        label: 'Facultad' },
@@ -10008,91 +10144,31 @@ function App() {
 
         {/* CENTER */}
         <div className="center">
-          {/* SUMMARY STRIP — solo en Dashboard */}
-          {route === 'dashboard' && <div style={{display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:4}}>
-            {/* Task summary */}
-            <div className="topbar-summary" onClick={() => navigate('tareas')} title="Ver tareas">
-              <div className="tbs-item">
-                <div>
-                  <div className={"tbs-item__num" + (tasks.filter(t=>!t.done && t.priority==='high').length > 0 ? ' tbs-item__num--warn' : '')}>
-                    {tasks.filter(t=>!t.done).length}
-                  </div>
-                  <div className="tbs-item__label">pendientes</div>
-                </div>
-              </div>
-              <div className="tbs-item">
-                <div>
-                  <div className="tbs-item__num tbs-item__num--ok">{tasks.filter(t=>t.done).length}</div>
-                  <div className="tbs-item__label">completadas</div>
-                </div>
-              </div>
-              {tasks.filter(t=>!t.done && t.priority==='high').length > 0 && (
-                <div className="tbs-item">
-                  <div>
-                    <div className="tbs-item__num tbs-item__num--warn">{tasks.filter(t=>!t.done && t.priority==='high').length}</div>
-                    <div className="tbs-item__label">urgentes</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Energy pill */}
-            <div className="energy-pill" title="Energía de hoy" onClick={() => navigate('dashboard')}>
-              {energyToday ? (
-                <>
-                  <span style={{fontSize:14}}>{energyToday.humor || '⚡'}</span>
-                  <div>
-                    <div className="energy-pill__bar">
-                      <div className="energy-pill__fill" style={{width:(energyToday.energia/5*100)+'%', background: energyToday.energia <= 2 ? '#f87171' : energyToday.energia === 3 ? '#fbbf24' : '#4ade80'}}/>
-                    </div>
-                    <div style={{fontSize:10, color:'var(--text-4)', marginTop:2}}>{energyToday.sueno || '?'}h sueño</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span style={{fontSize:12}}>⚡</span>
-                  <span style={{fontSize:11, color:'var(--text-3)'}}>Sin check-in</span>
-                </>
-              )}
-            </div>
-
-            {/* Dashboard mode selector */}
-            <div style={{display:'flex', gap:2, background:'var(--inner)', borderRadius:10, padding:'3px'}}>
-              {[['manana','🌅'],['tarde','☀️'],['noche','🌙']].map(([id,emoji]) => (
-                <button key={id} onClick={() => setDashMode(id)}
-                  style={{padding:'5px 10px', borderRadius:7, fontSize:12, background: dashMode===id ? 'var(--card-2)' : 'transparent',
-                    color: dashMode===id ? 'var(--text)' : 'var(--text-3)', fontWeight: dashMode===id ? 600 : 400, transition:'all 120ms', cursor:'pointer'}}>
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
-            {/* Parciales / Emergency toggle */}
-            <button className="parciales-toggle" data-on={parcialesMode}
-              onClick={() => setParcialesMode(!parcialesMode)}
-              title={parcialesMode ? 'Desactivar modo parciales' : 'Activar modo parciales — simplifica el dashboard'}>
-              <span className="parciales-toggle__dot"/>
-              {parcialesMode ? '🎯 PARCIALES — ON' : 'Modo Parciales'}
-            </button>
-          </div>}
-
-          {parcialesMode && (
-            <div className="parciales-banner">
-              <span className="parciales-banner__dot"/>
-              <strong>Modo Parciales activo</strong> — Solo ves lo crítico. Enfocate.
-              <button style={{marginLeft:'auto', fontSize:11, color:'#fca5a5', cursor:'pointer'}} onClick={() => setParcialesMode(false)}>Desactivar</button>
-            </div>
-          )}
-          {!parcialesMode && tasks.filter(t=>!t.done && t.priority==='high').length >= 5 && (
-            <div style={{background:'rgba(248,113,113,0.06)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:'var(--r-sm)', padding:'8px 16px', display:'flex', alignItems:'center', gap:10, fontSize:12, color:'#fca5a5', marginBottom:4}}>
-              🚨 <strong>Semana de emergencia:</strong> tenés {tasks.filter(t=>!t.done && t.priority==='high').length} tareas urgentes.
-              <button style={{marginLeft:'auto', fontSize:11, cursor:'pointer', color:'#f87171', fontWeight:600}}
-                onClick={() => setParcialesMode(true)}>Activar Modo Parciales →</button>
-            </div>
-          )}
-
-          {/* TOP ROW (search + chat + bell) — always visible */}
+          {/* TOP ROW (profile + banner + search + icons) — always visible */}
           <div className="top-row">
+            {/* Profile mini — izquierda */}
+            <div className="topbar-profile" onClick={() => setSettingsOpen(true)} title="Editar perfil">
+              <div className="topbar-profile__av">
+                {cfg.photo ? <img src={cfg.photo} alt="foto"/> : (cfg.initial || '?')}
+              </div>
+              <div>
+                <div className="topbar-profile__name">{cfg.name || 'Tu nombre'}</div>
+                <div className="topbar-profile__role">{cfg.career || '+ Completar perfil'}</div>
+              </div>
+            </div>
+
+            {/* Banner compacto — centro, solo en dashboard */}
+            {route === 'dashboard' && !editMode && (
+              <div className="topbar-banner">
+                <img src="/assets/icon.png" className="topbar-banner__logo" alt="StudyHub"/>
+                <div>
+                  <h2 className="topbar-banner__title">Study<span>Hub</span></h2>
+                  <p className="topbar-banner__sub">Tu centro de estudio</p>
+                </div>
+              </div>
+            )}
+
+            {/* Search — flex crece */}
             <div style={{position:'relative', flex:1}}>
               <label className="search" style={{width:'100%'}}>
                 <span className="search__icon"><I.Search size={15}/></span>
@@ -10216,64 +10292,6 @@ function App() {
           </div>
         </div>
 
-        {/* RIGHT — solo en Dashboard */}
-        {route === 'dashboard' && <aside className="right">
-          <div className="profile">
-            <div className={"profile__avatar" + (cfg.photo?' profile__avatar--photo':'')}
-              onClick={() => setSettingsOpen(true)} title="Editar perfil" style={{cursor:'pointer'}}>
-              {cfg.photo ? <img src={cfg.photo} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (cfg.initial || '?')}
-            </div>
-            <h3 className="profile__name" style={{cursor:'pointer'}} onClick={() => setSettingsOpen(true)}>{cfg.name || 'Tu nombre'}</h3>
-            <p className="profile__role" style={{cursor: cfg.career ? 'default' : 'pointer', color: cfg.career ? '' : 'var(--violet-2)', fontSize:12}}
-              onClick={() => !cfg.career && setSettingsOpen(true)}>
-              {cfg.career || '+ Completar perfil'}
-            </p>
-            <div className="profile__actions">
-              <button className="profile__btn" onClick={() => navigate('chat')} aria-label="Chat"><I.Chat size={16}/></button>
-              <button className="profile__btn" onClick={() => navigate('cal')} aria-label="Calendario"><I.Calendar size={16}/></button>
-              <button className="profile__btn" onClick={() => navigate('diario')} aria-label="Diario"><I.Edit size={16}/></button>
-            </div>
-          </div>
-
-          <div className="about">
-            <h4 className="about__title">Mis materias</h4>
-            {cfg.facultad && <p className="about__desc" style={{marginBottom:8}}>📍 {cfg.facultad}</p>}
-            <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:4}}>
-              {(() => {
-                const avClasses = ['v1','v2','v3','v4','v1'];
-                const rawMaterias = (cfg.materias || '').split(',').map(m => m.trim()).filter(Boolean);
-                if (rawMaterias.length === 0) return (
-                  <div style={{fontSize:13,color:'var(--text-3)',padding:'8px 0'}}>
-                    Agregá tus materias en <b style={{color:'var(--violet-2)',cursor:'pointer'}} onClick={() => setSettingsOpen(true)}>Configuración → Perfil</b>
-                  </div>
-                );
-                return rawMaterias.map((m, i) => {
-                  const initials = m.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-                  return (
-                    <div key={i} className="p-row" onClick={() => { navigate('facu'); flash('Abriendo ' + m); }}>
-                      <div className={"p-row__av t-avatar--" + avClasses[i % avClasses.length]}>{initials}</div>
-                      <div style={{flex:1, minWidth:0}}>
-                        <div className="p-row__name">{m}</div>
-                        <div className="p-row__role">Ver en Facultad →</div>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-
-          <div className="send">
-            <div className="send__left">
-              <p className="send__label">Total XP · {(9900 + totalXp).toLocaleString()}</p>
-              <p className="send__sub">Nivel {String(calcLevel(totalXp).level).padStart(2,'0')} · {calcLevel(totalXp).xpForNext - calcLevel(totalXp).xpInLevel} XP para subir</p>
-            </div>
-            <div className="send__value" style={{fontSize:22, fontWeight:800}}>{calcLevel(totalXp).level}</div>
-          </div>
-          <div style={{height:4, background:'var(--inner-2)', borderRadius:2, marginTop:-8, overflow:'hidden'}}>
-            <div style={{height:'100%', width:calcLevel(totalXp).pct+'%', background:'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius:2, transition:'width 800ms cubic-bezier(0.22,1,0.36,1)'}}/>
-          </div>
-        </aside>}
       </div>
 
       {/* SETTINGS MODAL */}
