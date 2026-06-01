@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const TELEGRAM_API = "https://api.telegram.org"
-const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 // ─── Formas exactas de la app (deben matchear 100%) ──────────────────────────
 // studyhub_v3_tasks:    [{id,name,avClass,initials,progress,xp,status,statusTone,done,createdAt,dueDate?}]
@@ -710,8 +710,8 @@ serve(async (req) => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: "Respondé solo: ok" }] }],
-              generationConfig: { temperature: 0, maxOutputTokens: 10 }
+              contents: [{ parts: [{ text: "Respondé solo con la palabra: ok" }] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 50 }
             })
           })
           const j = await r.json()
