@@ -12,25 +12,30 @@ const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemi
 // studyhub_v3_subjects: [{id,name,code,pct,prof,next,color,notes,tp:[]}]
 
 const SECTION_INFO = `
-Secciones disponibles y qué guardar en cada una:
-- tareas (studyhub_v3_tasks): cualquier tarea, trabajo práctico, actividad a hacer, entrega, estudio pendiente
-- misiones (studyhub_v3_missions): objetivos más grandes con múltiples pasos, proyectos, challenges personales
-- calendario (studyhub_v3_calendar): eventos con fecha específica: parciales, finales, reuniones, entregas
-- diario (studyhub_v3_diary): notas libres, reflexiones, pensamientos, "anotar que..."
-- materias (studyhub_v3_subjects): materias/asignaturas de la facultad
-- cocina/heladera (studyhub_v3_kitchen): alimentos en heladera o almacén
-- compras (studyhub_v3_groceries): lista de compras, cosas a comprar
-- finanzas (studyhub_fin_v1): gastos, ingresos, presupuesto
-- ocio (studyhub_ocio_v1): series, películas, videojuegos, libros, anime
+Secciones disponibles:
+- tareas: cualquier cosa a hacer, estudiar, entregar, resolver. Mencionar una materia (álgebra, análisis, programación) NO significa agregar la materia, significa que la tarea ES de esa materia.
+- misiones: objetivos grandes con múltiples pasos o etapas. "quiero terminar", "proyecto de", "objetivo".
+- calendario: eventos con fecha concreta. Parciales, finales, entregas, reuniones.
+- diario: notas personales, reflexiones, "anotar que", "recordar que".
+- materias: SOLO si el usuario quiere AGREGAR UNA MATERIA NUEVA que no existe todavía. Ej: "agregar la materia física" o "nueva materia: química".
+- cocina: alimentos en heladera, freezer o almacén.
+- compras: cosas para comprar, lista de compras.
+- finanzas: gastos, ingresos, presupuesto. Cualquier monto de dinero.
+- ocio: series, películas, juegos, libros, anime.
 
-Ejemplos de clasificación:
-"estudiar análisis mañana" → calendario (tiene fecha) o tareas (sin fecha exacta)
-"tengo que entregar el TP el viernes" → calendario + tareas
+REGLA CRÍTICA: Cuando el usuario menciona una materia (álgebra, análisis, programación, etc.) junto con algo que hacer, la sección es TAREAS o MISIONES, nunca "materias". El nombre de la materia va en el campo "subject" y en el "title".
+
+Ejemplos correctos:
+"estudiar álgebra" → tareas, title: "Estudiar Álgebra", subject: "Álgebra"
+"hacer ejercicios de análisis" → tareas, title: "Ejercicios de Análisis", subject: "Análisis"
+"resolver práctica 5 de álgebra" → tareas, title: "Práctica 5 de Álgebra", subject: "Álgebra"
+"terminar TP de programación" → tareas, title: "TP de Programación", subject: "Programación"
+"misión: aprobar álgebra" → misiones, title: "Aprobar Álgebra", subject: "Álgebra"
+"parcial de álgebra el 15 de julio" → calendario, title: "Parcial Álgebra", date: "2025-07-15"
+"agregar la materia física" → materias, title: "Física"
 "gasté 3000 en fotocopias" → finanzas
 "comprar leche y pan" → compras
-"quiero terminar el proyecto final" → misiones
-"parcial de álgebra el 15 de julio" → calendario
-"anotar que la clase fue interesante" → diario
+"anotar que la clase estuvo buena" → diario
 `
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -177,12 +182,12 @@ Respondé SOLO con un JSON (sin markdown, sin explicación):
 {
   "section": "tareas|misiones|calendario|diario|materias|cocina|compras|finanzas|ocio",
   "action": "add",
-  "item_type": "descripción breve del tipo de item",
   "data": {
-    "title": "texto principal del item",
-    "desc": "descripción adicional si la hay (o vacío)",
+    "title": "texto descriptivo del item (incluí la materia si aplica, ej: 'Práctica 5 de Álgebra')",
+    "desc": "descripción adicional si la hay, o vacío",
+    "subject": "nombre de la materia si se menciona (ej: 'Álgebra', 'Análisis'), o null",
     "date": "YYYY-MM-DD si hay fecha mencionada, o null",
-    "priority": "high|medium|low (según urgencia implícita)",
+    "priority": "high|medium|low",
     "xp": 10,
     "amount": null,
     "type": null
@@ -191,7 +196,7 @@ Respondé SOLO con un JSON (sin markdown, sin explicación):
   "needs_clarification": false
 }
 
-Si el mensaje es muy ambiguo (confidence < 0.6), poné "needs_clarification": true y en "data.clarification" la pregunta a hacerle al usuario.`
+Si el mensaje es ambiguo (confidence < 0.6), poné "needs_clarification": true y agregá "data.clarification" con la pregunta al usuario.`
           }]
         }],
         generationConfig: {
@@ -324,7 +329,7 @@ function buildItem(section: string, draft: Record<string, unknown>, subtasks?: s
         name: title,
         avClass: avClasses[Math.floor(Math.random() * avClasses.length)],
         initials,
-        progress: (data.desc as string) || "En curso",
+        progress: (data.subject as string) ? `${data.subject} · ${(data.desc as string) || "En curso"}` : ((data.desc as string) || "En curso"),
         xp: (data.xp as number) || 10,
         status: "Pendiente",
         statusTone: "blue",
@@ -448,6 +453,7 @@ function formatConfirmMessage(section: string, draft: Record<string, unknown>): 
   }
 
   let details = `<b>${data.title as string || "Item"}</b>`
+  if (data.subject) details += `\n📚 Materia: ${data.subject}`
   if (data.desc) details += `\n📝 ${data.desc}`
   if (data.date) details += `\n📅 ${data.date}`
   if (data.priority === "high") details += "\n🔴 Prioridad alta"
