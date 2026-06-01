@@ -694,6 +694,43 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
+    // Comando de debug — muestra estado de secrets y prueba Gemini en vivo
+    if (text === "/debug") {
+      const hasGemini = !!geminiKey
+      const hasToken = !!telegramToken
+      let geminiTest = "no probado"
+      let geminiRaw = ""
+      if (hasGemini) {
+        try {
+          const r = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "Respondé solo: ok" }] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 10 }
+            })
+          })
+          const j = await r.json()
+          geminiRaw = JSON.stringify(j).slice(0, 300)
+          if (j.error) {
+            geminiTest = `❌ Error ${j.error.code}: ${j.error.message}`
+          } else if (j.candidates?.[0]?.content?.parts?.[0]?.text) {
+            geminiTest = `✅ Funciona: "${j.candidates[0].content.parts[0].text}"`
+          } else {
+            geminiTest = `⚠️ Respuesta rara: ${geminiRaw}`
+          }
+        } catch (e) {
+          geminiTest = `❌ Fetch error: ${(e as Error).message}`
+        }
+      }
+      await sendMessage(chatId, telegramToken,
+        `🔧 <b>Debug</b>\n\n` +
+        `TELEGRAM_BOT_TOKEN: ${hasToken ? "✅" : "❌"}\n` +
+        `GEMINI_API_KEY: ${hasGemini ? "✅ presente" : "❌ no configurada"}\n\n` +
+        `Gemini test: ${geminiTest}`)
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }
+
     // ── PASO 5: Clasificar con Gemini y empezar flujo ────────────────────────
     const intent = await classifyWithGemini(text, geminiKey)
 
