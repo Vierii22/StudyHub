@@ -3628,14 +3628,18 @@ function CommandPalette({ onClose, cmdCtx }) {
 
   React.useEffect(() => { inputRef.current?.focus(); }, []);
 
+  // Patch facu label based on occupation
+  const _facuLabel = (() => { try { return JSON.parse(localStorage.getItem('studyhub_v3_config') || '{}').ocupacion === 'secundario' ? 'Secundaria' : 'Facultad'; } catch(e) { return 'Facultad'; } })();
+  const _cmdItems = CMD_ITEMS.map(i => i.id === 'go-facu' ? { ...i, title: _facuLabel } : i);
+
   // Filter
   const filtered = query.trim()
-    ? CMD_ITEMS.filter(i =>
+    ? _cmdItems.filter(i =>
         i.title.toLowerCase().includes(query.toLowerCase()) ||
         i.hint.toLowerCase().includes(query.toLowerCase()) ||
         i.group.toLowerCase().includes(query.toLowerCase())
       )
-    : CMD_ITEMS;
+    : _cmdItems;
 
   // Reset active when filter changes
   React.useEffect(() => { setActiveIdx(0); }, [query]);
@@ -3926,14 +3930,19 @@ function LoginScreen({ onLogin }) {
 function OnboardingScreen({ onDone }) {
   const [step, setStep] = useState(0);
   const [nombre, setNombre] = useState('');
-  const [carrera, setCarrera] = useState('');
-  const [facultad, setFacultad] = useState('');
-  const [materias, setMaterias] = useState('');
   const [foto, setFoto] = useState('');
+  const [ocupacion, setOcupacion] = useState('');
+  const [institucion, setInstitucion] = useState('');
+  const [carrera, setCarrera] = useState('');
+  const [trabajoDesc, setTrabajoDesc] = useState('');
+  const [anio, setAnio] = useState('1');
+  const [materiasList, setMateriasList] = useState(['']);
   const [saving, setSaving] = useState(false);
   const [tgCode, setTgCode] = useState('');
   const [tgCopied, setTgCopied] = useState(false);
   const [tgLoading, setTgLoading] = useState(false);
+
+  const TOTAL_STEPS = 4;
 
   const handleFoto = (e) => {
     const file = e.target.files[0];
@@ -3944,22 +3953,50 @@ function OnboardingScreen({ onDone }) {
     reader.readAsDataURL(file);
   };
 
+  const addMateria = () => setMateriasList(l => [...l, '']);
+  const updateMateria = (i, v) => setMateriasList(l => l.map((m, idx) => idx === i ? v : m));
+  const removeMateria = (i) => setMateriasList(l => l.length > 1 ? l.filter((_, idx) => idx !== i) : ['']);
+
+  const handleNext = () => {
+    if (step === 0 && !nombre.trim()) { alert('Ingresá tu nombre'); return; }
+    if (step === 1 && !ocupacion) { alert('Elegí una opción'); return; }
+    setStep(s => s + 1);
+  };
+
   const handleDone = () => {
     if (!nombre.trim()) { alert('Ingresá tu nombre'); return; }
     setSaving(true);
     try {
-      const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
+      const filledMaterias = materiasList.filter(m => m.trim());
+      const subjects = filledMaterias.map((m, i) => {
+        const name = m.trim();
+        const code = name.split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').slice(0, 3);
+        return { id: Date.now() + i, name, code, pct: 0, prof: '', next: '', color: ['v1','v2','v3','v4'][i % 4], notes: '', tp: [] };
+      });
       const updated = {
-        ...cfg,
         name: nombre.trim(),
-        career: carrera.trim(),
-        facultad: facultad.trim(),
-        materias: materias.trim(),
         initial: nombre.trim()[0]?.toUpperCase() || '?',
         photo: foto,
+        ocupacion,
+        facultad: ocupacion === 'universitario' ? institucion.trim() : '',
+        escuela: ocupacion === 'secundario' ? institucion.trim() : '',
+        carrera: ocupacion === 'universitario' ? carrera.trim() : '',
+        trabajo: ocupacion === 'trabajo' ? trabajoDesc.trim() : '',
+        anio,
+        materias: filledMaterias.join(', '),
+        theme: 'dark', accent: 'violet', density: 'comfy', radius: 'medium',
+        animations: true, sidebar: 'expanded', greeting: 'italic', bgDeco: true,
+        widgets: [
+          { id: 'stat-xp', span: 6 }, { id: 'stat-tasks', span: 6 },
+          { id: 'chart-week', span: 7 }, { id: 'ring-cuatri', span: 5 },
+          { id: 'upgrade-pro', span: 4 }, { id: 'tasks-table', span: 8 },
+        ],
         _onboardingDone: true,
       };
-      localStorage.setItem('studyhub-config', JSON.stringify(updated));
+      AppStorage.setItem('studyhub_v3_config', JSON.stringify(updated));
+      if (subjects.length > 0) {
+        AppStorage.setItem('studyhub_v3_subjects', JSON.stringify(subjects));
+      }
     } catch(e) {}
     setSaving(false);
     onDone();
@@ -3993,110 +4030,174 @@ function OnboardingScreen({ onDone }) {
     });
   };
 
-  const inputStyle = {
-    width:'100%', boxSizing:'border-box',
-    background:'#1f1f25', border:'1px solid rgba(255,255,255,0.1)',
-    borderRadius:10, padding:'10px 14px', color:'#f5f5f7',
-    fontSize:14, outline:'none', fontFamily:'inherit', marginTop:6,
-  };
+  const inputStyle = { width:'100%', boxSizing:'border-box', background:'#1f1f25', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'10px 14px', color:'#f5f5f7', fontSize:14, outline:'none', fontFamily:'inherit', marginTop:6 };
   const labelStyle = { fontSize:13, color:'#9898a6', fontWeight:500 };
+  const selectStyle = { ...inputStyle, cursor:'pointer', appearance:'none', backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898a6' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center', paddingRight:32 };
 
-  const steps = [
-    {
-      title: 'Bienvenido/a 👋', sub: 'Contanos un poco sobre vos',
-      content: (
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div>
-            <div style={labelStyle}>Tu nombre *</div>
-            <input style={inputStyle} placeholder="Ej: Lautaro" value={nombre} onChange={e=>setNombre(e.target.value)} autoFocus/>
-          </div>
-          <div>
-            <div style={labelStyle}>Foto de perfil (opcional)</div>
-            <div style={{display:'flex',alignItems:'center',gap:12,marginTop:6}}>
-              {foto
-                ? <img src={foto} style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid #8b5cf6'}} alt="foto"/>
-                : <div style={{width:52,height:52,borderRadius:'50%',background:'#2e2e38',display:'grid',placeItems:'center',fontSize:22,border:'2px dashed rgba(139,92,246,0.4)'}}>{nombre[0]?.toUpperCase()||'?'}</div>
-              }
-              <label style={{cursor:'pointer'}}>
-                <input type="file" accept="image/*" style={{display:'none'}} onChange={handleFoto}/>
-                <span style={{background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.3)',borderRadius:8,padding:'7px 14px',color:'#a78bfa',fontSize:13,cursor:'pointer'}}>
-                  {foto ? 'Cambiar foto' : 'Subir foto'}
-                </span>
-              </label>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Tu carrera 🎓', sub: '¿Dónde y qué estudiás?',
-      content: (
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div>
-            <div style={labelStyle}>Facultad / Universidad</div>
-            <input style={inputStyle} placeholder="Ej: UTN, UBA, UNC..." value={facultad} onChange={e=>setFacultad(e.target.value)} autoFocus/>
-          </div>
-          <div>
-            <div style={labelStyle}>Carrera y año</div>
-            <input style={inputStyle} placeholder="Ej: Ing. Informática · 3°" value={carrera} onChange={e=>setCarrera(e.target.value)}/>
-          </div>
-          <div>
-            <div style={labelStyle}>Materias que cursás ahora</div>
-            <input style={inputStyle} placeholder="Ej: Análisis, Álgebra, Programación..." value={materias} onChange={e=>setMaterias(e.target.value)}/>
-            <div style={{fontSize:11,color:'#5a5a6e',marginTop:4}}>Separalas con comas. Podés editarlo después.</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Conectá con Hubby 🤖', sub: 'Tu asistente IA en Telegram — guardá y consultá desde el chat',
-      content: (
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div style={{display:'flex',alignItems:'center',gap:14,background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
-            <img src="/assets/hubby-bot.png" alt="Hubby" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(139,92,246,0.4)',flexShrink:0}}
-              onError={e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex'; }}/>
-            <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#1a1a2e,#0d0d18)',border:'2px solid rgba(139,92,246,0.4)',placeItems:'center',fontSize:26,flexShrink:0,display:'none'}}>🤖</div>
-            <div>
-              <div style={{fontSize:14,fontWeight:700,color:'#c4b5fd',marginBottom:2}}>Hubby</div>
-              <div style={{fontSize:12,color:'#7c7c9e'}}>Asistente IA de StudyHub</div>
-            </div>
-          </div>
-          <div style={{background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
-            <ol style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:8,fontSize:13,color:'#c4b5fd',lineHeight:1.5}}>
-              <li>Generá tu código de vinculación abajo</li>
-              <li>Abrí Telegram y buscá exactamente <b style={{color:'#fff',background:'rgba(139,92,246,0.3)',padding:'1px 7px',borderRadius:6,fontFamily:'monospace'}}>@Hubby_ia_bot</b></li>
-              <li>Enviá el código al bot</li>
-              <li>¡Listo! Quedás conectado automáticamente</li>
-            </ol>
-          </div>
-          {!tgCode ? (
-            <button onClick={generateTgCode} disabled={tgLoading} style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:'11px 0',color:'#fff',fontSize:14,fontWeight:600,cursor:tgLoading?'not-allowed':'pointer',fontFamily:'inherit',opacity:tgLoading?0.7:1,boxShadow:'0 4px 16px rgba(139,92,246,0.3)'}}>
-              {tgLoading ? 'Generando...' : '⚡ Generar código'}
-            </button>
-          ) : (
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <div style={{flex:1,background:'#1a1a20',border:'1px solid rgba(139,92,246,0.35)',borderRadius:10,padding:'12px 16px',fontFamily:'JetBrains Mono,monospace',fontSize:22,fontWeight:700,color:'#c4b5fd',letterSpacing:3,textAlign:'center'}}>
-                  {tgCode}
-                </div>
-                <button onClick={copyTgCode} style={{background:tgCopied?'rgba(34,197,94,0.15)':'rgba(139,92,246,0.15)',border:`1px solid ${tgCopied?'rgba(34,197,94,0.4)':'rgba(139,92,246,0.3)'}`,borderRadius:10,padding:'12px 14px',color:tgCopied?'#4ade80':'#a78bfa',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'all 200ms'}}>
-                  {tgCopied ? '✓ Copiado' : '📋 Copiar'}
-                </button>
-              </div>
-              <a href="https://t.me/Hubby_ia_bot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none',transition:'background 150ms'}}
-                onMouseEnter={e=>e.currentTarget.style.background='rgba(0,136,204,0.2)'}
-                onMouseLeave={e=>e.currentTarget.style.background='rgba(0,136,204,0.12)'}>
-                🤖 Abrir Hubby en Telegram →
-              </a>
-            </div>
-          )}
-          <div style={{textAlign:'center',fontSize:12,color:'#4a4a5a'}}>Podés conectarlo también desde Configuración → Integraciones</div>
-        </div>
-      ),
-    },
+  const stepTitles = [
+    { title: 'Bienvenido/a 👋', sub: 'Contanos un poco sobre vos' },
+    { title: '¿Qué hacés? 📋', sub: 'Elegí tu situación actual' },
+    ocupacion === 'secundario'
+      ? { title: 'Tu secundaria 🏫', sub: '¿Dónde estudiás?' }
+      : ocupacion === 'trabajo'
+        ? { title: 'Tu trabajo 💼', sub: '¿A qué te dedicás?' }
+        : { title: 'Tu carrera 🎓', sub: '¿Dónde y qué estudiás?' },
+    { title: 'Conectá con Hubby 🤖', sub: 'Tu asistente IA en Telegram' },
   ];
 
-  const current = steps[step];
+  const renderMateriasList = () => (
+    <div>
+      <div style={labelStyle}>Materias que cursás</div>
+      {materiasList.map((m, i) => (
+        <div key={i} style={{display:'flex',gap:6,marginTop:6}}>
+          <input style={{...inputStyle,marginTop:0,flex:1}} placeholder={`Materia ${i+1}`} value={m} onChange={e=>updateMateria(i,e.target.value)}/>
+          {materiasList.length > 1 && (
+            <button onClick={()=>removeMateria(i)} style={{background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,padding:'0 11px',color:'#f87171',cursor:'pointer',fontSize:18,flexShrink:0,lineHeight:1}}>−</button>
+          )}
+        </div>
+      ))}
+      <button onClick={addMateria} style={{display:'flex',alignItems:'center',gap:6,marginTop:8,background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.2)',borderRadius:8,padding:'7px 12px',color:'#a78bfa',fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
+        <span style={{fontSize:16,lineHeight:1,fontWeight:700}}>+</span> Agregar materia
+      </button>
+      <div style={{fontSize:11,color:'#5a5a6e',marginTop:6}}>Se crean automáticamente en la app al finalizar.</div>
+    </div>
+  );
+
+  const renderStepContent = () => {
+    switch(step) {
+      case 0:
+        return (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div>
+              <div style={labelStyle}>Tu nombre *</div>
+              <input style={inputStyle} placeholder="Ej: Lautaro" value={nombre} onChange={e=>setNombre(e.target.value)} autoFocus/>
+            </div>
+            <div>
+              <div style={labelStyle}>Foto de perfil (opcional)</div>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginTop:6}}>
+                {foto
+                  ? <img src={foto} style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid #8b5cf6'}} alt="foto"/>
+                  : <div style={{width:52,height:52,borderRadius:'50%',background:'#2e2e38',display:'grid',placeItems:'center',fontSize:22,border:'2px dashed rgba(139,92,246,0.4)'}}>{nombre[0]?.toUpperCase()||'?'}</div>
+                }
+                <label style={{cursor:'pointer'}}>
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={handleFoto}/>
+                  <span style={{background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.3)',borderRadius:8,padding:'7px 14px',color:'#a78bfa',fontSize:13,cursor:'pointer'}}>
+                    {foto ? 'Cambiar foto' : 'Subir foto'}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {[
+              { id:'universitario', emoji:'🎓', label:'Estudiante universitario', desc:'Cursás en una facultad o universidad' },
+              { id:'secundario',    emoji:'🏫', label:'Estudiante secundario',    desc:'Cursás en un colegio o escuela' },
+              { id:'trabajo',       emoji:'💼', label:'Trabajo',                  desc:'Estás empleado o sos independiente' },
+            ].map(opt => (
+              <div key={opt.id} onClick={()=>setOcupacion(opt.id)}
+                style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px',borderRadius:12,cursor:'pointer',border:`1px solid ${ocupacion===opt.id?'rgba(139,92,246,0.5)':'rgba(255,255,255,0.08)'}`,background:ocupacion===opt.id?'rgba(139,92,246,0.12)':'rgba(255,255,255,0.03)',transition:'all 150ms'}}>
+                <div style={{fontSize:26,flexShrink:0}}>{opt.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,color:'#f5f5f7'}}>{opt.label}</div>
+                  <div style={{fontSize:12,color:'#7e7e8c',marginTop:2}}>{opt.desc}</div>
+                </div>
+                {ocupacion===opt.id && <div style={{color:'#8b5cf6',fontSize:18,flexShrink:0}}>✓</div>}
+              </div>
+            ))}
+          </div>
+        );
+      case 2:
+        if (ocupacion === 'trabajo') return (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div>
+              <div style={labelStyle}>¿En qué trabajás?</div>
+              <input style={inputStyle} placeholder="Ej: Desarrollador web, docente, enfermero..." value={trabajoDesc} onChange={e=>setTrabajoDesc(e.target.value)} autoFocus/>
+            </div>
+          </div>
+        );
+        if (ocupacion === 'secundario') return (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div>
+              <div style={labelStyle}>Colegio / Escuela</div>
+              <input style={inputStyle} placeholder="Nombre del colegio" value={institucion} onChange={e=>setInstitucion(e.target.value)} autoFocus/>
+            </div>
+            <div>
+              <div style={labelStyle}>Año que cursás</div>
+              <select style={selectStyle} value={anio} onChange={e=>setAnio(e.target.value)}>
+                {['1°','2°','3°','4°','5°','6°'].map((a,i)=><option key={i} value={String(i+1)}>{a} año</option>)}
+              </select>
+            </div>
+            {renderMateriasList()}
+          </div>
+        );
+        return (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div>
+              <div style={labelStyle}>Facultad / Universidad</div>
+              <input style={inputStyle} placeholder="Ej: UTN, UBA, UNC..." value={institucion} onChange={e=>setInstitucion(e.target.value)} autoFocus/>
+            </div>
+            <div>
+              <div style={labelStyle}>Carrera</div>
+              <input style={inputStyle} placeholder="Ej: Ing. Informática, Medicina, Derecho..." value={carrera} onChange={e=>setCarrera(e.target.value)}/>
+            </div>
+            <div>
+              <div style={labelStyle}>Año que cursás</div>
+              <select style={selectStyle} value={anio} onChange={e=>setAnio(e.target.value)}>
+                {['1°','2°','3°','4°','5°'].map((a,i)=><option key={i} value={String(i+1)}>{a} año</option>)}
+              </select>
+            </div>
+            {renderMateriasList()}
+          </div>
+        );
+      case 3:
+        return (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:14,background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
+              <img src="/assets/hubby-bot.png" alt="Hubby" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(139,92,246,0.4)',flexShrink:0}}
+                onError={e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex'; }}/>
+              <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#1a1a2e,#0d0d18)',border:'2px solid rgba(139,92,246,0.4)',placeItems:'center',fontSize:26,flexShrink:0,display:'none'}}>🤖</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:'#c4b5fd',marginBottom:2}}>Hubby</div>
+                <div style={{fontSize:12,color:'#7c7c9e'}}>Asistente IA de StudyHub</div>
+              </div>
+            </div>
+            <div style={{background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
+              <ol style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:8,fontSize:13,color:'#c4b5fd',lineHeight:1.5}}>
+                <li>Generá tu código de vinculación abajo</li>
+                <li>Abrí Telegram y buscá <b style={{color:'#fff',background:'rgba(139,92,246,0.3)',padding:'1px 7px',borderRadius:6,fontFamily:'monospace'}}>@Hubby_ia_bot</b></li>
+                <li>Enviá el código al bot</li>
+                <li>¡Listo! Quedás conectado automáticamente</li>
+              </ol>
+            </div>
+            {!tgCode ? (
+              <button onClick={generateTgCode} disabled={tgLoading} style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:'11px 0',color:'#fff',fontSize:14,fontWeight:600,cursor:tgLoading?'not-allowed':'pointer',fontFamily:'inherit',opacity:tgLoading?0.7:1,boxShadow:'0 4px 16px rgba(139,92,246,0.3)'}}>
+                {tgLoading ? 'Generando...' : '⚡ Generar código'}
+              </button>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  <div style={{flex:1,background:'#1a1a20',border:'1px solid rgba(139,92,246,0.35)',borderRadius:10,padding:'12px 16px',fontFamily:'JetBrains Mono,monospace',fontSize:22,fontWeight:700,color:'#c4b5fd',letterSpacing:3,textAlign:'center'}}>{tgCode}</div>
+                  <button onClick={copyTgCode} style={{background:tgCopied?'rgba(34,197,94,0.15)':'rgba(139,92,246,0.15)',border:`1px solid ${tgCopied?'rgba(34,197,94,0.4)':'rgba(139,92,246,0.3)'}`,borderRadius:10,padding:'12px 14px',color:tgCopied?'#4ade80':'#a78bfa',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'all 200ms'}}>
+                    {tgCopied ? '✓ Copiado' : '📋 Copiar'}
+                  </button>
+                </div>
+                <a href="https://t.me/Hubby_ia_bot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(0,136,204,0.2)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(0,136,204,0.12)'}>
+                  🤖 Abrir Hubby en Telegram →
+                </a>
+              </div>
+            )}
+            <div style={{textAlign:'center',fontSize:12,color:'#4a4a5a'}}>Podés conectarlo también desde Configuración → Integraciones</div>
+          </div>
+        );
+    }
+  };
+
+  const current = stepTitles[step] || stepTitles[0];
 
   const canvasRef2 = React.useRef(null);
   const mouseRef2  = React.useRef({ x: -9999, y: -9999 });
@@ -4126,18 +4227,17 @@ function OnboardingScreen({ onDone }) {
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#18181d',fontFamily:'Outfit,sans-serif',padding:20,position:'relative',overflow:'hidden'}}>
       <canvas ref={canvasRef2} style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:0}}/>
       <div style={{position:'absolute',width:400,height:400,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.1) 0%,transparent 70%)',top:'40%',left:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:0}}/>
-      <div style={{position:'relative',zIndex:1,background:'rgba(38,38,45,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:24,padding:'40px 36px',width:400,maxWidth:'100%',boxShadow:'0 8px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(139,92,246,0.15)',border:'1px solid rgba(255,255,255,0.07)'}}>
-        {/* Step indicator */}
+      <div style={{position:'relative',zIndex:1,background:'rgba(38,38,45,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:24,padding:'40px 36px',width:420,maxWidth:'100%',boxShadow:'0 8px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(139,92,246,0.15)',border:'1px solid rgba(255,255,255,0.07)',maxHeight:'90vh',overflowY:'auto'}}>
         <div style={{display:'flex',gap:6,marginBottom:28,justifyContent:'center'}}>
-          {steps.map((_,i) => (
-            <div key={i} style={{height:3,borderRadius:2,background:i===step?'#8b5cf6':'rgba(139,92,246,0.2)',width:i===step?32:16,transition:'all 300ms'}}/>
+          {Array.from({length:TOTAL_STEPS}).map((_,i) => (
+            <div key={i} style={{height:3,borderRadius:2,background:i===step?'#8b5cf6':i<step?'rgba(139,92,246,0.45)':'rgba(139,92,246,0.2)',width:i===step?32:16,transition:'all 300ms'}}/>
           ))}
         </div>
         <div style={{textAlign:'center',marginBottom:28}}>
           <div style={{fontSize:22,fontWeight:700,color:'#f5f5f7',letterSpacing:'-0.3px'}}>{current.title}</div>
           <div style={{fontSize:13,color:'#7e7e8c',marginTop:4}}>{current.sub}</div>
         </div>
-        {current.content}
+        {renderStepContent()}
         <div style={{display:'flex',gap:10,marginTop:28}}>
           {step > 0 && (
             <button onClick={() => setStep(s=>s-1)} style={{flex:1,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:11,color:'#c4b5fd',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'background 150ms'}}
@@ -4146,8 +4246,8 @@ function OnboardingScreen({ onDone }) {
               ← Atrás
             </button>
           )}
-          {step < steps.length - 1 ? (
-            <button onClick={() => { if(!nombre.trim()){alert('Ingresá tu nombre');return;} setStep(s=>s+1); }} style={{flex:1,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:11,color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 16px rgba(139,92,246,0.3)',transition:'box-shadow 150ms,transform 100ms'}}
+          {step < TOTAL_STEPS - 1 ? (
+            <button onClick={handleNext} style={{flex:1,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:10,padding:11,color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 16px rgba(139,92,246,0.3)',transition:'box-shadow 150ms,transform 100ms'}}
               onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'}
               onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
               Siguiente →
@@ -4172,7 +4272,8 @@ function OnboardingScreen({ onDone }) {
 
 function needsOnboarding() {
   try {
-    const cfg = JSON.parse(localStorage.getItem('studyhub-config') || '{}');
+    const raw = localStorage.getItem('studyhub_v3_config') || localStorage.getItem('studyhub-config');
+    const cfg = JSON.parse(raw || '{}');
     return !cfg._onboardingDone && !cfg.name;
   } catch(e) { return true; }
 }
@@ -7816,7 +7917,7 @@ function FacultadRoute({ flash }) {
 
   return (
     <>
-      <RouteHead title="Facultad" sub={`${subjects.length} materias · cuatrimestre en curso`}
+      <RouteHead title={loadConfig().ocupacion === 'secundario' ? 'Secundaria' : 'Facultad'} sub={`${subjects.length} materias · cuatrimestre en curso`}
         actions={<button className="btn-primary" onClick={() => setModal({type:'new'})}><I.Plus size={14}/> Nueva materia</button>}/>
       {subjects.length === 0 && (
         <div className="r-panel" style={{textAlign:'center', padding:48, color:'var(--text-3)'}}>
@@ -9576,9 +9677,11 @@ function App() {
   };
   // Also update CMD_ITEMS to include new routes (done via ALL_SECTIONS in search)
 
+  const facuLabel = cfg.ocupacion === 'secundario' ? 'Secundaria' : 'Facultad';
+
   const ROUTE_TITLES = {
     dashboard: 'Dashboard',
-    facu: 'Facultad',
+    facu: facuLabel,
     misiones: 'Misiones',
     cal: 'Calendario',
     tareas: 'Tareas',
@@ -9985,7 +10088,7 @@ function App() {
 
           {[
             { id: 'dashboard', icon: I.Home,        label: 'Dashboard' },
-            { id: 'facu',      icon: I.Book,        label: 'Facultad' },
+            { id: 'facu',      icon: I.Book,        label: facuLabel },
             { id: 'misiones',  icon: I.Zap,         label: 'Misiones' },
             { id: 'cal',       icon: I.Calendar,    label: 'Calendario' },
             { id: 'tareas',    icon: I.CheckSquare, label: 'Tareas' },
@@ -10092,7 +10195,7 @@ function App() {
               {search.length >= 1 && (() => {
                 const ALL_SECTIONS = [
                   {route:'dashboard', label:'Dashboard',  hint:'Inicio y resumen general', emoji:'🏠'},
-                  {route:'facu',      label:'Facultad',   hint:'Materias, progreso, profesores', emoji:'📚'},
+                  {route:'facu',      label:facuLabel,    hint:'Materias, progreso, profesores', emoji:'📚'},
                   {route:'misiones',  label:'Misiones',   hint:'Objetivos, XP, progreso', emoji:'⚡'},
                   {route:'cal',       label:'Calendario', hint:'Eventos, parciales, agenda', emoji:'📅'},
                   {route:'tareas',    label:'Tareas',     hint:'Tareas pendientes y completadas', emoji:'✅'},
