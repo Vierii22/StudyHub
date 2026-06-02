@@ -4,48 +4,86 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const TELEGRAM_API = "https://api.telegram.org"
 const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
-// ─── Formas exactas de la app (deben matchear 100%) ──────────────────────────
-// studyhub_v3_tasks:    [{id,name,avClass,initials,progress,xp,status,statusTone,done,createdAt,dueDate?}]
+// ─── Formas exactas de la app ─────────────────────────────────────────────────
+// studyhub_v3_tasks:    [{id,name,avClass,initials,progress,xp,status,statusTone,done,createdAt,dueDate?,subjectName?}]
 // studyhub_v3_missions: [{id,title,desc,priority,xp,done,tasks:[{id,text,done}]}]
 // studyhub_v3_calendar: [{id,title,date,color,desc}]
-// studyhub_v3_diary:    string (texto plano)
-// studyhub_v3_subjects: [{id,name,code,pct,prof,next,color,notes,tp:[]}]
+// studyhub_v3_diary:    string
+// studyhub_v3_subjects: [{id,name,code,pct,prof,next,color,notes,tp:[{id,title,desc,done,dueDate}]}]
+// studyhub_v3_kitchen:  [{id,title,sub,tag,warn,section:'heladera'}]
+// studyhub_v3_almacen:  [{id,title,sub,tag,warn,section:'almacen'}]
+// studyhub_v3_freezer:  [{id,title,sub,tag,warn,section:'freezer'}]
+// studyhub_v3_groceries:[{id,title,done}]
+// studyhub_fin_v1:      {presupuesto,gastos:[{id,cat,desc,monto,fecha}],metas:[],mes,anio}
+// studyhub_ocio_v1:     [{id,emoji,title,type,status,score,note}]
 
 const SECTION_INFO = `
-Secciones disponibles:
-- tareas: cualquier cosa a hacer, estudiar, entregar, resolver. Mencionar una materia (álgebra, análisis, programación) NO significa agregar la materia, significa que la tarea ES de esa materia.
-- misiones: objetivos grandes con múltiples pasos o etapas. "quiero terminar", "proyecto de", "objetivo".
-- calendario: eventos con fecha concreta. Parciales, finales, entregas, reuniones.
-- diario: notas personales, reflexiones, "anotar que", "recordar que".
-- materias: SOLO si el usuario quiere AGREGAR UNA MATERIA NUEVA que no existe todavía. Ej: "agregar la materia física" o "nueva materia: química".
-- cocina: alimentos en heladera, freezer o almacén.
-- compras: cosas para comprar, lista de compras.
-- finanzas: gastos, ingresos, presupuesto. Cualquier monto de dinero.
-- ocio: series, películas, juegos, libros, anime.
+Sos el asistente inteligente de StudyHub, una app de productividad para estudiantes universitarios.
 
-REGLA CRÍTICA: Cuando el usuario menciona una materia (álgebra, análisis, programación, etc.) junto con algo que hacer, la sección es TAREAS o MISIONES, nunca "materias". El nombre de la materia va en el campo "subject" y en el "title".
+=== MODOS ===
+- intent_type "add": el usuario quiere guardar algo
+- intent_type "query": el usuario hace una pregunta sobre sus datos ("¿qué tengo pendiente?", "¿cuáles son los temas?", "¿cuánto gasté?")
 
-Ejemplos correctos:
-"estudiar álgebra" → tareas, title: "Estudiar Álgebra", subject: "Álgebra"
-"hacer ejercicios de análisis" → tareas, title: "Ejercicios de Análisis", subject: "Análisis"
-"resolver práctica 5 de álgebra" → tareas, title: "Práctica 5 de Álgebra", subject: "Álgebra"
-"terminar TP de programación" → tareas, title: "TP de Programación", subject: "Programación"
-"misión: aprobar álgebra" → misiones, title: "Aprobar Álgebra", subject: "Álgebra"
-"parcial de álgebra el 15 de julio" → calendario, title: "Parcial Álgebra", date: "2025-07-15"
-"agregar la materia física" → materias, title: "Física"
-"gasté 3000 en fotocopias" → finanzas
-"comprar leche y pan" → compras
-"anotar que la clase estuvo buena" → diario
+=== SECCIONES Y SUB-SECCIONES ===
+
+TAREAS (section: "tareas")
+  Cualquier cosa a hacer, estudiar, entregar, resolver.
+  Cuando se menciona una materia, va en el campo "subject" y en el title.
+  Ej: "hacer ejercicios de álgebra" → title: "Ejercicios de Álgebra", subject: "Álgebra"
+
+MISIONES (section: "misiones")
+  Objetivos grandes con múltiples pasos. "quiero terminar", "proyecto de", "objetivo largo".
+
+CALENDARIO (section: "calendario")
+  Eventos con fecha. Parciales, finales, entregas, reuniones.
+
+DIARIO (section: "diario")
+  Notas libres, reflexiones, "anotar que", "recordar que".
+
+FACULTAD / MATERIAS (section: "facultad")
+  Sub-secciones:
+  - "nueva_materia": agregar una materia nueva. Ej: "agregar la materia física"
+  - "tp": agregar un trabajo práctico a una materia. Ej: "nuevo TP de álgebra: práctica 5"
+  - "nota_materia": guardar anotación en una materia. Ej: "anotar en filosofía: los temas son X y Z"
+  - "progreso": actualizar progreso de una materia. Ej: "completé 80% de álgebra"
+  - "fecha_materia": actualizar próximo evento de materia. Ej: "parcial de álgebra el 20 de junio"
+  REGLA: mencionar una materia con algo que hacer → TAREAS. Mencionar materia con "anotar EN", "agregar A", "TP de" → FACULTAD.
+
+COCINA (section: "cocina")
+  Sub-secciones (campo "subseccion"):
+  - "heladera": alimentos frescos en heladera
+  - "almacen": productos secos, enlatados, bebidas
+  - "freezer": alimentos congelados
+  - "compras": lista de cosas para comprar
+  Ej: "tengo leche en la heladera" → subseccion: "heladera"
+  Ej: "comprar pan y leche" → subseccion: "compras"
+  Ej: "metí empanadas al freezer" → subseccion: "freezer"
+  Si no queda claro dónde va → needs_clarification: true
+
+FINANZAS (section: "finanzas")
+  Gastos, ingresos, presupuesto. Cualquier monto de dinero.
+
+OCIO (section: "ocio")
+  Series, películas, videojuegos, libros, anime.
+
+=== EJEMPLOS ===
+"hacer ejercicios de álgebra" → add, tareas, subject: "Álgebra"
+"nuevo TP de análisis: práctica 5" → add, facultad, subseccion: "tp", subject: "Análisis"
+"anotar en filosofía: los temas son Kant y Hegel" → add, facultad, subseccion: "nota_materia"
+"parcial de álgebra el 15 de julio" → add, calendario
+"gasté 3000 en fotocopias" → add, finanzas
+"comprar pan, leche, huevos" → add, cocina, subseccion: "compras"
+"metí arroz al almacén" → add, cocina, subseccion: "almacen"
+"agregar la materia química" → add, facultad, subseccion: "nueva_materia"
+"¿qué tareas tengo pendientes?" → query, tareas
+"¿cuáles son los temas del parcial de filosofía?" → query, facultad, subject: "Filosofía"
+"¿cuánto gasté este mes?" → query, finanzas
 `
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function sendMessage(chatId: number | string, token: string, text: string, replyMarkup?: object) {
-  const body: Record<string, unknown> = {
-    chat_id: chatId,
-    text,
-    parse_mode: "HTML",
-  }
+  const body: Record<string, unknown> = { chat_id: chatId, text, parse_mode: "HTML" }
   if (replyMarkup) body.reply_markup = replyMarkup
   return fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: "POST",
@@ -54,22 +92,18 @@ async function sendMessage(chatId: number | string, token: string, text: string,
   })
 }
 
-async function answerCallbackQuery(callbackId: string, token: string, text = "") {
+async function answerCallbackQuery(callbackId: string, token: string) {
   return fetch(`${TELEGRAM_API}/bot${token}/answerCallbackQuery`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callback_query_id: callbackId, text }),
+    body: JSON.stringify({ callback_query_id: callbackId }),
   })
 }
 
 async function getState(supabase: ReturnType<typeof createClient>, chatId: string) {
   const { data } = await supabase
-    .from("telegram_state")
-    .select("state, updated_at")
-    .eq("chat_id", chatId)
-    .maybeSingle()
+    .from("telegram_state").select("state, updated_at").eq("chat_id", chatId).maybeSingle()
   if (!data?.state) return null
-  // Auto-limpiar estados viejos (más de 30 minutos)
   const updatedAt = new Date(data.updated_at || 0).getTime()
   if (Date.now() - updatedAt > 30 * 60 * 1000) {
     await supabase.from("telegram_state").delete().eq("chat_id", chatId)
@@ -89,385 +123,456 @@ async function setState(supabase: ReturnType<typeof createClient>, chatId: strin
   }
 }
 
-// Append un item a un array en app_data con la key correcta
-async function appendToAppData(supabase: ReturnType<typeof createClient>, userId: string, key: string, newItem: object) {
-  const { data } = await supabase
-    .from("app_data")
-    .select("value")
-    .eq("user_id", userId)
-    .eq("key", key)
-    .maybeSingle()
+async function getAppData(supabase: ReturnType<typeof createClient>, userId: string, key: string) {
+  const { data } = await supabase.from("app_data").select("value").eq("user_id", userId).eq("key", key).maybeSingle()
+  return data?.value ?? null
+}
 
+async function appendToAppData(supabase: ReturnType<typeof createClient>, userId: string, key: string, newItem: object) {
+  const { data } = await supabase.from("app_data").select("value").eq("user_id", userId).eq("key", key).maybeSingle()
   const arr = Array.isArray(data?.value) ? data.value : []
   arr.push(newItem)
-
   await supabase.from("app_data").upsert(
     { user_id: userId, key, value: arr, updated_at: new Date().toISOString() },
     { onConflict: "user_id,key" }
   )
 }
 
-// Agregar texto al diario (string acumulado)
-async function appendToDiary(supabase: ReturnType<typeof createClient>, userId: string, text: string) {
-  const { data } = await supabase
-    .from("app_data")
-    .select("value")
-    .eq("user_id", userId)
-    .eq("key", "studyhub_v3_diary")
-    .maybeSingle()
-
-  const current = typeof data?.value === "string" ? data.value : (data?.value?.text || "")
-  const today = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
-  const newText = current ? `${current}\n\n[${today} vía Telegram]\n${text}` : `[${today} vía Telegram]\n${text}`
-
+async function upsertAppData(supabase: ReturnType<typeof createClient>, userId: string, key: string, value: unknown) {
   await supabase.from("app_data").upsert(
-    { user_id: userId, key: "studyhub_v3_diary", value: newText, updated_at: new Date().toISOString() },
+    { user_id: userId, key, value, updated_at: new Date().toISOString() },
     { onConflict: "user_id,key" }
   )
 }
 
-// Clasificador por palabras clave (fallback si Gemini falla)
-function classifyByKeywords(text: string): Record<string, unknown> {
-  const t = text.toLowerCase()
-
-  // Finanzas — monto explícito o palabras de gasto
-  if (/gasté|gaste|pagué|pague|compré por|costó|costo|me cobró|\$\d|\d+\s*pesos/.test(t)) {
-    const amountMatch = text.match(/\d+/)
-    return { section: "finanzas", confidence: 0.8, data: { title: text, amount: amountMatch ? parseInt(amountMatch[0]) : null, type: "gasto", priority: "medium", xp: 5 } }
-  }
-
-  // Compras — lista de compras
-  if (/^comprar\s|necesito comprar|lista de compras|me falta|falta\s/.test(t)) {
-    return { section: "compras", confidence: 0.85, data: { title: text, priority: "medium", xp: 5 } }
-  }
-
-  // Calendario — evento con fecha
-  if (/parcial|final|examen|entrega|reunión|reunion|clase\s+el|evento/.test(t)) {
-    return { section: "calendario", confidence: 0.8, data: { title: text, priority: "high", xp: 20 } }
-  }
-
-  // Misiones — objetivo grande
-  if (/misión|mision|quiero terminar|quiero hacer|proyecto|objetivo|meta/.test(t)) {
-    return { section: "misiones", confidence: 0.8, data: { title: text, priority: "medium", xp: 20 } }
-  }
-
-  // Diario — nota personal
-  if (/anotar|nota:|diario|recordar que|pensar en|reflexión|reflexion/.test(t)) {
-    return { section: "diario", confidence: 0.85, data: { title: text, priority: "low", xp: 5 } }
-  }
-
-  // Tareas — estudiar, hacer, leer
-  if (/estudiar|leer|hacer|tp |trabajo práctico|práctica|practica|repasar|capítulo|capitulo|ejercicio|resolver/.test(t)) {
-    return { section: "tareas", confidence: 0.8, data: { title: text, priority: "medium", xp: 10 } }
-  }
-
-  return { section: null, confidence: 0.3, data: { title: text } }
+async function appendToDiary(supabase: ReturnType<typeof createClient>, userId: string, text: string) {
+  const { data } = await supabase.from("app_data").select("value").eq("user_id", userId).eq("key", "studyhub_v3_diary").maybeSingle()
+  const current = typeof data?.value === "string" ? data.value : ""
+  const today = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
+  const newText = current ? `${current}\n\n[${today} vía Telegram]\n${text}` : `[${today} vía Telegram]\n${text}`
+  await upsertAppData(supabase, userId, "studyhub_v3_diary", newText)
 }
 
-// Clasificar con Gemini (con fallback a keywords y debug de errores)
-async function classifyWithGemini(text: string, geminiKey: string): Promise<Record<string, unknown> & { _geminiError?: string }> {
-  // Si no hay API key, usar keywords directamente
-  if (!geminiKey) {
-    console.log("GEMINI_API_KEY no configurado, usando clasificador por keywords")
-    return classifyByKeywords(text)
+// ─── Modo LECTURA: responder preguntas sobre los datos ────────────────────────
+
+async function handleQuery(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  section: string,
+  data: Record<string, unknown>,
+  geminiKey: string
+): Promise<string> {
+  let rawData: unknown = null
+  let contextLabel = section
+
+  if (section === "tareas") {
+    rawData = await getAppData(supabase, userId, "studyhub_v3_tasks")
+    contextLabel = "tareas"
+  } else if (section === "misiones") {
+    rawData = await getAppData(supabase, userId, "studyhub_v3_missions")
+    contextLabel = "misiones"
+  } else if (section === "calendario") {
+    rawData = await getAppData(supabase, userId, "studyhub_v3_calendar")
+    contextLabel = "calendario"
+  } else if (section === "facultad") {
+    rawData = await getAppData(supabase, userId, "studyhub_v3_subjects")
+    contextLabel = "materias"
+  } else if (section === "finanzas") {
+    rawData = await getAppData(supabase, userId, "studyhub_fin_v1")
+    contextLabel = "finanzas"
+  } else if (section === "cocina") {
+    const hel = await getAppData(supabase, userId, "studyhub_v3_kitchen") || []
+    const alm = await getAppData(supabase, userId, "studyhub_v3_almacen") || []
+    const fre = await getAppData(supabase, userId, "studyhub_v3_freezer") || []
+    const comp = await getAppData(supabase, userId, "studyhub_v3_groceries") || []
+    rawData = { heladera: hel, almacen: alm, freezer: fre, compras: comp }
+    contextLabel = "cocina"
+  } else if (section === "ocio") {
+    rawData = await getAppData(supabase, userId, "studyhub_ocio_v1")
+    contextLabel = "ocio"
+  } else if (section === "diario") {
+    rawData = await getAppData(supabase, userId, "studyhub_v3_diary")
+    contextLabel = "diario"
   }
+
+  if (!rawData || (Array.isArray(rawData) && rawData.length === 0)) {
+    return `📭 No tenés datos guardados en ${contextLabel} todavía.`
+  }
+
+  // Usar Gemini para generar respuesta natural basada en los datos
+  try {
+    const subject = data.subject as string | undefined
+    const question = data.query_text as string || "Respondé con la info relevante"
+    const prompt = `Sos el asistente de StudyHub. El usuario preguntó: "${question}"
+${subject ? `Contexto adicional: está preguntando sobre "${subject}".` : ""}
+
+Estos son sus datos actuales de ${contextLabel}:
+${JSON.stringify(rawData, null, 2).slice(0, 3000)}
+
+Respondé en español, de forma clara y concisa. Máximo 5 líneas. No uses JSON en la respuesta.
+Si pregunta por temas de parcial, buscá en el campo "notes" o "tp" de la materia correspondiente.
+Si pregunta qué tiene pendiente, mostrá solo los items con done:false.`
+
+    const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } }
+      })
+    })
+    const json = await response.json()
+    const answer = json.candidates?.[0]?.content?.parts?.[0]?.text
+    if (answer) return `🤖 ${answer.trim()}`
+  } catch (e) {
+    console.log("Query Gemini error:", e)
+  }
+
+  return `📊 Encontré datos en ${contextLabel} pero no pude procesarlos. Abrí la app para verlos.`
+}
+
+// ─── Clasificador por palabras clave (fallback) ───────────────────────────────
+
+function classifyByKeywords(text: string): Record<string, unknown> {
+  const t = text.toLowerCase()
+  if (/gasté|gaste|pagué|pague|costó|costo|\$\d|\d+\s*pesos/.test(t))
+    return { intent_type: "add", section: "finanzas", confidence: 0.8, data: { title: text, amount: parseInt(text.match(/\d+/)?.[0] || "0"), type: "gasto", priority: "medium", xp: 5 } }
+  if (/comprar|lista de compras/.test(t))
+    return { intent_type: "add", section: "cocina", confidence: 0.8, data: { title: text, subseccion: "compras" } }
+  if (/heladera|nevera/.test(t))
+    return { intent_type: "add", section: "cocina", confidence: 0.8, data: { title: text, subseccion: "heladera" } }
+  if (/freezer|congelad/.test(t))
+    return { intent_type: "add", section: "cocina", confidence: 0.8, data: { title: text, subseccion: "freezer" } }
+  if (/almacen|almacén/.test(t))
+    return { intent_type: "add", section: "cocina", confidence: 0.8, data: { title: text, subseccion: "almacen" } }
+  if (/parcial|final|examen|entrega|reunión|reunion/.test(t))
+    return { intent_type: "add", section: "calendario", confidence: 0.8, data: { title: text, priority: "high", xp: 20 } }
+  if (/misión|mision|quiero terminar|proyecto|objetivo/.test(t))
+    return { intent_type: "add", section: "misiones", confidence: 0.8, data: { title: text, priority: "medium", xp: 20 } }
+  if (/anotar|nota:|recordar que/.test(t))
+    return { intent_type: "add", section: "diario", confidence: 0.85, data: { title: text, priority: "low", xp: 5 } }
+  if (/estudiar|leer|hacer|tp |resolver|ejercicio|practica|práctica/.test(t))
+    return { intent_type: "add", section: "tareas", confidence: 0.8, data: { title: text, priority: "medium", xp: 10 } }
+  if (/\?$|cuáles|cuales|qué tengo|que tengo|cuánto|cuanto/.test(t))
+    return { intent_type: "query", section: "tareas", confidence: 0.7, data: { query_text: text } }
+  return { intent_type: "add", section: null, confidence: 0.3, data: { title: text } }
+}
+
+// ─── Gemini: clasificar intención ─────────────────────────────────────────────
+
+async function classifyWithGemini(text: string, geminiKey: string): Promise<Record<string, unknown> & { _geminiError?: string }> {
+  if (!geminiKey) return classifyByKeywords(text)
 
   try {
     const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Sos un asistente de la app de estudio StudyHub. Analizá este mensaje y clasificalo.
-
-${SECTION_INFO}
+        contents: [{ parts: [{ text: `${SECTION_INFO}
 
 Mensaje del usuario: "${text}"
 
-Respondé SOLO con un JSON (sin markdown, sin explicación):
+Respondé SOLO con un JSON (sin markdown):
 {
-  "section": "tareas|misiones|calendario|diario|materias|cocina|compras|finanzas|ocio",
-  "action": "add",
+  "intent_type": "add|query",
+  "section": "tareas|misiones|calendario|diario|facultad|cocina|finanzas|ocio",
   "data": {
-    "title": "texto descriptivo del item (incluí la materia si aplica, ej: 'Práctica 5 de Álgebra')",
-    "desc": "descripción adicional si la hay, o vacío",
-    "subject": "nombre de la materia si se menciona (ej: 'Álgebra', 'Análisis'), o null",
-    "date": "YYYY-MM-DD si hay fecha mencionada, o null",
+    "title": "texto principal",
+    "desc": "descripción adicional o vacío",
+    "subject": "nombre de la materia si aplica, o null",
+    "subseccion": "para cocina: heladera|almacen|freezer|compras. Para facultad: nueva_materia|tp|nota_materia|progreso|fecha_materia. O null",
+    "date": "YYYY-MM-DD o null",
     "priority": "high|medium|low",
     "xp": 10,
     "amount": null,
-    "type": null
+    "type": null,
+    "query_text": "la pregunta original si es query, o null",
+    "pct": null
   },
   "confidence": 0.9,
   "needs_clarification": false
 }
-
-Si el mensaje es ambiguo (confidence < 0.6), poné "needs_clarification": true y agregá "data.clarification" con la pregunta al usuario.`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 1024,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
+Si es ambiguo (confidence < 0.6), poné needs_clarification: true y data.clarification con la pregunta.` }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } }
       })
     })
 
     const json = await response.json()
-
-    // Debug: loguear respuesta completa de Gemini
     console.log("Gemini status:", response.status)
-    console.log("Gemini response:", JSON.stringify(json).slice(0, 500))
-
-    // Si hay error de API (clave inválida, quota, etc.)
     if (json.error) {
       console.log("Gemini API error:", json.error.message)
-      const fallback = classifyByKeywords(text)
-      return { ...fallback, _geminiError: json.error.message }
+      return { ...classifyByKeywords(text), _geminiError: json.error.message }
     }
 
     const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-    const parsed = JSON.parse(cleaned)
-    return parsed
-
+    return JSON.parse(cleaned)
   } catch (e) {
     console.log("Gemini fetch error:", (e as Error).message)
-    // Fallback a keywords
     return classifyByKeywords(text)
   }
 }
 
-// Preguntas de seguimiento según sección
+// ─── Followups según sección ──────────────────────────────────────────────────
+
 function getFollowupQuestion(section: string, draft: Record<string, unknown>): string | null {
   const data = (draft.data || {}) as Record<string, unknown>
 
-  if (section === "misiones") {
-    // Siempre preguntar por subtareas en misiones
-    return `📋 ¿Querés agregarle tareas/pasos a esta misión?\n\nMandá las tareas separadas por coma (ej: "estudiar cap1, hacer ejercicios, repasar") o escribí <b>no</b> para crearla sin tareas.`
-  }
+  if (section === "misiones")
+    return `📋 ¿Querés agregarle pasos/subtareas a esta misión?\nMandálos separados por coma o escribí <b>no</b>.`
 
-  if (section === "tareas" && !data.date) {
-    return `📅 ¿Para cuándo es esta tarea? (ej: "lunes", "15 de julio", "la semana que viene") O escribí <b>sin fecha</b>.`
-  }
+  if (section === "tareas" && !data.date)
+    return `📅 ¿Para cuándo es? (ej: "lunes", "15 de julio") O escribí <b>sin fecha</b>.`
 
-  if (section === "calendario" && !data.date) {
-    return `📅 ¿Qué día es? (ej: "15 de julio", "próximo lunes", "el 20")`
-  }
+  if (section === "calendario" && !data.date)
+    return `📅 ¿Qué día es el evento?`
 
-  if (section === "finanzas" && !data.amount) {
-    return `💰 ¿Cuánto fue el ${data.type === "ingreso" ? "ingreso" : "gasto"}? (solo el número, ej: 3500)`
-  }
+  if (section === "finanzas" && !data.amount)
+    return `💰 ¿Cuánto fue el ${data.type === "ingreso" ? "ingreso" : "gasto"}? (solo número)`
+
+  if (section === "cocina" && !data.subseccion)
+    return `🍽️ ¿Dónde lo guardo?\n\n<b>heladera</b> · <b>almacen</b> · <b>freezer</b> · <b>compras</b>`
+
+  if (section === "facultad" && !data.subseccion)
+    return `📚 ¿Qué tipo de cosa es?\n\n<b>tp</b> (trabajo práctico) · <b>anotacion</b> · <b>nueva materia</b> · <b>progreso</b>`
+
+  if (section === "facultad" && (data.subseccion === "tp" || data.subseccion === "nota_materia") && !data.subject)
+    return `📚 ¿Para qué materia? (escribí el nombre)`
 
   return null
 }
 
-// Parsear fecha en español
+// ─── Parsear fecha en español ─────────────────────────────────────────────────
+
 function parseSpanishDate(text: string): string | null {
   if (!text) return null
   const t = text.toLowerCase().trim()
-
-  if (t === "hoy" || t === "today") {
-    return new Date().toISOString().slice(0, 10)
-  }
-  if (t === "mañana") {
-    const d = new Date(); d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
-  }
-  if (t.startsWith("el ") || t.startsWith("para el ")) {
-    const num = parseInt(t.replace(/\D+/g, ""))
-    if (num >= 1 && num <= 31) {
-      const now = new Date()
-      const d = new Date(now.getFullYear(), now.getMonth(), num)
-      if (d < now) d.setMonth(d.getMonth() + 1)
-      return d.toISOString().slice(0, 10)
-    }
-  }
-
-  const MONTHS: Record<string, number> = {
-    enero:0, febrero:1, marzo:2, abril:3, mayo:4, junio:5,
-    julio:6, agosto:7, septiembre:8, octubre:9, noviembre:10, diciembre:11
-  }
+  if (t === "hoy") return new Date().toISOString().slice(0, 10)
+  if (t === "mañana") { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) }
+  const MONTHS: Record<string, number> = { enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11 }
   for (const [name, idx] of Object.entries(MONTHS)) {
     const match = t.match(new RegExp(`(\\d{1,2})\\s+(?:de\\s+)?${name}`))
     if (match) {
-      const day = parseInt(match[1])
       const now = new Date()
-      const d = new Date(now.getFullYear(), idx, day)
+      const d = new Date(now.getFullYear(), idx, parseInt(match[1]))
       if (d < now) d.setFullYear(d.getFullYear() + 1)
       return d.toISOString().slice(0, 10)
     }
   }
-
-  const DAYS: Record<string, number> = {
-    lunes:1, martes:2, miércoles:3, miercoles:3, jueves:4,
-    viernes:5, sábado:6, sabado:6, domingo:0
-  }
+  const DAYS: Record<string, number> = { lunes:1,martes:2,miércoles:3,miercoles:3,jueves:4,viernes:5,sábado:6,sabado:6,domingo:0 }
   for (const [name, dayIdx] of Object.entries(DAYS)) {
     if (t.includes(name)) {
       const now = new Date()
       const diff = (dayIdx - now.getDay() + 7) % 7 || 7
-      const d = new Date(now)
-      d.setDate(d.getDate() + diff)
+      const d = new Date(now); d.setDate(d.getDate() + diff)
       return d.toISOString().slice(0, 10)
     }
   }
-
-  // Formato YYYY-MM-DD directo
   if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t
-
   return null
 }
 
-// Construir el item final para guardar en app_data según la sección
-function buildItem(section: string, draft: Record<string, unknown>, subtasks?: string[]): { key: string; item: Record<string, unknown> } | null {
+// ─── Construir item para guardar ──────────────────────────────────────────────
+
+async function buildAndSave(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  section: string,
+  draft: Record<string, unknown>,
+  subtasks?: string[]
+): Promise<string> {
   const data = (draft.data || {}) as Record<string, unknown>
   const now = Date.now()
+  const avClasses = ["v1","v2","v3","v4"]
 
+  // ── TAREAS ──
   if (section === "tareas") {
-    const avClasses = ["v1","v2","v3","v4"]
     const title = (data.title as string) || "Tarea sin nombre"
     const initials = title.split(/\s+/).slice(0,2).map((w: string) => w[0]?.toUpperCase() || "?").join("")
-    return {
-      key: "studyhub_v3_tasks",
-      item: {
-        id: now,
-        name: title,
-        avClass: avClasses[Math.floor(Math.random() * avClasses.length)],
-        initials,
-        progress: (data.subject as string) ? `${data.subject} · ${(data.desc as string) || "En curso"}` : ((data.desc as string) || "En curso"),
-        xp: (data.xp as number) || 10,
-        status: "Pendiente",
-        statusTone: "blue",
-        done: false,
-        createdAt: now,
-        dueDate: data.date || null,
-        savedViaTelegram: true,
-      },
-    }
+    const progress = (data.subject as string) ? `${data.subject} · En curso` : "En curso"
+    await appendToAppData(supabase, userId, "studyhub_v3_tasks", {
+      id: now, name: title, avClass: avClasses[now % 4], initials, progress,
+      xp: (data.xp as number) || 10, status: "Pendiente", statusTone: "blue",
+      done: false, createdAt: now, dueDate: data.date || null,
+      subjectName: data.subject || null, savedViaTelegram: true
+    })
+    return `✅ Tarea guardada${data.subject ? ` (${data.subject})` : ""}. Ya aparece en la app.`
   }
 
+  // ── MISIONES ──
   if (section === "misiones") {
     const tasks = (subtasks || []).map((t, i) => ({ id: now + i, text: t.trim(), done: false }))
-    return {
-      key: "studyhub_v3_missions",
-      item: {
-        id: now,
-        title: (data.title as string) || "Nueva misión",
-        desc: (data.desc as string) || "",
-        priority: (data.priority as string) || "medium",
-        xp: (data.xp as number) || 15,
-        done: false,
-        tasks,
-        savedViaTelegram: true,
-      },
-    }
+    await appendToAppData(supabase, userId, "studyhub_v3_missions", {
+      id: now, title: (data.title as string) || "Nueva misión",
+      desc: (data.desc as string) || "", priority: (data.priority as string) || "medium",
+      xp: (data.xp as number) || 15, done: false, tasks, savedViaTelegram: true
+    })
+    return `✅ Misión guardada${tasks.length ? ` con ${tasks.length} subtarea(s)` : ""}. Ya aparece en la app.`
   }
 
+  // ── CALENDARIO ──
   if (section === "calendario") {
-    const colors = ["v1","v2","v3","v4"]
-    return {
-      key: "studyhub_v3_calendar",
-      item: {
-        id: now,
-        title: (data.title as string) || "Evento",
-        date: (data.date as string) || new Date().toISOString().slice(0, 10),
-        color: colors[Math.floor(Math.random() * colors.length)],
-        desc: (data.desc as string) || "",
-        savedViaTelegram: true,
-      },
-    }
+    await appendToAppData(supabase, userId, "studyhub_v3_calendar", {
+      id: now, title: (data.title as string) || "Evento",
+      date: (data.date as string) || new Date().toISOString().slice(0,10),
+      color: "v1", desc: (data.desc as string) || "", savedViaTelegram: true
+    })
+    return `✅ Evento guardado en calendario. Ya aparece en la app.`
   }
 
-  if (section === "compras") {
-    return {
-      key: "studyhub_v3_groceries",
-      item: {
-        id: now,
-        title: (data.title as string) || "Item",
-        done: false,
-      },
-    }
+  // ── DIARIO ──
+  if (section === "diario") {
+    await appendToDiary(supabase, userId, (data.title as string) || "")
+    return `✅ Anotación guardada en tu diario.`
   }
 
+  // ── FACULTAD ──
+  if (section === "facultad") {
+    const subseccion = data.subseccion as string
+    const subjects = await getAppData(supabase, userId, "studyhub_v3_subjects") as Record<string, unknown>[] || []
+
+    if (subseccion === "nueva_materia") {
+      const name = (data.title as string) || "Nueva Materia"
+      const code = name.split(/\s+/).map((w: string) => w[0]?.toUpperCase() || "").join("").slice(0, 3)
+      await appendToAppData(supabase, userId, "studyhub_v3_subjects", {
+        id: now, name, code, pct: 0, prof: "", next: "", color: "v1", notes: "", tp: []
+      })
+      return `✅ Materia "${name}" agregada en Facultad.`
+    }
+
+    if (subseccion === "tp" && data.subject) {
+      const subjectName = (data.subject as string).toLowerCase()
+      const idx = subjects.findIndex((s: Record<string, unknown>) => (s.name as string).toLowerCase().includes(subjectName))
+      if (idx === -1) return `❌ No encontré la materia "${data.subject}". Verificá el nombre en la app.`
+      const subj = { ...subjects[idx] } as Record<string, unknown>
+      const tps = Array.isArray(subj.tp) ? [...subj.tp] : []
+      tps.push({ id: now, title: (data.title as string) || "TP", desc: (data.desc as string) || "", done: false, dueDate: data.date || null })
+      subj.tp = tps
+      subjects[idx] = subj
+      await upsertAppData(supabase, userId, "studyhub_v3_subjects", subjects)
+      return `✅ TP agregado a ${subjects[idx].name}. Ya aparece en Facultad.`
+    }
+
+    if (subseccion === "nota_materia" && data.subject) {
+      const subjectName = (data.subject as string).toLowerCase()
+      const idx = subjects.findIndex((s: Record<string, unknown>) => (s.name as string).toLowerCase().includes(subjectName))
+      if (idx === -1) return `❌ No encontré la materia "${data.subject}".`
+      const subj = { ...subjects[idx] } as Record<string, unknown>
+      const today = new Date().toLocaleDateString("es-AR")
+      subj.notes = subj.notes ? `${subj.notes}\n[${today}] ${data.title}` : `[${today}] ${data.title}`
+      subjects[idx] = subj
+      await upsertAppData(supabase, userId, "studyhub_v3_subjects", subjects)
+      return `✅ Anotación guardada en ${subjects[idx].name}.`
+    }
+
+    if (subseccion === "progreso" && data.subject) {
+      const subjectName = (data.subject as string).toLowerCase()
+      const idx = subjects.findIndex((s: Record<string, unknown>) => (s.name as string).toLowerCase().includes(subjectName))
+      if (idx === -1) return `❌ No encontré la materia "${data.subject}".`
+      const subj = { ...subjects[idx] } as Record<string, unknown>
+      subj.pct = Math.min(100, Math.max(0, (data.pct as number) || 0))
+      subjects[idx] = subj
+      await upsertAppData(supabase, userId, "studyhub_v3_subjects", subjects)
+      return `✅ Progreso de ${subjects[idx].name} actualizado a ${subj.pct}%.`
+    }
+
+    if (subseccion === "fecha_materia" && data.subject) {
+      const subjectName = (data.subject as string).toLowerCase()
+      const idx = subjects.findIndex((s: Record<string, unknown>) => (s.name as string).toLowerCase().includes(subjectName))
+      if (idx === -1) return `❌ No encontré la materia "${data.subject}".`
+      const subj = { ...subjects[idx] } as Record<string, unknown>
+      subj.next = (data.title as string) || (data.date as string) || ""
+      subjects[idx] = subj
+      await upsertAppData(supabase, userId, "studyhub_v3_subjects", subjects)
+      return `✅ Próximo evento de ${subjects[idx].name} actualizado.`
+    }
+
+    return `❌ No entendí qué guardar en Facultad. Probá: "nuevo TP de álgebra: práctica 5" o "anotar en filosofía: xyz".`
+  }
+
+  // ── COCINA ──
   if (section === "cocina") {
-    return {
-      key: "studyhub_v3_kitchen",
-      item: {
-        id: now,
-        title: (data.title as string) || "Alimento",
-        sub: (data.desc as string) || "",
-        tag: "",
-        warn: false,
-        section: "heladera",
-      },
+    const subseccion = (data.subseccion as string) || "heladera"
+    const keyMap: Record<string, string> = {
+      heladera: "studyhub_v3_kitchen",
+      almacen: "studyhub_v3_almacen",
+      freezer: "studyhub_v3_freezer",
+      compras: "studyhub_v3_groceries"
     }
+    const key = keyMap[subseccion] || "studyhub_v3_kitchen"
+
+    if (subseccion === "compras") {
+      await appendToAppData(supabase, userId, key, { id: now, title: (data.title as string) || "Item", done: false })
+    } else {
+      await appendToAppData(supabase, userId, key, {
+        id: now, title: (data.title as string) || "Alimento",
+        sub: (data.desc as string) || "", tag: "", warn: false, section: subseccion
+      })
+    }
+    const labels: Record<string, string> = { heladera:"heladera 🧊", almacen:"almacén 📦", freezer:"freezer ❄️", compras:"lista de compras 🛒" }
+    return `✅ Guardado en ${labels[subseccion] || subseccion}. Ya aparece en Cocina.`
   }
 
-  if (section === "materias") {
-    const name = (data.title as string) || "Materia"
-    const code = name.split(/\s+/).map((w: string) => w[0]?.toUpperCase() || "").join("").slice(0, 3)
-    return {
-      key: "studyhub_v3_subjects",
-      item: {
-        id: now,
-        name,
-        code,
-        pct: 0,
-        prof: "",
-        next: "",
-        color: "v1",
-        notes: "",
-        tp: [],
-      },
-    }
+  // ── FINANZAS ──
+  if (section === "finanzas") {
+    const fin = await getAppData(supabase, userId, "studyhub_fin_v1") as Record<string, unknown> || { presupuesto: 0, gastos: [], metas: [], mes: new Date().getMonth(), anio: new Date().getFullYear() }
+    const gastos = Array.isArray(fin.gastos) ? [...fin.gastos as Record<string, unknown>[]] : []
+    gastos.push({
+      id: now, cat: "otros", desc: (data.title as string) || "Gasto",
+      monto: (data.amount as number) || 0,
+      fecha: new Date().toISOString().slice(0, 10),
+      type: data.type || "gasto"
+    })
+    fin.gastos = gastos
+    await upsertAppData(supabase, userId, "studyhub_fin_v1", fin)
+    return `✅ ${data.type === "ingreso" ? "Ingreso" : "Gasto"} guardado en Finanzas.`
   }
 
+  // ── OCIO ──
   if (section === "ocio") {
-    const typeMap: Record<string, string> = {
-      serie:"serie", pelicula:"pelicula", película:"pelicula",
-      juego:"juego", libro:"libro", anime:"anime"
-    }
-    const detectedType = Object.keys(typeMap).find(k => (data.title as string || "").toLowerCase().includes(k)) || "serie"
-    const emojiMap: Record<string, string> = { serie:"📺", pelicula:"🎬", juego:"🎮", libro:"📚", anime:"⛩️" }
-    return {
-      key: "studyhub_ocio_v1",
-      item: {
-        id: now,
-        emoji: emojiMap[typeMap[detectedType]] || "📺",
-        title: (data.title as string) || "Contenido",
-        type: typeMap[detectedType] || "serie",
-        status: "pendiente",
-        score: 0,
-        note: (data.desc as string) || "",
-      },
-    }
+    await appendToAppData(supabase, userId, "studyhub_ocio_v1", {
+      id: now, emoji: "📺", title: (data.title as string) || "Contenido",
+      type: "serie", status: "pendiente", score: 0, note: (data.desc as string) || ""
+    })
+    return `✅ Guardado en Ocio.`
   }
 
-  return null
+  return `❌ No pude guardar. Sección desconocida: ${section}.`
 }
+
+// ─── Mensaje de confirmación ──────────────────────────────────────────────────
 
 function formatConfirmMessage(section: string, draft: Record<string, unknown>): string {
   const data = (draft.data || {}) as Record<string, unknown>
-  const sectionEmoji: Record<string, string> = {
-    tareas:"✅", misiones:"⚡", calendario:"📅", diario:"📖",
-    materias:"📚", cocina:"🍽️", compras:"🛒", finanzas:"💰", ocio:"🎬"
-  }
-  const sectionName: Record<string, string> = {
+  const emoji: Record<string,string> = { tareas:"✅",misiones:"⚡",calendario:"📅",diario:"📖",facultad:"📚",cocina:"🍽️",finanzas:"💰",ocio:"🎬" }
+  const name: Record<string,string> = {
     tareas:"Tareas", misiones:"Misiones", calendario:"Calendario", diario:"Diario",
-    materias:"Materias", cocina:"Cocina", compras:"Lista de compras", finanzas:"Finanzas", ocio:"Ocio"
+    facultad:"Facultad", cocina:"Cocina", finanzas:"Finanzas", ocio:"Ocio"
+  }
+  const subsLabel: Record<string,string> = {
+    heladera:"Heladera 🧊", almacen:"Almacén 📦", freezer:"Freezer ❄️", compras:"Lista de compras 🛒",
+    nueva_materia:"Nueva materia", tp:"Trabajo Práctico", nota_materia:"Anotación", progreso:"Progreso", fecha_materia:"Fecha/evento"
   }
 
   let details = `<b>${data.title as string || "Item"}</b>`
   if (data.subject) details += `\n📚 Materia: ${data.subject}`
+  if (data.subseccion) details += `\n📁 ${subsLabel[data.subseccion as string] || data.subseccion}`
   if (data.desc) details += `\n📝 ${data.desc}`
   if (data.date) details += `\n📅 ${data.date}`
   if (data.priority === "high") details += "\n🔴 Prioridad alta"
   if (data.xp) details += `\n⚡ +${data.xp} XP`
   if (data.amount) details += `\n💰 $${data.amount} (${data.type || "gasto"})`
+  if (data.pct) details += `\n📊 ${data.pct}% de progreso`
 
-  return `${sectionEmoji[section] || "📌"} <b>${sectionName[section] || section}</b>\n\n${details}\n\n¿Guardamos esto?`
+  return `${emoji[section]||"📌"} <b>${name[section]||section}</b>\n\n${details}\n\n¿Guardamos esto?`
+}
+
+const CONFIRM_KEYBOARD = {
+  inline_keyboard: [[
+    { text: "✅ Sí, guardar", callback_data: "confirm_yes" },
+    { text: "❌ No", callback_data: "confirm_no" },
+    { text: "📁 Cambiar sección", callback_data: "change_section" },
+  ]]
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────
@@ -475,22 +580,16 @@ function formatConfirmMessage(section: string, draft: Record<string, unknown>): 
 serve(async (req) => {
   try {
     const body = await req.json()
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
     const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN")!
     const geminiKey = Deno.env.get("GEMINI_API_KEY")!
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // ── Callback query (respuesta a botones inline) ──────────────────────────
+    // ── Callback query (botones inline) ─────────────────────────────────────
     if (body.callback_query) {
       const cq = body.callback_query
       const chatId = cq.message.chat.id.toString()
       const callbackData = cq.data as string
-
       await answerCallbackQuery(cq.id, telegramToken)
-
       const state = await getState(supabase, chatId)
 
       if (!state) {
@@ -499,209 +598,143 @@ serve(async (req) => {
       }
 
       if (callbackData === "confirm_yes" && state.stage === "awaiting_confirm") {
-        // Guardar el item
-        const built = buildItem(state.section as string, state.draft as Record<string, unknown>, state.subtasks as string[] | undefined)
-
-        if (built) {
-          if (state.section === "diario") {
-            await appendToDiary(supabase, state.user_id as string, (state.draft as Record<string, unknown>).data?.title as string || "")
-          } else {
-            await appendToAppData(supabase, state.user_id as string, built.key, built.item)
-          }
-          await setState(supabase, chatId, null)
-          await sendMessage(chatId, telegramToken, "✅ ¡Guardado! Ya aparece en la app.")
-        } else {
-          await setState(supabase, chatId, null)
-          await sendMessage(chatId, telegramToken, "❌ No pude guardar ese tipo de item.")
-        }
+        const result = await buildAndSave(supabase, state.user_id as string, state.section as string, state.draft as Record<string,unknown>, state.subtasks as string[]|undefined)
+        await setState(supabase, chatId, null)
+        await sendMessage(chatId, telegramToken, result)
 
       } else if (callbackData === "confirm_no") {
         await setState(supabase, chatId, null)
-        await sendMessage(chatId, telegramToken, "❌ Cancelado. Si querés guardar otra cosa, mandame un mensaje.")
+        await sendMessage(chatId, telegramToken, "❌ Cancelado.")
 
       } else if (callbackData === "change_section") {
         await setState(supabase, chatId, { ...state, stage: "awaiting_section_change" })
-        await sendMessage(chatId, telegramToken,
-          "📁 ¿A qué sección lo mando?\n\nOpciones: <b>tareas, misiones, calendario, diario, materias, cocina, compras, finanzas, ocio</b>")
+        await sendMessage(chatId, telegramToken, "📁 ¿A qué sección lo mando?\n\n<b>tareas · misiones · calendario · diario · facultad · cocina · finanzas · ocio</b>")
       }
-
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
     // ── Mensaje de texto ─────────────────────────────────────────────────────
     const message = body.message
     if (!message) return new Response(JSON.stringify({ ok: true }), { status: 200 })
-
     const chatId = message.chat.id.toString()
     const text = (message.text || "").trim()
-
     if (!text) return new Response(JSON.stringify({ ok: true }), { status: 200 })
 
-    // ── PASO 1: Verificar/procesar código SH-XXXX (ANTES del chequeo de vínculo)
-    if (/^SH-[A-Z0-9]{4}$/i.test(text.trim())) {
-      const code = text.trim().toUpperCase()
-
-      const { data: pendingLink, error: findErr } = await supabase
-        .from("telegram_links")
-        .select("user_id, link_code")
-        .eq("link_code", code)
-        .eq("linked", false)
-        .maybeSingle()
-
-      if (findErr || !pendingLink) {
+    // ── Vinculación SH-XXXX (antes del chequeo de vínculo) ──────────────────
+    if (/^SH-[A-Z0-9]{4}$/i.test(text)) {
+      const code = text.toUpperCase()
+      const { data: pendingLink } = await supabase.from("telegram_links").select("user_id").eq("link_code", code).eq("linked", false).maybeSingle()
+      if (!pendingLink) {
         await sendMessage(chatId, telegramToken, "❌ Código inválido o ya usado. Generá uno nuevo desde la app.")
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       }
-
-      await supabase
-        .from("telegram_links")
-        .update({
-          linked: true,
-          telegram_chat_id: chatId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("link_code", code)
-
+      await supabase.from("telegram_links").update({ linked: true, telegram_chat_id: chatId, updated_at: new Date().toISOString() }).eq("link_code", code)
       await sendMessage(chatId, telegramToken,
-        `✅ <b>¡Vinculación exitosa!</b>\n\nAhora podés mandarme cualquier cosa y la guardo en StudyHub.\n\n` +
-        `Algunos ejemplos:\n` +
-        `• "estudiar análisis el lunes" → Tareas\n` +
-        `• "parcial álgebra el 15 de julio" → Calendario\n` +
-        `• "quiero terminar el TP final" → Misiones\n` +
-        `• "gasté 3000 en fotocopias" → Finanzas\n\n` +
-        `🎯 Mando <b>un mensaje a la vez</b>, claro y directo. ¡Empezá!`)
+        `✅ <b>¡Vinculación exitosa!</b>\n\nAhora podés mandarme cualquier cosa en lenguaje natural:\n\n` +
+        `• "hacer ejercicios de álgebra"\n• "parcial de análisis el 15 de julio"\n• "gasté 3000 en fotocopias"\n` +
+        `• "nuevo TP de álgebra: práctica 5"\n• "¿qué tareas tengo pendientes?"\n\n` +
+        `🎯 Un mensaje a la vez. ¡Empezá!`)
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
-    // ── PASO 2: Verificar que el chat esté vinculado ─────────────────────────
-    const { data: link } = await supabase
-      .from("telegram_links")
-      .select("user_id, auto_save")
-      .eq("telegram_chat_id", chatId)
-      .eq("linked", true)
-      .maybeSingle()
-
+    // ── Chequear vínculo ─────────────────────────────────────────────────────
+    const { data: link } = await supabase.from("telegram_links").select("user_id, auto_save").eq("telegram_chat_id", chatId).eq("linked", true).maybeSingle()
     if (!link) {
-      await sendMessage(chatId, telegramToken,
-        "🔗 <b>Tu cuenta no está vinculada todavía.</b>\n\nAbrí StudyHub → Configuración → Integraciones → Telegram, generá el código y mandámelo acá.")
+      await sendMessage(chatId, telegramToken, "🔗 <b>Tu cuenta no está vinculada.</b>\n\nAbrí StudyHub → Configuración → Integraciones → Telegram, generá el código y mandámelo acá.")
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
-
     const userId = link.user_id as string
 
-    // ── PASO 3: Verificar si hay estado activo (conversación en curso) ────────
+    // ── Estado activo (conversación en curso) ────────────────────────────────
     const state = await getState(supabase, chatId)
-
     if (state) {
       const stage = state.stage as string
-      const draft = state.draft as Record<string, unknown>
+      const draft = state.draft as Record<string,unknown>
       const section = state.section as string
 
-      // Respuesta a cambio de sección
       if (stage === "awaiting_section_change") {
-        const validSections = ["tareas","misiones","calendario","diario","materias","cocina","compras","finanzas","ocio"]
+        const valid = ["tareas","misiones","calendario","diario","facultad","cocina","finanzas","ocio"]
         const newSection = text.toLowerCase().trim()
-        if (validSections.includes(newSection)) {
-          const newDraft = { ...draft, data: { ...(draft.data as Record<string, unknown>), title: (draft.data as Record<string,unknown>)?.title } }
-          const newState = { ...state, stage: "awaiting_confirm", section: newSection, draft: newDraft }
-
-          const followup = getFollowupQuestion(newSection, newDraft)
+        if (valid.includes(newSection)) {
+          const followup = getFollowupQuestion(newSection, draft)
           if (followup) {
-            await setState(supabase, chatId, { ...newState, stage: "awaiting_followup" })
+            await setState(supabase, chatId, { ...state, stage: "awaiting_followup", section: newSection })
             await sendMessage(chatId, telegramToken, followup)
           } else {
-            await setState(supabase, chatId, newState)
-            await sendMessage(chatId, telegramToken, formatConfirmMessage(newSection, newDraft), {
-              inline_keyboard: [[
-                { text: "✅ Sí, guardar", callback_data: "confirm_yes" },
-                { text: "❌ No", callback_data: "confirm_no" },
-                { text: "📁 Cambiar sección", callback_data: "change_section" },
-              ]]
-            })
+            await setState(supabase, chatId, { ...state, stage: "awaiting_confirm", section: newSection })
+            await sendMessage(chatId, telegramToken, formatConfirmMessage(newSection, draft), CONFIRM_KEYBOARD)
           }
         } else {
-          await sendMessage(chatId, telegramToken, "❓ No reconocí esa sección. Mandá una de estas: tareas, misiones, calendario, diario, materias, cocina, compras, finanzas, ocio")
+          await sendMessage(chatId, telegramToken, "❓ Opciones: tareas · misiones · calendario · diario · facultad · cocina · finanzas · ocio")
         }
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       }
 
-      // Respuesta a followup (misiones: subtareas, tareas: fecha, etc.)
       if (stage === "awaiting_followup") {
         let updatedDraft = { ...draft }
-        let subtasks: string[] | undefined = state.subtasks as string[] | undefined
+        let subtasks: string[]|undefined = state.subtasks as string[]|undefined
+        const data = (draft.data || {}) as Record<string, unknown>
 
         if (section === "misiones") {
-          // El usuario respondió sobre las subtareas
-          if (text.toLowerCase() !== "no") {
-            subtasks = text.split(",").map((t: string) => t.trim()).filter(Boolean)
-          }
+          if (text.toLowerCase() !== "no") subtasks = text.split(",").map((t: string) => t.trim()).filter(Boolean)
         } else if (section === "tareas" || section === "calendario") {
-          // Respuesta de fecha
-          if (!["sin fecha", "no tengo", "no sé", "nada"].some(s => text.toLowerCase().includes(s))) {
+          if (!["sin fecha","no tengo","nada"].some(s => text.toLowerCase().includes(s))) {
             const parsedDate = parseSpanishDate(text) || text
-            updatedDraft = { ...draft, data: { ...(draft.data as Record<string,unknown>), date: parsedDate } }
+            updatedDraft = { ...draft, data: { ...data, date: parsedDate } }
           }
         } else if (section === "finanzas") {
-          // Monto
-          const num = parseFloat(text.replace(/[^\d.,]/g, "").replace(",", "."))
-          if (!isNaN(num)) {
-            updatedDraft = { ...draft, data: { ...(draft.data as Record<string,unknown>), amount: num } }
+          const num = parseFloat(text.replace(/[^\d.,]/g,"").replace(",","."))
+          if (!isNaN(num)) updatedDraft = { ...draft, data: { ...data, amount: num } }
+        } else if (section === "cocina") {
+          const subMap: Record<string,string> = { heladera:"heladera", almacen:"almacen", almacén:"almacen", freezer:"freezer", compras:"compras", "lista":"compras" }
+          const sub = Object.keys(subMap).find(k => text.toLowerCase().includes(k))
+          if (sub) updatedDraft = { ...draft, data: { ...data, subseccion: subMap[sub] } }
+        } else if (section === "facultad") {
+          const tText = text.toLowerCase()
+          if (tText.includes("tp") || tText.includes("trabajo")) updatedDraft = { ...draft, data: { ...data, subseccion: "tp" } }
+          else if (tText.includes("anot") || tText.includes("nota")) updatedDraft = { ...draft, data: { ...data, subseccion: "nota_materia" } }
+          else if (tText.includes("nueva") || tText.includes("materia")) updatedDraft = { ...draft, data: { ...data, subseccion: "nueva_materia" } }
+          else if (tText.includes("progreso") || tText.includes("%")) updatedDraft = { ...draft, data: { ...data, subseccion: "progreso" } }
+          else {
+            // Si respondió con el nombre de una materia (para tp/nota que necesitaba subject)
+            if (!data.subject) updatedDraft = { ...draft, data: { ...data, subject: text.trim() } }
           }
         }
 
-        // Actualizar estado y pasar a confirmación
-        const newState = { ...state, stage: "awaiting_confirm", draft: updatedDraft, subtasks }
-        await setState(supabase, chatId, newState)
-
-        await sendMessage(chatId, telegramToken, formatConfirmMessage(section, updatedDraft), {
-          inline_keyboard: [[
-            { text: "✅ Sí, guardar", callback_data: "confirm_yes" },
-            { text: "❌ No", callback_data: "confirm_no" },
-            { text: "📁 Cambiar sección", callback_data: "change_section" },
-          ]]
-        })
+        // Chequear si necesita otro followup
+        const nextFollowup = getFollowupQuestion(section, updatedDraft)
+        if (nextFollowup && nextFollowup !== getFollowupQuestion(section, draft)) {
+          await setState(supabase, chatId, { ...state, draft: updatedDraft, subtasks })
+          await sendMessage(chatId, telegramToken, nextFollowup)
+        } else {
+          await setState(supabase, chatId, { ...state, stage: "awaiting_confirm", draft: updatedDraft, subtasks })
+          await sendMessage(chatId, telegramToken, formatConfirmMessage(section, updatedDraft), CONFIRM_KEYBOARD)
+        }
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       }
 
-      // Confirmación textual (respaldo si los botones no funcionan)
       if (stage === "awaiting_confirm") {
         const t = text.toLowerCase()
-        if (["sí","si","yes","dale","ok","confirmar","guardalo","guardar"].some(w => t.includes(w))) {
-          const built = buildItem(section, draft, state.subtasks as string[] | undefined)
-          if (built) {
-            if (section === "diario") {
-              await appendToDiary(supabase, userId, (draft.data as Record<string,unknown>)?.title as string || "")
-            } else {
-              await appendToAppData(supabase, userId, built.key, built.item)
-            }
-            await setState(supabase, chatId, null)
-            await sendMessage(chatId, telegramToken, "✅ ¡Guardado! Ya aparece en la app.")
-          }
-        } else if (["no","cancelar","descartar"].some(w => t.includes(w))) {
+        if (["sí","si","yes","dale","ok","guardar"].some(w => t.includes(w))) {
+          const result = await buildAndSave(supabase, userId, section, draft, state.subtasks as string[]|undefined)
+          await setState(supabase, chatId, null)
+          await sendMessage(chatId, telegramToken, result)
+        } else if (["no","cancelar"].some(w => t.includes(w))) {
           await setState(supabase, chatId, null)
           await sendMessage(chatId, telegramToken, "❌ Cancelado.")
-        } else {
-          // Puede ser un nuevo mensaje, limpiar estado y procesar como nuevo intent
-          await setState(supabase, chatId, null)
-          // Continuar al procesamiento de nuevo intent abajo
         }
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       }
     }
 
-    // ── PASO 4: Comandos especiales ──────────────────────────────────────────
+    // ── Comandos ─────────────────────────────────────────────────────────────
     if (text === "/start" || text === "/ayuda" || text === "/help") {
       await sendMessage(chatId, telegramToken,
-        `👋 <b>Hola! Soy el bot de StudyHub.</b>\n\n` +
-        `Mandame cualquier cosa en lenguaje natural y la guardo en tu app:\n\n` +
-        `📚 <b>Ejemplos:</b>\n` +
-        `• "estudiar análisis para el lunes"\n` +
-        `• "parcial de álgebra el 15 de julio"\n` +
-        `• "quiero terminar el TP grupal — misión"\n` +
-        `• "gasté 2500 en libros"\n` +
-        `• "comprar pan, leche, huevos"\n` +
-        `• "anotar: la clase de hoy estuvo buena"\n\n` +
-        `⚙️ Comandos: /ayuda · /cancelar`)
+        `👋 <b>Hola! Soy el bot de StudyHub.</b>\n\nPodés guardar y consultar cosas:\n\n` +
+        `📝 <b>Guardar:</b>\n• "hacer ejercicios de álgebra"\n• "nuevo TP de álgebra: práctica 5"\n• "anotar en filosofía: temas del parcial"\n` +
+        `• "parcial de análisis el 20 de julio"\n• "gasté 3000 en fotocopias"\n• "comprar pan y leche"\n• "metí empanadas al freezer"\n\n` +
+        `🔍 <b>Consultar:</b>\n• "¿qué tareas tengo pendientes?"\n• "¿cuáles son los temas de filosofía?"\n• "¿cuánto gasté este mes?"\n\n` +
+        `⚙️ /cancelar para cancelar una operación`)
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
@@ -711,95 +744,63 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
-    // Comando de debug — muestra estado de secrets y prueba Gemini en vivo
+    // Comando debug
     if (text === "/debug") {
       const hasGemini = !!geminiKey
-      const hasToken = !!telegramToken
       let geminiTest = "no probado"
-      let geminiRaw = ""
       if (hasGemini) {
         try {
           const r = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ parts: [{ text: "Respondé solo con la palabra: ok" }] }],
-              generationConfig: {
-                temperature: 0,
-                maxOutputTokens: 500,
-                thinkingConfig: { thinkingBudget: 0 }
-              }
+              generationConfig: { temperature: 0, maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } }
             })
           })
           const j = await r.json()
-          geminiRaw = JSON.stringify(j).slice(0, 300)
-          if (j.error) {
-            geminiTest = `❌ Error ${j.error.code}: ${j.error.message}`
-          } else if (j.candidates?.[0]?.content?.parts?.[0]?.text) {
-            geminiTest = `✅ Funciona: "${j.candidates[0].content.parts[0].text}"`
-          } else {
-            geminiTest = `⚠️ Respuesta rara: ${geminiRaw}`
-          }
-        } catch (e) {
-          geminiTest = `❌ Fetch error: ${(e as Error).message}`
-        }
+          if (j.error) geminiTest = `❌ Error ${j.error.code}: ${j.error.message}`
+          else if (j.candidates?.[0]?.content?.parts?.[0]?.text) geminiTest = `✅ Funciona: "${j.candidates[0].content.parts[0].text}"`
+          else geminiTest = `⚠️ Respuesta rara: ${JSON.stringify(j).slice(0, 200)}`
+        } catch (e) { geminiTest = `❌ ${(e as Error).message}` }
       }
       await sendMessage(chatId, telegramToken,
-        `🔧 <b>Debug</b>\n\n` +
-        `TELEGRAM_BOT_TOKEN: ${hasToken ? "✅" : "❌"}\n` +
-        `GEMINI_API_KEY: ${hasGemini ? "✅ presente" : "❌ no configurada"}\n\n` +
-        `Gemini test: ${geminiTest}`)
+        `🔧 <b>Debug</b>\n\nTELEGRAM_BOT_TOKEN: ${!!telegramToken ? "✅" : "❌"}\nGEMINI_API_KEY: ${hasGemini ? "✅ presente" : "❌ no configurada"}\n\nGemini test: ${geminiTest}`)
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
-    // ── PASO 5: Clasificar con Gemini y empezar flujo ────────────────────────
+    // ── Clasificar con Gemini ────────────────────────────────────────────────
     const intent = await classifyWithGemini(text, geminiKey)
 
-    // Debug temporal: si Gemini tuvo error, avisarlo
-    if (intent._geminiError) {
-      console.log("Gemini error (usando fallback keywords):", intent._geminiError)
+    // Modo QUERY — responder pregunta
+    if (intent.intent_type === "query") {
+      const answer = await handleQuery(supabase, userId, intent.section as string, (intent.data || {}) as Record<string,unknown>, geminiKey)
+      await sendMessage(chatId, telegramToken, answer)
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
+    // Baja confianza
     if (!intent.section || (intent.confidence as number) < 0.5) {
       await sendMessage(chatId, telegramToken,
-        `🤔 No entendí bien qué querés guardar.\n\n` +
-        `Probá ser más específico. Por ejemplo:\n` +
-        `• "tarea: estudiar capítulo 4"\n` +
-        `• "evento: parcial álgebra el 20"\n` +
-        `• "gasto: 3000 en transporte"\n\n` +
-        `O escribí <b>/ayuda</b> para ver todos los ejemplos.`)
+        `🤔 No entendí bien. Probá:\n• "tarea: estudiar capítulo 4"\n• "nuevo TP de álgebra: práctica 5"\n• "gasto: 3000 en transporte"\n• "¿qué tengo pendiente?"\n\nO escribí <b>/ayuda</b>.`)
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
     if (intent.needs_clarification) {
-      const clarQuestion = (intent.data as Record<string,unknown>)?.clarification as string
+      const q = (intent.data as Record<string,unknown>)?.clarification as string
       await setState(supabase, chatId, { stage: "awaiting_clarification", original_text: text, user_id: userId })
-      await sendMessage(chatId, telegramToken, clarQuestion || "¿Podés ser más específico?")
+      await sendMessage(chatId, telegramToken, q || "¿Podés ser más específico?")
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }
 
-    // Guardar estado inicial con el draft
     const section = intent.section as string
-    const draftState: Record<string, unknown> = { stage: "awaiting_followup", section, draft: intent, user_id: userId }
-
-    // Verificar si necesita followup
     const followupQ = getFollowupQuestion(section, intent as Record<string,unknown>)
 
     if (followupQ) {
-      await setState(supabase, chatId, draftState)
-      await sendMessage(chatId, telegramToken,
-        `🎯 Entendí: <b>${intent.data?.title || text}</b> → ${section}\n\n${followupQ}`)
+      await setState(supabase, chatId, { stage: "awaiting_followup", section, draft: intent, user_id: userId })
+      await sendMessage(chatId, telegramToken, `🎯 Entendí: <b>${(intent.data as Record<string,unknown>)?.title || text}</b> → ${section}\n\n${followupQ}`)
     } else {
-      // Ir directo a confirmación
-      const confirmState = { ...draftState, stage: "awaiting_confirm" }
-      await setState(supabase, chatId, confirmState)
-      await sendMessage(chatId, telegramToken, formatConfirmMessage(section, intent as Record<string,unknown>), {
-        inline_keyboard: [[
-          { text: "✅ Sí, guardar", callback_data: "confirm_yes" },
-          { text: "❌ No", callback_data: "confirm_no" },
-          { text: "📁 Cambiar sección", callback_data: "change_section" },
-        ]]
-      })
+      await setState(supabase, chatId, { stage: "awaiting_confirm", section, draft: intent, user_id: userId })
+      await sendMessage(chatId, telegramToken, formatConfirmMessage(section, intent as Record<string,unknown>), CONFIRM_KEYBOARD)
     }
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
