@@ -4049,13 +4049,20 @@ function OnboardingScreen({ onDone }) {
       ),
     },
     {
-      title: 'Conectá Telegram 📱', sub: 'Mandá tareas y recibí alertas desde el chat',
+      title: 'Conectá con Hubby 🤖', sub: 'Tu asistente IA en Telegram — guardá y consultá desde el chat',
       content: (
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{display:'flex',alignItems:'center',gap:14,background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
+            <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#1a1a2e,#0d0d18)',border:'2px solid rgba(139,92,246,0.4)',display:'grid',placeItems:'center',fontSize:26,flexShrink:0}}>🤖</div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:'#c4b5fd',marginBottom:2}}>Hubby</div>
+              <div style={{fontSize:12,color:'#7c7c9e'}}>@Hubby_ia_bot · Asistente de StudyHub</div>
+            </div>
+          </div>
           <div style={{background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
             <ol style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:8,fontSize:13,color:'#c4b5fd',lineHeight:1.5}}>
               <li>Generá tu código de vinculación abajo</li>
-              <li>Abrí Telegram y buscá <b style={{color:'#a78bfa'}}>@Hubby_ia_bot</b></li>
+              <li>Abrí Telegram y buscá <b style={{color:'#a78bfa'}}>Hubby</b> <span style={{color:'#4a4a6a'}}>(@Hubby_ia_bot)</span></li>
               <li>Enviá el código al bot</li>
               <li>¡Listo! Quedás conectado automáticamente</li>
             </ol>
@@ -4077,7 +4084,7 @@ function OnboardingScreen({ onDone }) {
               <a href="https://t.me/Hubby_ia_bot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none',transition:'background 150ms'}}
                 onMouseEnter={e=>e.currentTarget.style.background='rgba(0,136,204,0.2)'}
                 onMouseLeave={e=>e.currentTarget.style.background='rgba(0,136,204,0.12)'}>
-                Abrir @Hubby_ia_bot en Telegram →
+                🤖 Abrir Hubby en Telegram →
               </a>
             </div>
           )}
@@ -4956,18 +4963,18 @@ function TelegramLinkCard() {
       </div>
       {showTutorial && (
         <div style={{background:'var(--inner)',borderRadius:12,padding:16,marginBottom:16,fontSize:13,lineHeight:1.7,color:'var(--text-2)'}}>
-          <b style={{color:'var(--text)',display:'block',marginBottom:8}}>Cómo conectar el bot:</b>
+          <b style={{color:'var(--text)',display:'block',marginBottom:8}}>Cómo conectar Hubby:</b>
           <ol style={{margin:0,paddingLeft:20,display:'flex',flexDirection:'column',gap:6}}>
             <li>Tocá <b>"⚡ Generar código"</b> acá abajo</li>
-            <li>Abrí Telegram y buscá el bot <b style={{color:'var(--violet-2)'}}>@Hubby_ia_bot</b></li>
+            <li>Abrí Telegram y buscá <b style={{color:'var(--violet-2)'}}>Hubby</b> <span style={{color:'var(--text-3)',fontSize:11}}>(@Hubby_ia_bot)</span></li>
             <li>Mandá el código que generaste (ej: <b>SH-A3X7</b>)</li>
-            <li>El bot te confirma que quedó vinculado</li>
-            <li>¡Listo! Podés mandar tareas, notas y más desde Telegram</li>
+            <li>Hubby te confirma que quedó vinculado</li>
+            <li>¡Listo! Podés mandarle tareas, consultas y más</li>
           </ol>
         </div>
       )}
       <p style={{fontSize: 13, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.55}}>
-        Vinculá tu cuenta de Telegram para guardar cosas desde el bot.
+        Vinculá tu cuenta con <b>Hubby</b>, tu asistente IA en Telegram.
       </p>
       <div style={{
         background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(217,70,239,0.08))',
@@ -9792,7 +9799,7 @@ function App() {
                 <div style={{fontSize:24,flexShrink:0}}>✈️</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--text)'}}>Conectá Telegram al StudyHub</div>
-                  <div style={{fontSize:11,color:'var(--text-3)'}}>Guardá tareas y notas directo desde el bot @Hubby_ia_bot</div>
+                  <div style={{fontSize:11,color:'var(--text-3)'}}>Guardá tareas y consultá datos con Hubby, tu asistente en Telegram</div>
                 </div>
                 <button onClick={()=>setSettingsOpen(true)} style={{background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',borderRadius:8,padding:'7px 14px',color:'#93c5fd',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
                   Conectar
