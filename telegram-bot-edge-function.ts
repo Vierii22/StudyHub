@@ -65,10 +65,17 @@ async function answerCallbackQuery(callbackId: string, token: string, text = "")
 async function getState(supabase: ReturnType<typeof createClient>, chatId: string) {
   const { data } = await supabase
     .from("telegram_state")
-    .select("state")
+    .select("state, updated_at")
     .eq("chat_id", chatId)
     .maybeSingle()
-  return data?.state || null
+  if (!data?.state) return null
+  // Auto-limpiar estados viejos (más de 30 minutos)
+  const updatedAt = new Date(data.updated_at || 0).getTime()
+  if (Date.now() - updatedAt > 30 * 60 * 1000) {
+    await supabase.from("telegram_state").delete().eq("chat_id", chatId)
+    return null
+  }
+  return data.state
 }
 
 async function setState(supabase: ReturnType<typeof createClient>, chatId: string, state: object | null) {
