@@ -728,9 +728,37 @@ serve(async (req) => {
     }
 
     // ── Comandos ─────────────────────────────────────────────────────────────
-    if (text === "/start" || text === "/ayuda" || text === "/help") {
+    if (text === "/start") {
+      // Si ya está vinculado, dar bienvenida distinta
+      const { data: existingLink } = await supabase
+        .from("telegram_links").select("linked").eq("telegram_chat_id", chatId).eq("linked", true).maybeSingle()
+
+      if (existingLink) {
+        await sendMessage(chatId, telegramToken,
+          `👋 <b>¡Ya estás conectado a StudyHub!</b>\n\n` +
+          `Mandame cualquier cosa en lenguaje natural y la guardo en tu app.\n\n` +
+          `📝 "hacer ejercicios de álgebra"\n` +
+          `📅 "parcial de análisis el 20 de julio"\n` +
+          `💰 "gasté 3000 en fotocopias"\n` +
+          `🔍 "¿qué tareas tengo pendientes?"\n\n` +
+          `Escribí /ayuda para ver todos los ejemplos.`)
+      } else {
+        await sendMessage(chatId, telegramToken,
+          `✨ <b>¡Hola! Soy Hubby, tu asistente de StudyHub.</b>\n\n` +
+          `Voy a ser tu compañero de estudio en Telegram. Podés mandarme tareas, eventos, gastos, notas y hasta hacerme preguntas sobre tu info — todo se sincroniza directo con la app.\n\n` +
+          `🔗 <b>Para empezar, vinculá tu cuenta:</b>\n\n` +
+          `1. Abrí StudyHub en el navegador\n` +
+          `2. Onboarding paso 3 <b>o</b> Configuración → Integraciones\n` +
+          `3. Generá tu código <b>SH-XXXX</b>\n` +
+          `4. Mandámelo acá\n\n` +
+          `¡En segundos quedamos conectados! 🚀`)
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }
+
+    if (text === "/ayuda" || text === "/help") {
       await sendMessage(chatId, telegramToken,
-        `👋 <b>Hola! Soy el bot de StudyHub.</b>\n\nPodés guardar y consultar cosas:\n\n` +
+        `🤖 <b>Soy Hubby, asistente de StudyHub.</b>\n\nPodés guardar y consultar cosas:\n\n` +
         `📝 <b>Guardar:</b>\n• "hacer ejercicios de álgebra"\n• "nuevo TP de álgebra: práctica 5"\n• "anotar en filosofía: temas del parcial"\n` +
         `• "parcial de análisis el 20 de julio"\n• "gasté 3000 en fotocopias"\n• "comprar pan y leche"\n• "metí empanadas al freezer"\n\n` +
         `🔍 <b>Consultar:</b>\n• "¿qué tareas tengo pendientes?"\n• "¿cuáles son los temas de filosofía?"\n• "¿cuánto gasté este mes?"\n\n` +
