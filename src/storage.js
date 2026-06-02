@@ -1,5 +1,17 @@
 import { supabase } from './supabase.js';
 
+let _currentUserId = null;
+let _channel = null;
+
+function _clearLocalStorage() {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('studyhub'))
+      .forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem('studyhub-config');
+  } catch (e) {}
+}
+
 async function _getUserId() {
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -32,13 +44,23 @@ async function _supabaseClear() {
   await supabase.from('app_data').delete().eq('user_id', userId);
 }
 
-let _channel = null;
+function _stopRealtime() {
+  if (_channel) {
+    supabase.removeChannel(_channel);
+    _channel = null;
+  }
+}
 
-function _startRealtime() {
-  if (_channel) return;
+function _startRealtime(userId) {
+  _stopRealtime();
   _channel = supabase
-    .channel('app_data_sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_data' }, (payload) => {
+    .channel('app_data_sync_' + userId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'app_data',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         const { key, value } = payload.new;
         const stored = typeof value === 'string' ? value : JSON.stringify(value);
@@ -58,6 +80,9 @@ function _startRealtime() {
 async function _initialSync() {
   const userId = await _getUserId();
   if (!userId) return;
+  _currentUserId = userId;
+  // Limpiar datos del usuario anterior antes de cargar los del nuevo
+  _clearLocalStorage();
   const { data, error } = await supabase
     .from('app_data')
     .select('key, value')
@@ -68,8 +93,23 @@ async function _initialSync() {
       try { localStorage.setItem(row.key, stored); } catch (e) {}
     }
   }
-  _startRealtime();
+  _startRealtime(userId);
+  window.dispatchEvent(new CustomEvent('sh:user-synced'));
 }
+
+// Re-sincronizar cuando cambia el usuario (login/logout en la misma pestaña)
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN') {
+    const newUserId = session?.user?.id;
+    if (newUserId && newUserId !== _currentUserId) {
+      _initialSync();
+    }
+  } else if (event === 'SIGNED_OUT') {
+    _currentUserId = null;
+    _clearLocalStorage();
+    _stopRealtime();
+  }
+});
 
 _initialSync();
 
