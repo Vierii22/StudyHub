@@ -81,8 +81,6 @@ async function _initialSync() {
   const userId = await _getUserId();
   if (!userId) return;
   _currentUserId = userId;
-  // Limpiar datos del usuario anterior antes de cargar los del nuevo
-  _clearLocalStorage();
   const { data, error } = await supabase
     .from('app_data')
     .select('key, value')
