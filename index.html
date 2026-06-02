@@ -4055,7 +4055,7 @@ function OnboardingScreen({ onDone }) {
           <div style={{background:'rgba(139,92,246,0.07)',border:'1px solid rgba(139,92,246,0.18)',borderRadius:12,padding:'14px 16px'}}>
             <ol style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:8,fontSize:13,color:'#c4b5fd',lineHeight:1.5}}>
               <li>Generá tu código de vinculación abajo</li>
-              <li>Abrí Telegram y buscá <b style={{color:'#a78bfa'}}>@StudyHubBot</b></li>
+              <li>Abrí Telegram y buscá <b style={{color:'#a78bfa'}}>@studyhub_bot</b></li>
               <li>Enviá el código al bot</li>
               <li>¡Listo! Quedás conectado automáticamente</li>
             </ol>
@@ -4074,10 +4074,10 @@ function OnboardingScreen({ onDone }) {
                   {tgCopied ? '✓ Copiado' : '📋 Copiar'}
                 </button>
               </div>
-              <a href="https://t.me/StudyHubBot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none',transition:'background 150ms'}}
+              <a href="https://t.me/studyhub_bot" target="_blank" rel="noopener noreferrer" style={{display:'block',textAlign:'center',background:'rgba(0,136,204,0.12)',border:'1px solid rgba(0,136,204,0.25)',borderRadius:10,padding:'10px 0',color:'#54a5d4',fontSize:13,fontWeight:600,textDecoration:'none',transition:'background 150ms'}}
                 onMouseEnter={e=>e.currentTarget.style.background='rgba(0,136,204,0.2)'}
                 onMouseLeave={e=>e.currentTarget.style.background='rgba(0,136,204,0.12)'}>
-                Abrir @StudyHubBot en Telegram →
+                Abrir @studyhub_bot en Telegram →
               </a>
             </div>
           )}
@@ -4959,7 +4959,7 @@ function TelegramLinkCard() {
           <b style={{color:'var(--text)',display:'block',marginBottom:8}}>Cómo conectar el bot:</b>
           <ol style={{margin:0,paddingLeft:20,display:'flex',flexDirection:'column',gap:6}}>
             <li>Tocá <b>"⚡ Generar código"</b> acá abajo</li>
-            <li>Abrí Telegram y buscá el bot <b style={{color:'var(--violet-2)'}}>@StudyHubBot</b></li>
+            <li>Abrí Telegram y buscá el bot <b style={{color:'var(--violet-2)'}}>@studyhub_bot</b></li>
             <li>Mandá el código que generaste (ej: <b>SH-A3X7</b>)</li>
             <li>El bot te confirma que quedó vinculado</li>
             <li>¡Listo! Podés mandar tareas, notas y más desde Telegram</li>
@@ -9792,7 +9792,7 @@ function App() {
                 <div style={{fontSize:24,flexShrink:0}}>✈️</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--text)'}}>Conectá Telegram al StudyHub</div>
-                  <div style={{fontSize:11,color:'var(--text-3)'}}>Guardá tareas y notas directo desde el bot @StudyHubBot</div>
+                  <div style={{fontSize:11,color:'var(--text-3)'}}>Guardá tareas y notas directo desde el bot @studyhub_bot</div>
                 </div>
                 <button onClick={()=>setSettingsOpen(true)} style={{background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',borderRadius:8,padding:'7px 14px',color:'#93c5fd',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
                   Conectar
