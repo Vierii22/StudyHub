@@ -1547,8 +1547,10 @@ input, textarea { font: inherit; color: inherit; }
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
   z-index: 100;
   animation: backdropIn var(--d-base) var(--ease) both;
   padding: 24px;
@@ -1570,7 +1572,9 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--card);
   border-radius: var(--r-lg);
   width: min(640px, 100%);
-  max-height: calc(100vh - 48px);
+  max-height: none;
+  margin: auto;
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
@@ -1584,6 +1588,7 @@ input, textarea { font: inherit; color: inherit; }
   gap: 14px;
   padding: 22px 24px 18px;
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .modal__head svg { color: var(--violet-2); }
 .modal__title {
@@ -3987,9 +3992,9 @@ function OnboardingScreen({ onDone }) {
         theme: 'dark', accent: 'violet', density: 'comfy', radius: 'medium',
         animations: true, sidebar: 'expanded', greeting: 'italic', bgDeco: true,
         widgets: [
-          { id: 'stat-xp', span: 6 }, { id: 'stat-tasks', span: 6 },
-          { id: 'chart-week', span: 7 }, { id: 'ring-cuatri', span: 5 },
-          { id: 'upgrade-pro', span: 4 }, { id: 'tasks-table', span: 8 },
+          { id: 'today-agenda', span: 6 }, { id: 'stat-tasks', span: 6 },
+          { id: 'tasks-table', span: 8 }, { id: 'subjects', span: 6 },
+          { id: 'stat-streak', span: 6 },
         ],
         _onboardingDone: true,
       };
@@ -4965,12 +4970,11 @@ function saveConfig(cfg) {
 }
 
 const DEFAULT_WIDGETS = [
-  { id: 'stat-xp',     span: 6 },
-  { id: 'stat-tasks',  span: 6 },
-  { id: 'chart-week',  span: 7 },
-  { id: 'ring-cuatri', span: 5 },
-  { id: 'upgrade-pro', span: 4 },
-  { id: 'tasks-table', span: 8 },
+  { id: 'today-agenda', span: 6 },
+  { id: 'stat-tasks',   span: 6 },
+  { id: 'tasks-table',  span: 8 },
+  { id: 'subjects',     span: 6 },
+  { id: 'stat-streak',  span: 6 },
 ];
 
 const defaultConfig = {
@@ -5144,6 +5148,81 @@ function TelegramLinkCard() {
   );
 }
 
+function CuentaTab() {
+  const [email, setEmail] = useStateS('');
+  const [newPwd, setNewPwd] = useStateS('');
+  const [confirmPwd, setConfirmPwd] = useStateS('');
+  const [msg, setMsg] = useStateS('');
+  const [msgType, setMsgType] = useStateS('');
+  const [loading, setLoading] = useStateS(false);
+
+  useEffectS(() => {
+    const sb = window._supabase;
+    if (!sb) return;
+    sb.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) setEmail(data.user.email);
+    });
+  }, []);
+
+  const changePassword = async () => {
+    if (!newPwd.trim()) { setMsg('Ingresá una contraseña'); setMsgType('err'); return; }
+    if (newPwd !== confirmPwd) { setMsg('Las contraseñas no coinciden'); setMsgType('err'); return; }
+    if (newPwd.length < 6) { setMsg('Mínimo 6 caracteres'); setMsgType('err'); return; }
+    const sb = window._supabase;
+    if (!sb) return;
+    setLoading(true);
+    const { error } = await sb.auth.updateUser({ password: newPwd });
+    setLoading(false);
+    if (error) { setMsg('Error: ' + error.message); setMsgType('err'); }
+    else { setMsg('✓ Contraseña actualizada'); setMsgType('ok'); setNewPwd(''); setConfirmPwd(''); }
+    setTimeout(() => setMsg(''), 4000);
+  };
+
+  return (
+    <>
+      <section className="cfg-section">
+        <h3 className="cfg-section__title">Tu cuenta</h3>
+        <div className="cfg-row">
+          <div className="cfg-row__main">
+            <div className="cfg-row__label">Email</div>
+            <div className="cfg-row__desc" style={{fontFamily:'var(--font-mono)', fontSize:12}}>{email || '...'}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="cfg-section">
+        <h3 className="cfg-section__title">Cambiar contraseña</h3>
+        <div style={{display:'flex', flexDirection:'column', gap:10}}>
+          <input className="cfg-input" type="password" placeholder="Nueva contraseña (mín. 6 caracteres)" value={newPwd} onChange={e => setNewPwd(e.target.value)}/>
+          <input className="cfg-input" type="password" placeholder="Repetir contraseña" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)}/>
+          {msg && <div style={{fontSize:12, padding:'4px 0', color: msgType==='ok' ? '#4ade80' : '#f87171'}}>{msg}</div>}
+          <button className="btn-primary" onClick={changePassword} disabled={loading} style={{alignSelf:'flex-start'}}>
+            {loading ? 'Guardando...' : 'Actualizar contraseña'}
+          </button>
+        </div>
+      </section>
+
+      <section className="cfg-section">
+        <h3 className="cfg-section__title">Seguridad</h3>
+        <div className="cfg-row" style={{opacity:0.45, pointerEvents:'none'}}>
+          <div className="cfg-row__main">
+            <div className="cfg-row__label">Autenticación en 2 pasos</div>
+            <div className="cfg-row__desc">Próximamente disponible</div>
+          </div>
+          <button className="btn-primary" disabled style={{fontSize:12}}>Activar</button>
+        </div>
+      </section>
+
+      <section className="cfg-section">
+        <h3 className="cfg-section__title">Sesión</h3>
+        <button className="btn-danger" onClick={() => { const sb = window._supabase; if (sb) sb.auth.signOut(); }}>
+          Cerrar sesión
+        </button>
+      </section>
+    </>
+  );
+}
+
 function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard, onClearData }) {
   const [tab, setTab] = useStateS('apariencia');
   const [soundsOn, setSoundsOn] = useStateS(() => localStorage.getItem('studyhub_sounds') !== 'off');
@@ -5191,6 +5270,9 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard, onCle
             </button>
             <button className={'cfg-tab' + (tab==='integraciones'?' cfg-tab--active':'')} onClick={() => setTab('integraciones')}>
               🤖 Integraciones
+            </button>
+            <button className={'cfg-tab' + (tab==='cuenta'?' cfg-tab--active':'')} onClick={() => setTab('cuenta')}>
+              <I.Settings size={14}/> Cuenta
             </button>
           </div>
 
@@ -5374,6 +5456,11 @@ function SettingsModal({ cfg, onChange, onClose, onReset, onEditDashboard, onCle
           {/* INTEGRACIONES */}
           {tab === 'integraciones' && (
             <TelegramLinkCard/>
+          )}
+
+          {/* CUENTA */}
+          {tab === 'cuenta' && (
+            <CuentaTab flash={cfg._flash}/>
           )}
 
           {/* PERFIL */}
@@ -6671,15 +6758,69 @@ const DEFAULT_SUBJ_WIDGETS = [
   {id:'subj-fechas', span:4}, {id:'subj-links', span:4}, {id:'subj-resumen', span:4},
 ];
 
-function SubjectWidgetContent({ widgetId, subject, flash }) {
-  const skey = 'studyhub_v3_subj_' + subject.id + '_' + widgetId;
-  const [items, setItems] = useState(() => { try { const r = AppStorage.getItem(skey); return r ? JSON.parse(r) : []; } catch(e){ return []; } });
+function CustomNotaWidget({ widgetId, subject, title }) {
+  const notaKey = 'studyhub_v3_subj_' + subject.id + '_' + widgetId + '_nota';
+  const [notaText, setNotaText] = useState(() => { try { return AppStorage.getItem(notaKey) || ''; } catch(e){ return ''; } });
+  const saveNota = (v) => { setNotaText(v); try { AppStorage.setItem(notaKey, v); } catch(e){} };
+  return (
+    <div className="panel" style={{height:'100%', display:'flex', flexDirection:'column'}}>
+      <h3 className="panel__title panel__title--left" style={{marginBottom:8}}>{title}</h3>
+      <textarea value={notaText} onChange={e=>saveNota(e.target.value)} placeholder="Escribí tu nota aquí..." className="diary-textarea" style={{flex:1, minHeight:80, resize:'none'}}/>
+    </div>
+  );
+}
+
+function SubjectWidgetContent({ widgetId, subject, flash, customMeta }) {
+  // subj-tasks: usa lista global de tareas filtrada por materia
+  const isTaskWidget = widgetId === 'subj-tasks';
+  const skey = isTaskWidget ? 'studyhub_v3_tasks' : ('studyhub_v3_subj_' + subject.id + '_' + widgetId);
+
+  const loadItems = () => {
+    try {
+      const r = AppStorage.getItem(skey);
+      const all = r ? JSON.parse(r) : [];
+      if (isTaskWidget) return all.filter(t => t.subjectId === subject.id || (t.subjectName && t.subjectName.toLowerCase() === subject.name.toLowerCase()));
+      return all;
+    } catch(e) { return []; }
+  };
+
+  const [items, setItems] = useState(loadItems);
   const [draft, setDraft] = useState('');
-  const save = (next) => { setItems(next); try { AppStorage.setItem(skey, JSON.stringify(next)); } catch(e){} };
-  const add = () => { if (!draft.trim()) return; save([...items, {id:Date.now(), text:draft.trim(), done:false}]); setDraft(''); };
-  const toggle = (id) => save(items.map(x => x.id===id ? {...x, done:!x.done} : x));
-  const del = (id) => save(items.filter(x => x.id!==id));
-  const meta = SUBJ_WIDGET_CATALOG[widgetId];
+
+  const saveItems = (next) => {
+    if (isTaskWidget) {
+      try {
+        const all = (() => { try { const r = AppStorage.getItem(skey); return r ? JSON.parse(r) : []; } catch(e){ return []; } })();
+        const otherTasks = all.filter(t => t.subjectId !== subject.id && !(t.subjectName && t.subjectName.toLowerCase() === subject.name.toLowerCase()));
+        AppStorage.setItem(skey, JSON.stringify([...otherTasks, ...next]));
+      } catch(e) {}
+    } else {
+      try { AppStorage.setItem(skey, JSON.stringify(next)); } catch(e) {}
+    }
+    setItems(next);
+    window.dispatchEvent(new CustomEvent('sh:tasks-updated'));
+  };
+
+  const add = () => {
+    if (!draft.trim()) return;
+    const name = draft.trim();
+    if (isTaskWidget) {
+      const newTask = { id: Date.now(), name, avClass:'v1', initials: name.slice(0,2).toUpperCase(), progress: subject.name + ' · En curso', xp:10, status:'Pendiente', statusTone:'blue', priority:'medium', done:false, createdAt:Date.now(), subjectId: subject.id, subjectName: subject.name };
+      saveItems([...items, newTask]);
+    } else {
+      saveItems([...items, {id:Date.now(), text:name, done:false}]);
+    }
+    setDraft('');
+  };
+
+  const toggle = (id) => saveItems(items.map(x => x.id===id ? {...x, done:!x.done, status: !x.done?'Lista':'En progreso'} : x));
+  const del = (id) => saveItems(items.filter(x => x.id!==id));
+  const meta = customMeta || SUBJ_WIDGET_CATALOG[widgetId];
+
+  // Widget custom tipo NOTA — delegamos a componente separado (no violar reglas de hooks)
+  if (customMeta?.kind === 'nota') {
+    return <CustomNotaWidget widgetId={widgetId} subject={subject} title={meta?.title}/>;
+  }
 
   if (widgetId === 'subj-resumen') {
     const done = items.filter(x=>x.done).length;
@@ -6710,13 +6851,13 @@ function SubjectWidgetContent({ widgetId, subject, flash }) {
             <span className="tbl__check" data-done={it.done} onClick={() => toggle(it.id)} style={{cursor:'pointer', flexShrink:0, marginTop:2}}>
               {it.done && <I.CheckSquare size={11}/>}
             </span>
-            <span style={{flex:1, fontSize:13, lineHeight:1.5, textDecoration:it.done?'line-through':'none', color:it.done?'var(--text-3)':'var(--text)'}}>{it.text}</span>
+            <span style={{flex:1, fontSize:13, lineHeight:1.5, textDecoration:it.done?'line-through':'none', color:it.done?'var(--text-3)':'var(--text)'}}>{it.text || it.name}</span>
             <button className="dash-mini-btn dash-mini-btn--danger" onClick={() => del(it.id)}><I.X size={12}/></button>
           </div>
         ))}
       </div>
       <div className="task-add" style={{marginTop:10, borderTop:'1px solid var(--line)', paddingTop:10}}>
-        <input className="cfg-input" style={{flex:1}} placeholder={`Agregar ${meta?.title?.toLowerCase()}…`}
+        <input className="cfg-input" style={{flex:1}} placeholder={isTaskWidget ? 'Agregar tarea de ' + subject.name + '…' : `Agregar ${meta?.title?.toLowerCase()}…`}
           value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key==='Enter' && add()}/>
         <button className="task-add__btn" onClick={add}><I.Plus size={15}/></button>
       </div>
@@ -6724,32 +6865,44 @@ function SubjectWidgetContent({ widgetId, subject, flash }) {
   );
 }
 
-function DraggableSubjDrawer({ onClose, availableWidgets, currentWidgets, addWidget, removeWidget, exitEditor }) {
-  const [pos, setPos] = useState({ x: window.innerWidth - 300, y: 120 });
+function DraggableSubjDrawer({ onClose, availableWidgets, currentWidgets, addWidget, removeWidget, exitEditor, combinedCatalog, onAddPostIt, onAddImage, onCreateWidget }) {
+  const safeX = Math.max(0, Math.min(window.innerWidth - 290, window.innerWidth - 310));
+  const [pos, setPos] = useState({ x: safeX, y: 80 });
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
+  const imgInputRef = useRef(null);
   const onMouseDown = (e) => { dragging.current = true; offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }; document.body.style.userSelect = 'none'; };
   useEffect(() => {
-    const onMove = (e) => { if (!dragging.current) return; setPos({ x: Math.max(0, Math.min(window.innerWidth-280, e.clientX-offset.current.x)), y: Math.max(0, Math.min(window.innerHeight-100, e.clientY-offset.current.y)) }); };
+    const onMove = (e) => { if (!dragging.current) return; setPos({ x: Math.max(0, Math.min(window.innerWidth-290, e.clientX-offset.current.x)), y: Math.max(0, Math.min(window.innerHeight-100, e.clientY-offset.current.y)) }); };
     const onUp = () => { dragging.current = false; document.body.style.userSelect = ''; };
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
+  const catalog = combinedCatalog || SUBJ_WIDGET_CATALOG;
   return (
-    <div className="edit-drawer" style={{position:'fixed', left:pos.x, top:pos.y, right:'auto', bottom:'auto', maxHeight:'80vh', display:'flex', flexDirection:'column', zIndex:300}}>
+    <div className="edit-drawer" style={{position:'fixed', left:Math.min(pos.x, window.innerWidth-290), top:pos.y, right:'auto', bottom:'auto', maxHeight:'80vh', display:'flex', flexDirection:'column', zIndex:300, width:280}}>
       <div className="edit-drawer__head" onMouseDown={onMouseDown} style={{cursor:'grab'}}>
         <div className="edit-drawer__head-main">
-          <h3 className="edit-drawer__title">⠿ Secciones</h3>
-          <p className="edit-drawer__sub">Click para agregar · arrastrar para mover</p>
+          <h3 className="edit-drawer__title">⠿ Pizarrón</h3>
+          <p className="edit-drawer__sub">Click para agregar sección</p>
         </div>
         <button className="edit-drawer__close" onClick={onClose}><I.X size={14}/></button>
       </div>
       <div className="edit-drawer__body" style={{overflowY:'auto', flex:1}}>
+        {/* Quick-add: post-it, image, custom */}
+        <div className="edit-drawer__group">Agregar</div>
+        <div style={{display:'flex', gap:6, padding:'4px 12px 8px', flexWrap:'wrap'}}>
+          <button onClick={onAddPostIt} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(251,191,36,0.12)',color:'#fbbf24',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>📝 Post-it</button>
+          <button onClick={() => imgInputRef.current?.click()} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(96,165,250,0.1)',color:'#60a5fa',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>🖼️ Imagen</button>
+          <button onClick={onCreateWidget} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:8,border:'1px solid rgba(139,92,246,0.3)',background:'rgba(139,92,246,0.1)',color:'#a78bfa',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>✨ Crear widget</button>
+          <input ref={imgInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={e => { const f=e.target.files[0]; if(!f) return; if(f.size>1*1024*1024){alert('Máx 1MB');return;} const r=new FileReader(); r.onload=ev=>onAddImage(ev.target.result); r.readAsDataURL(f); e.target.value=''; }}/>
+        </div>
+
         {availableWidgets.length > 0 && <>
-          <div className="edit-drawer__group">Disponibles</div>
+          <div className="edit-drawer__group">Secciones disponibles</div>
           {availableWidgets.map(id => {
-            const w = SUBJ_WIDGET_CATALOG[id];
-            const Ic = I[w.iconKey] || I.Home;
+            const w = catalog[id]; if (!w) return null;
+            const Ic = I[w.iconKey] || I.Book;
             return (
               <div key={id} className="edit-drawer__row" onClick={() => addWidget(id)}>
                 <div className="edit-drawer__icon"><Ic size={14}/></div>
@@ -6761,8 +6914,17 @@ function DraggableSubjDrawer({ onClose, availableWidgets, currentWidgets, addWid
         </>}
         <div className="edit-drawer__group">Activas · {currentWidgets.length}</div>
         {currentWidgets.map((w, i) => {
-          const meta = SUBJ_WIDGET_CATALOG[w.id]; if (!meta) return null;
-          const Ic = I[meta.iconKey] || I.Home;
+          if (w.type === 'postit' || w.type === 'image') {
+            return (
+              <div key={w.id} className="edit-drawer__row" style={{cursor:'default', opacity:0.7}}>
+                <div className="edit-drawer__icon" style={{background:'rgba(255,255,255,0.04)'}}>{w.type==='postit'?'📝':'🖼️'}</div>
+                <div className="edit-drawer__main"><div className="edit-drawer__name">{w.type==='postit'?'Post-it':'Imagen'}</div><div className="edit-drawer__desc">Ancho {w.span}/12</div></div>
+                <button className="edit-drawer__btn" style={{background:'rgba(248,113,113,0.18)', color:'#fca5a5'}} onClick={() => removeWidget(i)}><I.X size={14}/></button>
+              </div>
+            );
+          }
+          const meta = catalog[w.id]; if (!meta) return null;
+          const Ic = I[meta.iconKey] || I.Book;
           return (
             <div key={w.id} className="edit-drawer__row" style={{cursor:'default', opacity:0.7}}>
               <div className="edit-drawer__icon" style={{background:'rgba(255,255,255,0.04)'}}><Ic size={14}/></div>
@@ -6788,16 +6950,45 @@ function SubjectDashboard({ subject, onEdit, onBack, flash }) {
   const gridRef = useRef(null);
   const resizingRef = useRef(null);
   const [resizing, setResizing] = useState(null);
+  const [colorPickerIdx, setColorPickerIdx] = useState(null);
+  const [showCreateWidget, setShowCreateWidget] = useState(false);
+  const [cwForm, setCwForm] = useState({ title:'', kind:'list', icon:'Book' });
+
+  // Combined catalog: builtin + user custom widgets
+  const userCfg = loadConfig();
+  const customWidgets = userCfg.customWidgets || [];
+  const combinedCatalog = {
+    ...SUBJ_WIDGET_CATALOG,
+    ...Object.fromEntries(customWidgets.map(cw => [cw.id, { title: cw.title, iconKey: cw.icon||'Book', span: 6, desc: cw.kind==='nota'?'Nota libre':'Lista personalizada', kind: cw.kind }]))
+  };
 
   const saveWidgets = (next) => { setWidgets(next); try { AppStorage.setItem(wkey, JSON.stringify(next)); } catch(e){} };
-  const availableWidgets = Object.keys(SUBJ_WIDGET_CATALOG).filter(k => !widgets.some(w => w.id === k));
-  const addWidget = (id) => saveWidgets([...widgets, {id, span: SUBJ_WIDGET_CATALOG[id].span}]);
-  const removeWidget = (i) => { const next = [...widgets]; next.splice(i,1); saveWidgets(next); };
+  const availableWidgets = Object.keys(combinedCatalog).filter(k => !widgets.some(w => w.id === k));
+  const addWidget = (id) => saveWidgets([...widgets, {id, span: combinedCatalog[id]?.span || 6}]);
+  const removeWidget = (i) => { const next = [...widgets]; next.splice(i,1); saveWidgets(next); setColorPickerIdx(null); };
   const moveWidget = (from, to) => {
     if (from === to || from == null || to == null) return;
     const next = [...widgets]; const [m] = next.splice(from,1); next.splice(to,0,m); saveWidgets(next);
   };
   const resizeWidget = (i, span) => { const next = [...widgets]; next[i] = {...next[i], span}; saveWidgets(next); };
+  const styleWidget = (i, styleUpdate) => { const next = [...widgets]; next[i] = {...next[i], style: {...(next[i].style||{}), ...styleUpdate}}; saveWidgets(next); };
+  const resetStyle = (i) => { const next = [...widgets]; next[i] = {...next[i], style: {}}; saveWidgets(next); };
+
+  const addPostIt = () => { const id='note_'+Date.now(); saveWidgets([...widgets, {id, type:'postit', span:4, text:'', color:'#fbbf24'}]); };
+  const addImage = (src) => { const id='img_'+Date.now(); saveWidgets([...widgets, {id, type:'image', span:6, src}]); };
+  const updatePostItText = (i, text) => { const next=[...widgets]; next[i]={...next[i], text}; saveWidgets(next); };
+  const updatePostItColor = (i, color) => { const next=[...widgets]; next[i]={...next[i], color}; saveWidgets(next); };
+
+  const handleCreateWidget = () => {
+    if (!cwForm.title.trim()) return;
+    const id = 'cw_' + Date.now();
+    const newCw = { id, title: cwForm.title.trim(), kind: cwForm.kind, icon: cwForm.icon, keywords: cwForm.title.toLowerCase().split(/\s+/) };
+    const updatedCfg = { ...userCfg, customWidgets: [...customWidgets, newCw] };
+    saveConfig(updatedCfg);
+    saveWidgets([...widgets, { id, span: 6 }]);
+    setCwForm({ title:'', kind:'list', icon:'Book' });
+    setShowCreateWidget(false);
+  };
 
   // Resize by drag corner
   const startResize = (e, idx) => {
@@ -6860,17 +7051,71 @@ function SubjectDashboard({ subject, onEdit, onBack, flash }) {
           const span = w.span || 6;
           const customHeight = w.height ? {minHeight: w.height + 'px'} : undefined;
           const isResizingThis = resizing?.idx === i;
-          if (!editMode) {
+          const wStyle = w.style || {};
+          const widgetInlineStyle = {
+            ...customHeight,
+            ...(wStyle.bg ? {background: wStyle.bg} : {}),
+            ...(wStyle.border ? {borderColor: wStyle.border, borderWidth:1, borderStyle:'solid'} : {}),
+            ...(wStyle.fontColor ? {color: wStyle.fontColor} : {}),
+            ...(wStyle.fontSize ? {fontSize: wStyle.fontSize} : {}),
+          };
+          // POST-IT
+          if (w.type === 'postit') {
+            const POSTIT_COLORS = ['#fbbf24','#4ade80','#60a5fa','#f87171','#a78bfa','#fb923c'];
+            const pitStyle = { background: w.color||'#fbbf24', color:'#1a1a1a', borderRadius:4, padding:16, minHeight:120, boxShadow:'2px 4px 12px rgba(0,0,0,0.35)', transform:'rotate(-1deg)', display:'flex', flexDirection:'column', gap:8, position:'relative' };
+            if (!editMode) return (
+              <div key={w.id} className={"widget widget--s"+span} style={{...widgetInlineStyle, overflow:'visible', background:'transparent', boxShadow:'none', border:'none', padding:0}}>
+                <div style={pitStyle}>
+                  <textarea value={w.text||''} onChange={e=>updatePostItText(i, e.target.value)} placeholder="Escribí tu nota..." style={{flex:1,background:'transparent',border:'none',outline:'none',resize:'none',fontFamily:'inherit',fontSize:13,color:'inherit',lineHeight:1.5,minHeight:80}}/>
+                </div>
+              </div>
+            );
             return (
-              <div key={w.id} className={"widget widget--s" + span} style={customHeight}>
-                <SubjectWidgetContent widgetId={w.id} subject={subject} flash={flash}/>
+              <div key={w.id} className={"widget editable widget--s"+span+(draggedIdx===i?' dragging':'')+(dragOverIdx===i&&draggedIdx!==i?' drag-over':'')} style={{...widgetInlineStyle, overflow:'visible', background:'transparent', boxShadow:'none', border:'none', padding:0}}
+                draggable={!resizing} onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(i));setDraggedIdx(i);}} onDragOver={e=>{e.preventDefault();if(dragOverIdx!==i)setDragOverIdx(i);}} onDragLeave={()=>{if(dragOverIdx===i)setDragOverIdx(null);}} onDrop={e=>{e.preventDefault();moveWidget(draggedIdx,i);setDraggedIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDraggedIdx(null);setDragOverIdx(null);}}>
+                <div style={pitStyle}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                    <div style={{display:'flex',gap:4}}>{POSTIT_COLORS.map(c=><div key={c} onClick={e=>{e.stopPropagation();updatePostItColor(i,c);}} style={{width:14,height:14,borderRadius:'50%',background:c,cursor:'pointer',outline:w.color===c?'2px solid rgba(0,0,0,0.4)':'none',outlineOffset:1}}/>)}</div>
+                    <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();removeWidget(i);}} style={{background:'rgba(0,0,0,0.15)',border:'none',borderRadius:4,width:18,height:18,cursor:'pointer',display:'grid',placeItems:'center',color:'inherit'}}><I.X size={10}/></button>
+                  </div>
+                  <textarea value={w.text||''} onChange={e=>updatePostItText(i,e.target.value)} placeholder="Escribí tu nota..." onMouseDown={e=>e.stopPropagation()} style={{flex:1,background:'transparent',border:'none',outline:'none',resize:'none',fontFamily:'inherit',fontSize:13,color:'inherit',lineHeight:1.5,minHeight:80}}/>
+                </div>
               </div>
             );
           }
+
+          // IMAGEN
+          if (w.type === 'image') {
+            if (!editMode) return (
+              <div key={w.id} className={"widget widget--s"+span} style={{...widgetInlineStyle, overflow:'hidden', padding:0}}>
+                <img src={w.src} alt="img" style={{width:'100%',height:'100%',objectFit:'cover',display:'block',minHeight:120}}/>
+              </div>
+            );
+            return (
+              <div key={w.id} className={"widget editable widget--s"+span+(draggedIdx===i?' dragging':'')+(dragOverIdx===i&&draggedIdx!==i?' drag-over':'')} style={{...widgetInlineStyle, overflow:'hidden', padding:0, position:'relative'}}
+                draggable={!resizing} onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(i));setDraggedIdx(i);}} onDragOver={e=>{e.preventDefault();if(dragOverIdx!==i)setDragOverIdx(i);}} onDragLeave={()=>{if(dragOverIdx===i)setDragOverIdx(null);}} onDrop={e=>{e.preventDefault();moveWidget(draggedIdx,i);setDraggedIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDraggedIdx(null);setDragOverIdx(null);}}>
+                <img src={w.src} alt="img" style={{width:'100%',height:'100%',objectFit:'cover',display:'block',minHeight:120}}/>
+                <div style={{position:'absolute',top:6,right:6,display:'flex',gap:4}}>
+                  <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();removeWidget(i);}} style={{background:'rgba(0,0,0,0.6)',border:'none',borderRadius:6,padding:'4px 6px',cursor:'pointer',color:'white',fontSize:11,fontFamily:'inherit'}}>✕ Quitar</button>
+                </div>
+              </div>
+            );
+          }
+
+          if (!editMode) {
+            return (
+              <div key={w.id} className={"widget widget--s" + span} style={widgetInlineStyle}>
+                <SubjectWidgetContent widgetId={w.id} subject={subject} flash={flash} customMeta={combinedCatalog[w.id]}/>
+              </div>
+            );
+          }
+
+          const COLOR_SWATCHES = ['default','#8b5cf6','#ec4899','#22d3ee','#34d399','#fbbf24','#f87171','#60a5fa','#fb923c','#1f1f25','#2d2d35','#18181d'];
+
           return (
             <div key={w.id}
               className={"widget editable widget--s"+span+(draggedIdx===i?' dragging':'')+(dragOverIdx===i&&draggedIdx!==i?' drag-over':'')+(isResizingThis?' resizing':'')}
-              style={customHeight}
+              style={widgetInlineStyle}
               draggable={!isResizingThis}
               onDragStart={(e) => { e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(i)); setDraggedIdx(i); }}
               onDragOver={(e) => { e.preventDefault(); if(dragOverIdx!==i) setDragOverIdx(i); }}
@@ -6879,15 +7124,37 @@ function SubjectDashboard({ subject, onEdit, onBack, flash }) {
               onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}>
               <div className="widget__edit-bar" onMouseDown={e=>e.stopPropagation()}>
                 <span className="widget__edit-handle">⋮⋮</span>
-                <span className="widget__edit-name">{SUBJ_WIDGET_CATALOG[w.id]?.title}</span>
+                <span className="widget__edit-name">{SUBJ_WIDGET_CATALOG[w.id]?.title || w.title || w.id}</span>
                 <div className="widget__edit-sizes">
                   {[4,6,8,12].map(s => (
                     <button key={s} data-on={span===s} draggable={false} onClick={e=>{e.stopPropagation();resizeWidget(i,s);}} title={`Ancho ${s}/12`}>{s}</button>
                   ))}
                 </div>
+                <button draggable={false} onClick={e=>{e.stopPropagation();setColorPickerIdx(colorPickerIdx===i?null:i);}} title="Colores" style={{background:'none',border:'none',cursor:'pointer',padding:'2px 5px',fontSize:14,color:'var(--text-2)'}}>🎨</button>
                 <button className="widget__edit-remove" draggable={false} onClick={e=>{e.stopPropagation();removeWidget(i);}}><I.X size={14}/></button>
               </div>
-              <SubjectWidgetContent widgetId={w.id} subject={subject} flash={flash}/>
+              {colorPickerIdx === i && (
+                <div onMouseDown={e=>e.stopPropagation()} style={{position:'absolute',top:36,right:8,zIndex:200,background:'var(--card-2)',border:'1px solid var(--line-2)',borderRadius:12,padding:14,width:220,boxShadow:'0 8px 24px rgba(0,0,0,0.4)'}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Fondo</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
+                    {COLOR_SWATCHES.map(c => <div key={c} onClick={()=>styleWidget(i,{bg:c==='default'?undefined:c})} style={{width:20,height:20,borderRadius:4,background:c==='default'?'var(--inner)':c,cursor:'pointer',outline:wStyle.bg===c?'2px solid white':'1px solid rgba(255,255,255,0.15)',outlineOffset:1,display:'grid',placeItems:'center',fontSize:9,color:'rgba(255,255,255,0.7)'}}>{c==='default'&&'↩'}</div>)}
+                  </div>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Borde</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
+                    {COLOR_SWATCHES.map(c => <div key={c} onClick={()=>styleWidget(i,{border:c==='default'?undefined:c})} style={{width:20,height:20,borderRadius:4,background:c==='default'?'var(--inner)':c,cursor:'pointer',outline:wStyle.border===c?'2px solid white':'1px solid rgba(255,255,255,0.15)',outlineOffset:1,display:'grid',placeItems:'center',fontSize:9,color:'rgba(255,255,255,0.7)'}}>{c==='default'&&'↩'}</div>)}
+                  </div>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Color de texto</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
+                    {['default','#f5f5f7','#a78bfa','#ec4899','#4ade80','#fbbf24','#f87171','#60a5fa'].map(c => <div key={c} onClick={()=>styleWidget(i,{fontColor:c==='default'?undefined:c})} style={{width:20,height:20,borderRadius:4,background:c==='default'?'var(--inner)':c,cursor:'pointer',outline:wStyle.fontColor===c?'2px solid white':'1px solid rgba(255,255,255,0.15)',outlineOffset:1,display:'grid',placeItems:'center',fontSize:9,color:'rgba(0,0,0,0.5)'}}>{c==='default'&&'↩'}</div>)}
+                  </div>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Tamaño texto</div>
+                  <div style={{display:'flex',gap:6,marginBottom:10}}>
+                    {[['Chico','12px'],['Normal',undefined],['Grande','16px']].map(([l,v])=><button key={l} onClick={()=>styleWidget(i,{fontSize:v})} style={{flex:1,padding:'4px 0',borderRadius:6,border:'1px solid rgba(255,255,255,0.1)',background:wStyle.fontSize===v?'var(--violet)':'var(--inner-2)',color:'var(--text)',cursor:'pointer',fontSize:11,fontFamily:'inherit'}}>{l}</button>)}
+                  </div>
+                  <button onClick={()=>{resetStyle(i);}} style={{width:'100%',padding:'5px 0',borderRadius:6,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(248,113,113,0.1)',color:'#f87171',cursor:'pointer',fontSize:11,fontFamily:'inherit'}}>↩ Restaurar</button>
+                </div>
+              )}
+              <SubjectWidgetContent widgetId={w.id} subject={subject} flash={flash} customMeta={combinedCatalog[w.id]}/>
               {isResizingThis && <div className="widget__size-badge">{resizing.currentSpan}/12 · {Math.round(resizing.currentHeight)}px</div>}
               <div className="widget__resize-handle" draggable={false} onDragStart={e=>e.preventDefault()} onMouseDown={e=>startResize(e,i)}>
                 <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M13 6 L6 13"/><path d="M13 10 L10 13"/></svg>
@@ -6911,7 +7178,43 @@ function SubjectDashboard({ subject, onEdit, onBack, flash }) {
           addWidget={addWidget}
           removeWidget={removeWidget}
           exitEditor={() => setEditMode(false)}
+          combinedCatalog={combinedCatalog}
+          onAddPostIt={addPostIt}
+          onAddImage={addImage}
+          onCreateWidget={() => setShowCreateWidget(true)}
         />
+      )}
+
+      {showCreateWidget && (
+        <div className="modal-backdrop" onClick={() => setShowCreateWidget(false)}>
+          <div className="modal" style={{width:'min(400px,100%)'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal__head">
+              <div><h2 className="modal__title">✨ Crear widget</h2></div>
+              <button className="modal__close" onClick={() => setShowCreateWidget(false)}><I.X size={18}/></button>
+            </div>
+            <div className="modal__body" style={{padding:'20px 24px'}}>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:600,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Nombre del widget</div>
+                <input className="cfg-input" style={{width:'100%'}} placeholder="Ej: Compañeros de grupo, Bibliografía..." value={cwForm.title} onChange={e=>setCwForm(f=>({...f,title:e.target.value}))} autoFocus/>
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:600,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Tipo</div>
+                <div style={{display:'flex',gap:8}}>
+                  {[['list','☰ Lista','Ítems con checkbox'],['nota','📝 Nota','Texto libre']].map(([v,l,d])=>(
+                    <div key={v} onClick={()=>setCwForm(f=>({...f,kind:v}))} style={{flex:1,padding:'10px 12px',borderRadius:10,cursor:'pointer',border:`1px solid ${cwForm.kind===v?'rgba(139,92,246,0.5)':'rgba(255,255,255,0.08)'}`,background:cwForm.kind===v?'rgba(139,92,246,0.1)':'rgba(255,255,255,0.03)'}}>
+                      <div style={{fontSize:13,fontWeight:600,color:'var(--text)',marginBottom:2}}>{l}</div>
+                      <div style={{fontSize:11,color:'var(--text-3)'}}>{d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:8}}>
+                <button className="editor-toolbar__btn" onClick={()=>setShowCreateWidget(false)}>Cancelar</button>
+                <button className="btn-primary" onClick={handleCreateWidget} disabled={!cwForm.title.trim()}>Crear widget</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -7885,7 +8188,18 @@ function CalCountdown({ subjectName }) {
 function FacultadRoute({ flash }) {
   const [subjects, setSubjects] = useState(() => loadSubjects());
   const [modal, setModal] = useState(null);
-  const [openSubject, setOpenSubject] = useState(null); // subject being viewed
+  const [openSubject, setOpenSubject] = useState(null);
+
+  // Auto-open subject when navigated from TareasRoute
+  useEffect(() => {
+    const sid = sessionStorage.getItem('sh_open_subject');
+    if (sid) {
+      sessionStorage.removeItem('sh_open_subject');
+      const subjs = loadSubjects();
+      const found = subjs.find(s => String(s.id) === String(sid));
+      if (found) setOpenSubject(found);
+    }
+  }, []);
 
   const save = (updated) => {
     const next = subjects.find(x => x.id === updated.id)
@@ -9137,13 +9451,20 @@ function TaskDetailModal({ task, onSave, onClose }) {
 const PRIORITY_COLOR = { high:'#f87171', medium:'#fbbf24', low:'#34d399' };
 const PRIORITY_LABEL = { high:'Alta', medium:'Media', low:'Baja' };
 
-function TareasRoute({ tasks, setTasks, completedCount, flash }) {
+function TareasRoute({ tasks, setTasks, completedCount, flash, navigate }) {
   const [modal, setModal] = useState(null);
   const [newTask, setNewTask] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
-  const [sortBy, setSortBy] = useState('creacion'); // 'creacion' | 'prioridad' | 'fecha' | 'nombre'
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards' | 'materias'
+  const [sortBy, setSortBy] = useState('creacion');
   const [showDone, setShowDone] = useState(true);
   const AV_PALETTE = ['v1','v2','v3','v4'];
+
+  // Reload tasks when SubjectWidgetContent modifies the global list
+  useEffect(() => {
+    const reload = () => { try { const r = AppStorage.getItem(TASKS_KEY); if (r) setTasks(JSON.parse(r)); } catch(e){} };
+    window.addEventListener('sh:tasks-updated', reload);
+    return () => window.removeEventListener('sh:tasks-updated', reload);
+  }, []);
 
   const PRIO_ORDER = { high:0, medium:1, low:2, none:3, undefined:2 };
   const sortedTasks = [...tasks]
@@ -9196,6 +9517,7 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
           </button>
           <button className={"editor-toolbar__btn" + (viewMode==='table'?' editor-toolbar__btn--active':'')} onClick={() => setViewMode('table')} title="Vista tabla">☰ Tabla</button>
           <button className={"editor-toolbar__btn" + (viewMode==='cards'?' editor-toolbar__btn--active':'')} onClick={() => setViewMode('cards')} title="Vista cards">⊞ Cards</button>
+          <button className={"editor-toolbar__btn" + (viewMode==='materias'?' editor-toolbar__btn--active':'')} onClick={() => setViewMode('materias')} title="Agrupar por materia">📚 Materias</button>
         </>}/>
 
       {viewMode === 'table' && (
@@ -9306,6 +9628,73 @@ function TareasRoute({ tasks, setTasks, completedCount, flash }) {
           </div>
         </div>
       )}
+
+      {viewMode === 'materias' && (() => {
+        const subjects = loadSubjects();
+        const subjectMap = {};
+        subjects.forEach(s => { subjectMap[s.id] = s; });
+        const visibleTasks = tasks.filter(t => showDone || !t.done);
+
+        // Group by subjectName
+        const groups = {};
+        visibleTasks.forEach(t => {
+          const key = t.subjectName || '__general__';
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(t);
+        });
+
+        const goToSubject = (task) => {
+          if (!navigate) return;
+          const subj = subjects.find(s => s.id === task.subjectId || (task.subjectName && s.name.toLowerCase() === task.subjectName.toLowerCase()));
+          if (subj) {
+            sessionStorage.setItem('sh_open_subject', subj.id);
+            navigate('facu');
+          }
+        };
+
+        const groupKeys = Object.keys(groups).sort((a, b) => {
+          if (a === '__general__') return 1;
+          if (b === '__general__') return -1;
+          return a.localeCompare(b);
+        });
+
+        return (
+          <div style={{display:'flex', flexDirection:'column', gap:24}}>
+            {groupKeys.map(key => {
+              const groupTasks = groups[key];
+              const subj = key !== '__general__' ? subjects.find(s => s.name.toLowerCase() === key.toLowerCase()) : null;
+              const color = subj ? (SUBJECT_COLORS.find(c => c.id === (subj.color||'v1')) || SUBJECT_COLORS[0]).css : 'var(--text-3)';
+              return (
+                <div key={key}>
+                  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10, paddingBottom:6, borderBottom:`2px solid ${color}`}}>
+                    <span style={{fontSize:11, fontWeight:800, letterSpacing:'0.1em', color, textTransform:'uppercase'}}>{key === '__general__' ? 'General' : key}</span>
+                    <span style={{fontSize:11, color:'var(--text-4)'}}>{groupTasks.length} tarea{groupTasks.length!==1?'s':''}</span>
+                    {subj && <button className="editor-toolbar__btn" style={{fontSize:11, marginLeft:'auto', padding:'2px 8px'}} onClick={() => goToSubject(groupTasks[0])}>Abrir materia →</button>}
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                    {groupTasks.map(row => (
+                      <div key={row.id} style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:10, background:'var(--inner)', border:'1px solid var(--line)', opacity:row.done?0.6:1}}>
+                        <span className="tbl__check" data-done={row.done} onClick={() => toggleTask(row.id)} style={{cursor:'pointer', flexShrink:0}}>{row.done && <I.CheckSquare size={11}/>}</span>
+                        <span style={{flex:1, fontSize:13, textDecoration:row.done?'line-through':'none', color:row.done?'var(--text-3)':'var(--text)', cursor:'pointer'}} onClick={() => setModal({task:row})}>{row.name}</span>
+                        {row.dueDate && (() => {
+                          const _today = new Date().toISOString().slice(0,10);
+                          const _diff = Math.round((new Date(row.dueDate+'T12:00:00') - new Date(_today+'T12:00:00'))/(1000*60*60*24));
+                          const _col = row.done?'var(--text-4)':_diff<0?'#f87171':_diff===0?'#fbbf24':_diff<=2?'#fb923c':'var(--text-3)';
+                          return <span style={{fontSize:10, color:_col, fontFamily:'var(--font-mono)', fontWeight:600}}>{_diff<0?`-${Math.abs(_diff)}d`:_diff===0?'HOY':_diff===1?'1d':`${_diff}d`}</span>;
+                        })()}
+                        <span className={`priority-badge priority-badge--${row.priority||'medium'}`} style={{fontSize:10}}>{PRIORITY_LABEL[row.priority||'medium']}</span>
+                        <button className="dash-mini-btn" onClick={() => setModal({task:row})}><I.Edit size={12}/></button>
+                        <button className="dash-mini-btn dash-mini-btn--danger" onClick={() => deleteTask(row.id)}><I.X size={12}/></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {groupKeys.length === 0 && <div style={{textAlign:'center', padding:'40px 0', color:'var(--text-3)'}}>No hay tareas.</div>}
+          </div>
+        );
+      })()}
 
       {modal && <TaskDetailModal task={modal.task} onSave={saveTask} onClose={() => setModal(null)}/>}
     </>
@@ -10053,7 +10442,7 @@ function App() {
       case 'facu':     return <FacultadRoute flash={flash}/>;
       case 'misiones': return <MisionesRoute flash={flash}/>;
       case 'cal':      return <CalendarioRoute flash={flash}/>;
-      case 'tareas':   return <TareasRoute tasks={tasks} setTasks={(next) => { setTasks(next); saveTasks(next); }} completedCount={completedCount} flash={flash}/>;
+      case 'tareas':   return <TareasRoute tasks={tasks} setTasks={(next) => { setTasks(next); saveTasks(next); }} completedCount={completedCount} flash={flash} navigate={navigate}/>;
       case 'chat':     return <ChatRoute tasks={tasks} energyToday={energyToday}/>;
       case 'diario':   return <DiarioRoute flash={flash}/>;
       case 'cocina':    return <CocinaRoute flash={flash}/>;

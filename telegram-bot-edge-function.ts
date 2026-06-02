@@ -260,15 +260,40 @@ function classifyByKeywords(text: string): Record<string, unknown> {
 
 // ─── Gemini: clasificar intención ─────────────────────────────────────────────
 
-async function classifyWithGemini(text: string, geminiKey: string): Promise<Record<string, unknown> & { _geminiError?: string }> {
+async function classifyWithGemini(
+  text: string,
+  geminiKey: string,
+  supabase?: ReturnType<typeof createClient>,
+  userId?: string
+): Promise<Record<string, unknown> & { _geminiError?: string }> {
   if (!geminiKey) return classifyByKeywords(text)
+
+  // Load user context: materias + custom widgets
+  let userContext = ""
+  if (supabase && userId) {
+    try {
+      const subjects = await getAppData(supabase, userId, "studyhub_v3_subjects") as Record<string,unknown>[] | null
+      const cfg = await getAppData(supabase, userId, "studyhub_v3_config") as Record<string,unknown> | null
+      const customWidgets = (cfg?.customWidgets as Record<string,unknown>[] | null) || []
+      if (subjects && subjects.length > 0) {
+        userContext += `\nMATERIAS DEL USUARIO: ${subjects.map((s:any) => s.name).join(", ")}`
+      }
+      if (customWidgets.length > 0) {
+        userContext += `\nWIDGETS PERSONALIZADOS DEL USUARIO (para sección facultad, subseccion widget_custom):\n`
+        customWidgets.forEach((cw: any) => {
+          userContext += `- id: "${cw.id}", title: "${cw.title}", keywords: ${JSON.stringify(cw.keywords || [])}\n`
+        })
+        userContext += `Si el usuario quiere agregar algo a uno de estos widgets, usá section:"facultad", subseccion:"widget_custom", data.widget_id: el id del widget, data.subject: la materia, data.title: el item a agregar.`
+      }
+    } catch (_) {}
+  }
 
   try {
     const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `${SECTION_INFO}
+        contents: [{ parts: [{ text: `${SECTION_INFO}${userContext}
 
 Mensaje del usuario: "${text}"
 
@@ -280,7 +305,8 @@ Respondé SOLO con un JSON (sin markdown):
     "title": "texto principal",
     "desc": "descripción adicional o vacío",
     "subject": "nombre de la materia si aplica, o null",
-    "subseccion": "para cocina: heladera|almacen|freezer|compras. Para facultad: nueva_materia|tp|nota_materia|progreso|fecha_materia. O null",
+    "subseccion": "para cocina: heladera|almacen|freezer|compras. Para facultad: nueva_materia|tp|nota_materia|progreso|fecha_materia|widget_custom. O null",
+    "widget_id": "id del widget custom si subseccion=widget_custom, o null",
     "date": "YYYY-MM-DD o null",
     "priority": "high|medium|low",
     "xp": 10,
@@ -485,6 +511,20 @@ async function buildAndSave(
       subjects[idx] = subj
       await upsertAppData(supabase, userId, "studyhub_v3_subjects", subjects)
       return `✅ Próximo evento de ${subjects[idx].name} actualizado.`
+    }
+
+    if (subseccion === "widget_custom" && data.widget_id && data.subject) {
+      const subjectName = (data.subject as string).toLowerCase()
+      const idx = subjects.findIndex((s: Record<string, unknown>) => (s.name as string).toLowerCase().includes(subjectName))
+      if (idx === -1) return `❌ No encontré la materia "${data.subject}".`
+      const subj = subjects[idx] as Record<string, unknown>
+      const cfg = await getAppData(supabase, userId, "studyhub_v3_config") as Record<string, unknown> | null
+      const customWidgets = (cfg?.customWidgets as Record<string, unknown>[] | null) || []
+      const cw = customWidgets.find((w: any) => w.id === data.widget_id || (data.title as string || "").toLowerCase().split(/\s+/).some((word: string) => (w.keywords || []).includes(word)))
+      if (!cw) return `❌ No encontré el widget "${data.widget_id}". Revisá los widgets en la app.`
+      const widgetKey = `studyhub_v3_subj_${subj.id}_${(cw as any).id}`
+      await appendToAppData(supabase, userId, widgetKey, { id: now, text: (data.title as string) || "Item", done: false })
+      return `✅ Agregué <b>${data.title}</b> en <b>${(cw as any).title}</b> (${subj.name}).`
     }
 
     return `❌ No entendí qué guardar en Facultad. Probá: "nuevo TP de álgebra: práctica 5" o "anotar en filosofía: xyz".`
@@ -797,7 +837,7 @@ serve(async (req) => {
     }
 
     // ── Clasificar con Gemini ────────────────────────────────────────────────
-    const intent = await classifyWithGemini(text, geminiKey)
+    const intent = await classifyWithGemini(text, geminiKey, supabase, userId)
 
     // Modo QUERY — responder pregunta
     if (intent.intent_type === "query") {
