@@ -310,8 +310,60 @@ const getPomoWeekByDay = () => {
   return result;
 };
 
+/* ── POMO STORE — timer global que sobrevive navegación ──── */
+const _pomoDur  = { foco: 25, corto: 5, largo: 15 };
+const _pomoSubs = new Set();
+const _ps = {
+  running: false, started: false,
+  mode: "foco", cycles: 0,
+  secs: 1500,
+  task: (() => { try { return localStorage.getItem("sh_pomo_task") || ""; } catch { return ""; } })(),
+  _iv: null,
+};
+const _snap = () => ({ running: _ps.running, started: _ps.started, mode: _ps.mode, cycles: _ps.cycles, secs: _ps.secs, task: _ps.task });
+const _pomoNotify = () => _pomoSubs.forEach(fn => fn(_snap()));
+
+const PomoStore = {
+  get: _snap,
+  sub(fn) { _pomoSubs.add(fn); fn(_snap()); return () => _pomoSubs.delete(fn); },
+  start() {
+    if (_ps._iv) return;
+    _ps.running = true; _ps.started = true; _pomoNotify();
+    _ps._iv = setInterval(() => {
+      if (_ps.secs <= 1) {
+        clearInterval(_ps._iv); _ps._iv = null; _ps.running = false;
+        if (_ps.mode === "foco") {
+          _ps.cycles++; addPomoMinutes(25); playSound("complete");
+          window.dispatchEvent(new CustomEvent("pomo:complete", { detail: { mode: _ps.mode, task: _ps.task } }));
+        } else {
+          playSound("save");
+          window.dispatchEvent(new CustomEvent("pomo:complete", { detail: { mode: _ps.mode, task: _ps.task } }));
+        }
+        toast("¡Sesión completa! 🎉");
+        _ps.secs = _pomoDur[_ps.mode] * 60;
+        _ps.started = false;
+        _pomoNotify(); return;
+      }
+      _ps.secs--; _pomoNotify();
+    }, 1000);
+  },
+  pause() { clearInterval(_ps._iv); _ps._iv = null; _ps.running = false; _pomoNotify(); },
+  toggle() { _ps.running ? PomoStore.pause() : PomoStore.start(); },
+  reset() { clearInterval(_ps._iv); _ps._iv = null; _ps.running = false; _ps.started = false; _ps.secs = _pomoDur[_ps.mode] * 60; _pomoNotify(); },
+  dismiss() { PomoStore.reset(); },
+  setMode(m) { clearInterval(_ps._iv); _ps._iv = null; _ps.running = false; _ps.started = false; _ps.mode = m; _ps.secs = _pomoDur[m] * 60; _pomoNotify(); },
+  setTask(t) { _ps.task = t; try { localStorage.setItem("sh_pomo_task", t); } catch {} _pomoNotify(); },
+};
+
+function usePomoStore() {
+  const [s, set] = React.useState(() => PomoStore.get());
+  React.useEffect(() => PomoStore.sub(set), []);
+  return s;
+}
+
 Object.assign(window, {
   Store, useStore, uid, scaleToZoom, toast, ToastHost,
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
+  PomoStore, usePomoStore,
 });

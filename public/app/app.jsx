@@ -14,6 +14,61 @@ const ACCENTS = {
   indigo: { v: "#6d8bff", v2: "#8b6dff", hi: "#93a9ff" },
 };
 
+/* ── MINI POMODORO FLOTANTE ─────────────────────────────── */
+/* Aparece en la esquina cuando el timer está activo y el
+   usuario navega a otra sección. */
+function PomoMini({ onOpen }) {
+  const ps = usePomoStore();
+  if (!ps.started && !ps.running) return null;
+
+  const mm     = String(Math.floor(ps.secs / 60)).padStart(2, "0");
+  const ss     = String(ps.secs % 60).padStart(2, "0");
+  const isFoco = ps.mode === "foco";
+  const accent = isFoco ? "var(--violet-hi)" : "#3ecf9a";
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, right: 24, zIndex: 400,
+      display: "flex", alignItems: "center", gap: 10,
+      background: "var(--surface-1)",
+      border: `1px solid ${ps.running && isFoco ? "var(--violet-line)" : "var(--line-2)"}`,
+      borderRadius: 16, padding: "10px 14px",
+      boxShadow: `0 12px 36px -10px rgba(0,0,0,.7)${ps.running && isFoco ? ", 0 0 0 1px rgba(139,109,255,.2)" : ""}`,
+      backdropFilter: "blur(16px)",
+      cursor: "pointer", minWidth: 176,
+      transition: "border-color .3s, box-shadow .3s",
+    }} onClick={onOpen} title="Ir al Pomodoro">
+
+      {/* ícono modo */}
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: ps.running && isFoco ? "var(--violet-soft)" : "var(--surface-2)", display: "grid", placeItems: "center", color: accent, flex: "0 0 34px" }}>
+        <Icon name={isFoco ? "clock" : "mug"} size={17} />
+      </div>
+
+      {/* countdown */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 19, fontWeight: 700, letterSpacing: ".04em", lineHeight: 1, color: ps.running ? accent : "var(--tx-2)" }}>
+          {mm}:{ss}
+        </div>
+        <div style={{ fontSize: 10, color: "var(--tx-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 90 }}>
+          {isFoco ? "Foco" : "Descanso"}{ps.task ? ` · ${ps.task}` : ""}
+        </div>
+      </div>
+
+      {/* pause/play */}
+      <div onClick={e => { e.stopPropagation(); PomoStore.toggle(); }}
+        style={{ width: 32, height: 32, borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--line)", display: "grid", placeItems: "center", cursor: "pointer", color: ps.running ? accent : "var(--tx-2)", flex: "0 0 32px" }}>
+        <Icon name={ps.running ? "pause" : "play"} size={14} />
+      </div>
+
+      {/* dismiss */}
+      <div onClick={e => { e.stopPropagation(); PomoStore.dismiss(); }}
+        style={{ width: 26, height: 26, borderRadius: 8, display: "grid", placeItems: "center", cursor: "pointer", color: "var(--tx-3)", flex: "0 0 26px" }}>
+        <Icon name="x" size={13} />
+      </div>
+    </div>
+  );
+}
+
 /* pantalla de carga mientras se verifica la sesión */
 function LoadingScreen() {
   return (
@@ -212,6 +267,7 @@ function App() {
         </div>
       </div>
       {morning && <MorningModal onClose={() => setMorning(false)} />}
+      {section !== "pomodoro" && <PomoMini onOpen={() => nav("pomodoro")} />}
       <FeedbackWidget section={section} />
       <ToastHost />
     </div>

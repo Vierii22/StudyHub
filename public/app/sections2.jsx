@@ -6,59 +6,36 @@
 const POMO_MODES = [["foco","Foco",25],["corto","Descanso",5],["largo","Descanso largo",15]];
 
 const Pomodoro = () => {
-  const [data] = useStore();
-  const [mode, setMode]       = React.useState("foco");
-  const durations             = { foco: 25, corto: 5, largo: 15 };
-  const [secs, setSecs]       = React.useState(25 * 60);
-  const [running, setRunning] = React.useState(false);
-  const [task, setTask]       = React.useState(() => {
-    try { return localStorage.getItem("sh_pomo_task") || ""; } catch { return ""; }
-  });
-  const [sessionLog, setLog]  = React.useState([]); /* log de sesión actual (in-memory) */
-  const [cycles, setCycles]   = React.useState(0);
-  const ref = React.useRef();
+  /* Usa PomoStore global — el timer sobrevive navegación */
+  const ps = usePomoStore();
+  const { running, secs, mode, cycles, task } = ps;
+  const [sessionLog, setLog] = React.useState([]);
 
-  React.useEffect(() => { setSecs(durations[mode] * 60); setRunning(false); }, [mode]);
-
+  /* Escucha eventos de completado del PomoStore */
   React.useEffect(() => {
-    if (running) {
-      ref.current = setInterval(() => setSecs(s => {
-        if (s <= 1) {
-          clearInterval(ref.current);
-          setRunning(false);
-          const logEntry = {
-            time: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }),
-            mode, task
-          };
-          setLog(l => [logEntry, ...l]);
-          if (mode === "foco") {
-            setCycles(c => c + 1);
-            addPomoMinutes(25); /* persiste en sh_data */
-            playSound("complete");
-          } else {
-            playSound("save");
-          }
-          toast("¡Sesión completa! 🎉");
-          return durations[mode] * 60;
-        }
-        return s - 1;
-      }), 1000);
-    }
-    return () => clearInterval(ref.current);
-  }, [running, mode, task]);
+    const onComplete = (e) => {
+      setLog(l => [{
+        time: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }),
+        mode: e.detail.mode,
+        task: e.detail.task,
+      }, ...l]);
+    };
+    window.addEventListener("pomo:complete", onComplete);
+    return () => window.removeEventListener("pomo:complete", onComplete);
+  }, []);
 
   /* Espacio para pausar */
   React.useEffect(() => {
-    const onKey = (e) => { if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); setRunning(r => !r); } };
+    const onKey = (e) => {
+      if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+        e.preventDefault(); PomoStore.toggle();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const handleTaskChange = (v) => {
-    setTask(v);
-    try { localStorage.setItem("sh_pomo_task", v); } catch {}
-  };
-
+  const durations = { foco: 25, corto: 5, largo: 15 };
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss = String(secs % 60).padStart(2, "0");
   const total = durations[mode] * 60, pct = ((total - secs) / total) * 100;
@@ -75,7 +52,7 @@ const Pomodoro = () => {
           {POMO_MODES.map(([k, l, m]) => {
             const on = mode === k, light = running && isFoco;
             return (
-              <button key={k} onClick={() => setMode(k)} style={{ fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "8px 16px", borderRadius: 99, border: "1px solid transparent", background: on ? (light ? "rgba(255,255,255,.18)" : "var(--violet-soft)") : "transparent", color: on ? (light ? "#fff" : "var(--violet-hi)") : (light ? "rgba(255,255,255,.7)" : "var(--tx-2)"), borderColor: on ? (light ? "rgba(255,255,255,.3)" : "var(--violet-line)") : "transparent" }}>{l} · {m}m</button>
+              <button key={k} onClick={() => PomoStore.setMode(k)} style={{ fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "8px 16px", borderRadius: 99, border: "1px solid transparent", background: on ? (light ? "rgba(255,255,255,.18)" : "var(--violet-soft)") : "transparent", color: on ? (light ? "#fff" : "var(--violet-hi)") : (light ? "rgba(255,255,255,.7)" : "var(--tx-2)"), borderColor: on ? (light ? "rgba(255,255,255,.3)" : "var(--violet-line)") : "transparent" }}>{l} · {m}m</button>
             );
           })}
           <div style={{ flex: 1 }}></div>
@@ -97,15 +74,15 @@ const Pomodoro = () => {
           <div style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", gap: 14, minWidth: 220 }}>
             <input
               value={task}
-              onChange={e => handleTaskChange(e.target.value)}
+              onChange={e => PomoStore.setTask(e.target.value)}
               placeholder="¿En qué vas a trabajar?"
               style={{ width: "100%", background: running && isFoco ? "rgba(255,255,255,.14)" : "var(--surface-2)", border: "1px solid " + (running && isFoco ? "rgba(255,255,255,.25)" : "var(--line)"), borderRadius: "var(--r)", padding: "12px 15px", color: running && isFoco ? "#fff" : "var(--tx-1)", fontFamily: "var(--font-body)", fontSize: 14, outline: "none" }}
             />
             <div className="row" style={{ gap: 12 }}>
-              <button onClick={() => setRunning(r => !r)} className="btn" style={{ flex: 1, padding: "16px", fontSize: 16, background: running && isFoco ? "#fff" : "var(--grad)", color: running && isFoco ? "#1a1a22" : "#fff", boxShadow: "0 8px 22px -10px rgba(0,0,0,.5)" }}>
+              <button onClick={() => PomoStore.toggle()} className="btn" style={{ flex: 1, padding: "16px", fontSize: 16, background: running && isFoco ? "#fff" : "var(--grad)", color: running && isFoco ? "#1a1a22" : "#fff", boxShadow: "0 8px 22px -10px rgba(0,0,0,.5)" }}>
                 <Icon name={running ? "pause" : "play"} size={18} />{running ? "Pausar" : "Iniciar"}
               </button>
-              <button onClick={() => { setSecs(durations[mode] * 60); setRunning(false); }} className="icon-btn" style={{ width: 54, height: 54, flex: "0 0 auto", background: running && isFoco ? "rgba(255,255,255,.14)" : "var(--surface-1)", borderColor: running && isFoco ? "rgba(255,255,255,.25)" : "var(--line)", color: running && isFoco ? "#fff" : "var(--tx-2)" }}>
+              <button onClick={() => PomoStore.reset()} className="icon-btn" style={{ width: 54, height: 54, flex: "0 0 auto", background: running && isFoco ? "rgba(255,255,255,.14)" : "var(--surface-1)", borderColor: running && isFoco ? "rgba(255,255,255,.25)" : "var(--line)", color: running && isFoco ? "#fff" : "var(--tx-2)" }}>
                 <Icon name="refresh" size={20} />
               </button>
             </div>
