@@ -64,53 +64,62 @@ const NAV = [
   { id: "ocio",      label: "Ocio",      short: "Ocio", icon: "sparkles" },
 ];
 
-const Sidebar = ({ active, onNav, onLogout }) => {
+const Sidebar = ({ active, onNav, onLogout, isOpen, onClose }) => {
   const [expanded, setExpanded] = React.useState(() => { try { return JSON.parse(localStorage.getItem("sh_sidebar")) ?? false; } catch { return false; } });
   const [tip, setTip] = React.useState(null);
   React.useEffect(() => { localStorage.setItem("sh_sidebar", JSON.stringify(expanded)); }, [expanded]);
   const showTip = (e, label) => { if (expanded) return; const r = e.currentTarget.getBoundingClientRect(); setTip({ label, top: r.top + r.height / 2, left: r.right + 12 }); };
   const hideTip = () => setTip(null);
   React.useEffect(() => { if (expanded) setTip(null); }, [expanded]);
+
+  /* En móvil: navegar cierra el sidebar */
+  const handleNav = (id) => { onNav(id); if (onClose) onClose(); };
+
   return (
-    <aside className={`sidebar${expanded ? " expanded" : ""}`}>
-      <div className="sidebar-brand">
-        <img src="assets/logo.png" alt="StudyHub" />
-        <div className="wordmark">
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 17, letterSpacing: "-.02em", lineHeight: 1.1 }}>Study<span style={{ color: "var(--violet-hi)" }}>Hub</span></div>
-          <div className="mono" style={{ fontSize: 8.5, letterSpacing: ".22em", marginTop: 3 }}>Tu centro de estudio</div>
+    <React.Fragment>
+      {/* Backdrop (solo visible en móvil cuando isOpen) */}
+      <div className={`sidebar-backdrop${isOpen ? " visible" : ""}`} onClick={onClose} />
+
+      <aside className={`sidebar${expanded ? " expanded" : ""}${isOpen ? " mobile-open" : ""}`}>
+        <div className="sidebar-brand">
+          <img src="assets/logo.png" alt="StudyHub" />
+          <div className="wordmark">
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 17, letterSpacing: "-.02em", lineHeight: 1.1 }}>Study<span style={{ color: "var(--violet-hi)" }}>Hub</span></div>
+            <div className="mono" style={{ fontSize: 8.5, letterSpacing: ".22em", marginTop: 3 }}>Tu centro de estudio</div>
+          </div>
         </div>
-      </div>
-      <nav className="sidebar-nav">
-        {NAV.map((item, i) =>
-          item.sep
-            ? <div className="nav-sep" key={"s" + i}></div>
-            : <div key={item.id}
-                className={`nav-item${active === item.id ? " active" : ""}`}
-                onClick={() => onNav(item.id)}
-                onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}>
-                <Icon name={item.icon} /><span className="nav-label">{item.label}</span>
-              </div>
+        <nav className="sidebar-nav">
+          {NAV.map((item, i) =>
+            item.sep
+              ? <div className="nav-sep" key={"s" + i}></div>
+              : <div key={item.id}
+                  className={`nav-item${active === item.id ? " active" : ""}`}
+                  onClick={() => handleNav(item.id)}
+                  onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}>
+                  <Icon name={item.icon} /><span className="nav-label">{item.label}</span>
+                </div>
+          )}
+        </nav>
+        <div className="sidebar-foot">
+          <div className="collapse-btn" onClick={() => setExpanded(e => !e)} title={expanded ? "Colapsar barra" : "Expandir barra"}>
+            <Icon name={expanded ? "chevL" : "chevR"} />
+          </div>
+          <div className={`nav-item${active === "config" ? " active" : ""}`} onClick={() => handleNav("config")} onMouseEnter={e => showTip(e, "Configuración")} onMouseLeave={hideTip}>
+            <Icon name="gear" /><span className="nav-label">Configuración</span>
+          </div>
+          <div className="nav-item" onClick={onLogout} onMouseEnter={e => showTip(e, "Cerrar sesión")} onMouseLeave={hideTip} style={{ color: "#e8639b" }}>
+            <Icon name="logout" /><span className="nav-label">Salir</span>
+          </div>
+        </div>
+        {tip && !expanded && (
+          <div style={{ position: "fixed", left: tip.left, top: tip.top, transform: "translateY(-50%)", zIndex: 90,
+            background: "#1d1d25", color: "var(--tx-1)", border: "1px solid var(--line-2)",
+            fontFamily: "var(--font-body)", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
+            padding: "6px 11px", borderRadius: 9, pointerEvents: "none",
+            boxShadow: "0 10px 26px -10px rgba(0,0,0,.7)" }}>{tip.label}</div>
         )}
-      </nav>
-      <div className="sidebar-foot">
-        <div className="collapse-btn" onClick={() => setExpanded(e => !e)} title={expanded ? "Colapsar barra" : "Expandir barra"}>
-          <Icon name={expanded ? "chevL" : "chevR"} />
-        </div>
-        <div className={`nav-item${active === "config" ? " active" : ""}`} onClick={() => onNav("config")} onMouseEnter={e => showTip(e, "Configuración")} onMouseLeave={hideTip}>
-          <Icon name="gear" /><span className="nav-label">Configuración</span>
-        </div>
-        <div className="nav-item" onClick={onLogout} onMouseEnter={e => showTip(e, "Cerrar sesión")} onMouseLeave={hideTip} style={{ color: "#e8639b" }}>
-          <Icon name="logout" /><span className="nav-label">Salir</span>
-        </div>
-      </div>
-      {tip && !expanded && (
-        <div style={{ position: "fixed", left: tip.left, top: tip.top, transform: "translateY(-50%)", zIndex: 90,
-          background: "#1d1d25", color: "var(--tx-1)", border: "1px solid var(--line-2)",
-          fontFamily: "var(--font-body)", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
-          padding: "6px 11px", borderRadius: 9, pointerEvents: "none",
-          boxShadow: "0 10px 26px -10px rgba(0,0,0,.7)" }}>{tip.label}</div>
-      )}
-    </aside>
+      </aside>
+    </React.Fragment>
   );
 };
 
@@ -187,10 +196,14 @@ const AppearanceControl = ({ open, onClose, theme, setTheme }) => {
 };
 
 /* ---------- HEADER ---------- */
-const Header = ({ profile, onNav, section }) => {
+const Header = ({ profile, onNav, section, onToggleSidebar }) => {
   const incomplete = !profile.uni || !profile.career;
   return (
     <header className="header">
+      {/* Hamburger — visible solo en móvil via CSS */}
+      <div className="header-hamburger" onClick={onToggleSidebar} title="Menú">
+        <Icon name="menu" size={22} />
+      </div>
       <div className="row" style={{ gap: 10, flex: "0 0 auto", cursor: "pointer" }} onClick={() => onNav("config")}>
         <div className="avatar">{profile.initial || profile.name[0]}</div>
         <div style={{ lineHeight: 1.2 }}>

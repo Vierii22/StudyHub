@@ -38,6 +38,7 @@ function App() {
   const [openSubject, setOpenSubject] = useState(null);
   const [morning, setMorning] = useState(false);
   const [dashEditSignal, setDashEditSignal] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data] = useStore();
 
   /* ── auth Supabase ─────────────────────────────────── */
@@ -129,7 +130,7 @@ function App() {
   }, [auth]);
 
   const setTheme  = (k, v) => setThemeState(t => ({ ...t, [k]: v }));
-  const nav       = (s)    => { setOpenSubject(null); setSection(s); };
+  const nav       = (s)    => { setOpenSubject(null); setSection(s); setSidebarOpen(false); };
   const logout    = ()     => {
     const sb = window._supabase;
     if (sb) sb.auth.signOut();
@@ -192,9 +193,20 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar active={section} onNav={nav} onLogout={logout} />
+      <Sidebar
+        active={section}
+        onNav={nav}
+        onLogout={logout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main">
-        <Header profile={data.profile} onNav={nav} section={section} />
+        <Header
+          profile={data.profile}
+          onNav={nav}
+          section={section}
+          onToggleSidebar={() => setSidebarOpen(o => !o)}
+        />
         <div className="scroll scroll-zoom" key={section + (openSubject || "")}>
           {render()}
         </div>
