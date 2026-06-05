@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, ALL_WIDGETS } from './store.jsx';
 import { Btn, Chip, MonoLabel, Modal, Field } from './ui.jsx';
+import { WIDGET_COMP, greetingTime } from './dashboard.jsx';
 
 /* ============================================================
    DASHBOARD SHELL — grilla 12 col, modo edición, 3 variantes
