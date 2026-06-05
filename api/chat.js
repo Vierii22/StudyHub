@@ -1,9 +1,22 @@
+// Orígenes autorizados — solo el dominio propio y localhost dev
+const ALLOWED_ORIGINS = [
+  'https://study-hub-theta-one.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+];
+
 module.exports = async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin || '';
+  const allowed = ALLOWED_ORIGINS.includes(origin);
+
+  // CORS — solo responde a orígenes autorizados
+  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : 'null');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!allowed) return res.status(403).json({ error: 'Origen no autorizado' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { messages, systemPrompt } = req.body || {};

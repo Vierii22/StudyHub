@@ -24,6 +24,68 @@ const ConfigRow = ({ label, sub, children }) => (
   </div>
 );
 
+/* ── PWA INSTALL BUTTON ─────────────────────────────────── */
+const InstallPWA = () => {
+  const [canInstall, setCanInstall] = React.useState(!!window._pwaPrompt);
+  const [installed,  setInstalled]  = React.useState(false);
+
+  React.useEffect(() => {
+    const onPrompt = () => setCanInstall(true);
+    window.addEventListener("beforeinstallprompt_ready", onPrompt);
+    // Si el prompt ya llegó antes de que este componente montara
+    if (window._pwaPrompt) setCanInstall(true);
+    // Detectar si ya está instalada (standalone mode)
+    if (window.matchMedia("(display-mode: standalone)").matches) setInstalled(true);
+    return () => window.removeEventListener("beforeinstallprompt_ready", onPrompt);
+  }, []);
+
+  const install = async () => {
+    const prompt = window._pwaPrompt;
+    if (!prompt) return;
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === "accepted") { setInstalled(true); setCanInstall(false); window._pwaPrompt = null; toast("¡App instalada! Buscala en tu escritorio."); }
+  };
+
+  if (installed) return (
+    <div className="card card-2" style={{ marginTop: 16, textAlign: "center", padding: "18px 22px" }}>
+      <div style={{ color: "#3ecf9a", marginBottom: 6 }}><Icon name="check" size={22} /></div>
+      <div style={{ fontWeight: 600, fontSize: 14 }}>StudyHub instalada</div>
+      <div className="small" style={{ marginTop: 4 }}>Podés abrirla desde el escritorio o el dock de tu dispositivo.</div>
+    </div>
+  );
+
+  if (!canInstall) return (
+    <div className="card card-2" style={{ marginTop: 16, padding: "16px 20px" }}>
+      <div className="row" style={{ gap: 12 }}>
+        <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="home" size={20} /></span>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Instalar como app</div>
+          <div className="small" style={{ marginTop: 3 }}>
+            En Chrome/Edge: menú <b>⋮</b> → <b>"Instalar StudyHub"</b>.<br />
+            En Safari (iOS): compartir → <b>"Añadir a pantalla de inicio"</b>.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="card card-2" style={{ marginTop: 16, padding: "16px 20px" }}>
+      <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
+        <div className="row" style={{ gap: 12 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="home" size={20} /></span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Instalar como app</div>
+            <div className="small" style={{ marginTop: 3 }}>Sin browser, con ícono propio, como app nativa.</div>
+          </div>
+        </div>
+        <Btn variant="primary" icon="download" onClick={install}>Instalar</Btn>
+      </div>
+    </div>
+  );
+};
+
 const ConfigSection = ({ theme, setTheme, onEditDash, onLogout }) => {
   const [data, set] = useStore();
   const [tab, setTab] = React.useState("apariencia");
@@ -277,6 +339,10 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout }) => {
               <div className="card card-2" style={{ textAlign: "center" }}><MonoLabel>Secciones</MonoLabel><div className="h2" style={{ marginTop: 8 }}>{typeof NAV !== "undefined" ? NAV.filter(n => !n.sep).length : "—"}</div></div>
               <div className="card card-2" style={{ textAlign: "center" }}><MonoLabel>Materias</MonoLabel><div className="h2" style={{ marginTop: 8 }}>{data.subjects.length}</div></div>
             </div>
+
+            {/* Instalar como app */}
+            <InstallPWA />
+
             <div className="small" style={{ marginTop: 18, textAlign: "center", color: "var(--tx-3)" }}>
               Hecho con 💜 para estudiantes · Tus datos se sincronizan en la nube.
             </div>

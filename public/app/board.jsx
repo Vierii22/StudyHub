@@ -158,6 +158,8 @@ function CanvaBoard({ items, onChange, editing, showDots, minHeight = 680 }) {
 
   const update = (id, patch) => onChange(items.map(it => it.id === id ? { ...it, ...patch } : it));
   const remove = (id) => onChange(items.filter(it => it.id !== id));
+  /* bring-to-front: mueve el item al final del array → renderiza encima de todos */
+  const bringToFront = (id) => { const it = items.find(i => i.id === id); if (it) onChange([...items.filter(i => i.id !== id), it]); };
 
   // ESC sale de expandido
   React.useEffect(() => {
@@ -232,7 +234,7 @@ function CanvaBoard({ items, onChange, editing, showDots, minHeight = 680 }) {
                 return (
                   <div key={item.id} className={`postit${editing ? " editing" : ""}`}
                     style={{ left: item.x, top: item.y, width: item.w, height: item.h, background: item.bg }}
-                    onMouseDown={editing ? (e => { if (e.target.tagName !== "TEXTAREA") onDown(e, item, "move"); }) : undefined}>
+                    onMouseDown={editing ? (e => { bringToFront(item.id); if (e.target.tagName !== "TEXTAREA") onDown(e, item, "move"); }) : undefined}>
                     {editing && <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 4, zIndex: 4 }}>
                       {POSTIT_COLORS.slice(0, 4).map(c => <span key={c} onClick={() => update(item.id, { bg: c })} style={{ width: 13, height: 13, borderRadius: "50%", background: c, cursor: "pointer", border: "1px solid rgba(0,0,0,.2)" }} />)}
                       <span onClick={() => remove(item.id)} style={{ cursor: "pointer", color: "rgba(0,0,0,.5)" }}><Icon name="x" size={13} /></span>
@@ -244,7 +246,8 @@ function CanvaBoard({ items, onChange, editing, showDots, minHeight = 680 }) {
               }
               return (
                 <div key={item.id} className={`board-item${editing ? " editing" : ""}`}
-                  style={{ left: item.x, top: item.y, width: item.w, height: item.h, background: item.bg, borderColor: item.border }}>
+                  style={{ left: item.x, top: item.y, width: item.w, height: item.h, background: item.bg, borderColor: item.border }}
+                  onMouseDown={() => editing && bringToFront(item.id)}>
                   {editing && (
                     <div className="ed-bar" onMouseDown={e => { if (!e.target.closest(".no-drag")) onDown(e, item, "move"); }}>
                       <span className="handle"><Icon name="dots" size={14} /></span>
