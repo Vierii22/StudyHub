@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast } from './store.jsx';
-import { Btn } from './ui.jsx';
+import { Btn, TerminalCorners } from './ui.jsx';
 
 /* ============================================================
    FEEDBACK — botón flotante + panel "Ideas y comentarios"

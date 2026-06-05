@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Btn, Chip, MonoLabel, PageHead } from './ui.jsx';
+import { Btn, Chip, MonoLabel, PageHead, TerminalCorners } from './ui.jsx';
 
 /* ============================================================
    SISTEMA DE DISEÑO — panel de tokens

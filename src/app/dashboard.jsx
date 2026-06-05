@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, PRIO, STATUS, getPomoWeekMins, getPomoWeekByDay } from './store.jsx';
-import { Btn, Chip, MonoLabel, PageHead, Empty, Toggle, ProgressRing } from './ui.jsx';
+import { Btn, Chip, MonoLabel, PageHead, Empty, Toggle, ProgressRing, SubjectDot, TerminalCorners } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 
 /* ============================================================

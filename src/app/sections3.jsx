@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel, Toggle } from './ui.jsx';
+import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel, Toggle, TerminalCorners } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 
 /* ============================================================

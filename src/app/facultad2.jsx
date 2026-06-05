@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Toggle, ProgressRing } from './ui.jsx';
+import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Toggle, ProgressRing, SubjectDot } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 import { CanvaBoard, defaultBoardItem } from './board.jsx';
 

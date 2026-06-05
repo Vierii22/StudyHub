@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Chip, Modal, Field, PageHead, Empty } from './ui.jsx';
+import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel, TerminalCorners } from './ui.jsx';
 
 /* ============================================================
    MISIONES + CALENDARIO (con .ics import/export)

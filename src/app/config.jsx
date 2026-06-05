@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Chip, MonoLabel, PageHead, Field, Modal, Seg, Toggle, ProgressRing, TerminalCorners, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS, NAV } from './ui.jsx';
+import { Btn, Chip, MonoLabel, PageHead, Field, Modal, Seg, Toggle, ProgressRing, TerminalCorners, BrandBanner, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS, NAV } from './ui.jsx';
 import { supabase } from '../supabase.js';
 import { SupabaseStorage } from '../storage.js';
 
