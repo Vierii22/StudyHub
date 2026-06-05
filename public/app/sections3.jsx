@@ -212,9 +212,32 @@ const Cocina = ({ onNav }) => {
 /* ---------- FINANZAS ---------- */
 const CATS = { comida: "mug", transporte: "bus", estudio: "book", salud: "heart", entretenimiento: "gamepad", otros: "box" };
 const CAT_LABELS = { comida: "Comida", transporte: "Transporte", estudio: "Estudio", salud: "Salud", entretenimiento: "Entretenimiento", otros: "Otros" };
+const BudgetModal = ({ current, onSave, onClose }) => {
+  const [val, setVal] = React.useState(String(current));
+  const save = () => {
+    const n = parseInt(val.replace(/\D/g, ""));
+    if (!n || n <= 0) return toast("Ingresá un monto válido");
+    onSave(n); onClose();
+  };
+  return (
+    <Modal title="Editar presupuesto" icon="coins" onClose={onClose}
+      footer={<><span className="link" style={{ color: "var(--tx-3)", cursor: "pointer" }} onClick={onClose}>Cancelar</span><Btn variant="primary" onClick={save}>Guardar</Btn></>}>
+      <Field label="Presupuesto mensual (AR$)">
+        <input className="input" type="number" value={val} onChange={e => setVal(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && save()} autoFocus
+          style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-.01em" }} />
+      </Field>
+      <div className="small" style={{ marginTop: 10, color: "var(--tx-3)" }}>
+        Define el techo mensual que se muestra en el card y la barra de uso.
+      </div>
+    </Modal>
+  );
+};
+
 const Finanzas = () => {
   const [data, set] = useStore();
   const [f, setF] = React.useState({ desc: "", amount: "", cat: "comida", type: "gasto" });
+  const [showBudget, setShowBudget] = React.useState(false);
   const exp = data.finance.expenses;
   const gastos = exp.filter(e => e.type === "gasto").reduce((a, e) => a + e.amount, 0);
   const ingresos = exp.filter(e => e.type === "ingreso").reduce((a, e) => a + e.amount, 0);
@@ -225,7 +248,7 @@ const Finanzas = () => {
   return (
     <div className="page page-wide">
       <PageHead title="Finanzas" meta="Junio · presupuesto y movimientos">
-        <Btn variant="primary" icon="settings">Presupuesto</Btn>
+        <Btn variant="primary" icon="settings" onClick={() => setShowBudget(true)}>Presupuesto</Btn>
       </PageHead>
       <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 24 }}>
         <div className="card card-hero tcorners"><TerminalCorners /><MonoLabel>Presupuesto</MonoLabel><div className="display" style={{ fontSize: 44, color: "#fff", marginTop: 10 }}>{fmt(budget)}</div><div style={{ marginTop: 14 }}><div className="bar" style={{ background: "rgba(255,255,255,.2)" }}><i style={{ width: usedPct + "%", background: "#fff" }}></i></div><div style={{ fontSize: 13, color: "rgba(255,255,255,.8)", marginTop: 8 }}>{usedPct}% usado</div></div></div>
@@ -252,6 +275,7 @@ const Finanzas = () => {
             </div>
           ))}
       </div>
+      {showBudget && <BudgetModal current={budget} onSave={n => set(s => { s.finance.budget = n; })} onClose={() => setShowBudget(false)} />}
     </div>
   );
 };

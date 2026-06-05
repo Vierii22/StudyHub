@@ -121,8 +121,11 @@ const parseDate = (dateStr) => {
   return { year: y, month: m - 1, day: d };
 };
 
-/* helper: retorna "YYYY-MM-DD" de hoy */
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/* helper: retorna "YYYY-MM-DD" de hoy en hora LOCAL (no UTC) */
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 /* obtiene el "day" de un evento (día del mes) */
 const evDay  = (e) => e.date ? parseDate(e.date)?.day   : (e.day  || 0);

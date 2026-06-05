@@ -172,7 +172,9 @@ const buildSystemPrompt = (data) => {
     `Hoy es ${today}. Hora: ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,"0")}.`,
     profile.career ? `El usuario estudia ${profile.career}${profile.uni ? " en " + profile.uni : ""}, cursando ${profile.year}° año.` : "",
     subjects.length ? `Materias activas: ${subjects.map(s => `${s.name} (${s.pct}%)`).join(", ")}.` : "Sin materias cargadas aún.",
-    pending.length ? `Tareas pendientes: ${pending.length} (${urgent.length} urgentes). Urgentes: ${urgent.slice(0,4).map(t => t.t).join(" | ") || "ninguna"}.` : "No hay tareas pendientes.",
+    pending.length
+      ? `Tareas pendientes (${pending.length}, ${urgent.length} urgentes):\n${pending.slice(0, 10).map(t => `- "${t.t}"${t.prio === "alta" ? " 🔴" : t.prio === "media" ? " 🟡" : ""}${t.date ? " — vence " + t.date : ""}${t.subject ? " [" + t.subject + "]" : ""}`).join("\n")}`
+      : "No hay tareas pendientes.",
     events.length ? `Próximos eventos: ${events.slice(0,4).map(e => e.title).join(", ")}.` : "",
     missions.length ? `Misiones activas: ${missions.slice(0,3).map(m => m.t).join(", ")}.` : "",
     morning ? `Hoy el usuario tiene energía ${morning.energy}/5, durmió ${morning.sleep}h, humor: ${morning.mood}.` : "",
@@ -333,7 +335,8 @@ const SleepPanel = ({ morning, onRegister }) => {
 const Diario = () => {
   const [data, set]        = useStore();
   const [draft, setDraft]  = React.useState(data.journalDraft || "");
-  const [open, setOpen]    = React.useState(null);
+  const [open, setOpen]      = React.useState(null);
+  const [viewEntry, setViewEntry] = React.useState(null);
   const [showMorning, setSM] = React.useState(false);
   const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
 
@@ -382,12 +385,12 @@ const Diario = () => {
             : (
               <div style={{ display: "grid", gap: 12 }}>
                 {data.journal.map(j => (
-                  <div key={j.id} className="card card-2 hoverable" style={{ padding: 16, cursor: "pointer" }} onClick={() => setOpen(open === j.id ? null : j.id)}>
-                    <div className="row between">
+                  <div key={j.id} className="card card-2 hoverable" style={{ padding: 16, cursor: "pointer" }} onClick={() => setViewEntry(j)}>
+                    <div className="row between" style={{ marginBottom: 8 }}>
                       <span className="mono" style={{ fontSize: 10.5 }}>{j.date} · {j.time}</span>
-                      <Icon name={open === j.id ? "chevL" : "chevR"} size={14} color="var(--tx-3)" />
+                      <Icon name="expand" size={13} color="var(--tx-3)" />
                     </div>
-                    <div className="small" style={{ marginTop: 8, color: "var(--tx-2)", display: "-webkit-box", WebkitLineClamp: open === j.id ? "unset" : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{j.text}</div>
+                    <div className="small" style={{ color: "var(--tx-2)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.6 }}>{j.text}</div>
                   </div>
                 ))}
               </div>
@@ -395,6 +398,16 @@ const Diario = () => {
         </div>
       </div>
       {showMorning && <MorningModal onClose={() => setSM(false)} />}
+      {viewEntry && (
+        <Modal title={viewEntry.date} sub={viewEntry.time} icon="pen" onClose={() => setViewEntry(null)}>
+          <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.8, fontSize: 15, color: "var(--tx-1)", maxHeight: "60vh", overflowY: "auto" }}>
+            {viewEntry.text}
+          </div>
+          <div className="row" style={{ marginTop: 18, justifyContent: "flex-end" }}>
+            <Btn variant="secondary" onClick={() => setViewEntry(null)}>Cerrar</Btn>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

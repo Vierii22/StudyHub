@@ -166,7 +166,8 @@ function MiEspacio() {
   const setActive = (id) => set(s => s.space.activeId = id);
   const patch = (id, p) => set(s => Object.assign(s.space.pages.find(x => x.id === id), p));
   const setItems = (v) => patch(active.id, { items: v });
-  const addPage = () => set(s => { const id = uid(); s.space.pages.push({ id, icon: "file", title: "Nueva página", kind: "doc", blocks: [{ id: uid(), type: "text", text: "" }] }); s.space.activeId = id; });
+  const [renamingId, setRenamingId] = React.useState(null);
+  const addPage = () => { const id = uid(); set(s => { s.space.pages.push({ id, icon: "file", title: "Nueva página", kind: "doc", blocks: [{ id: uid(), type: "text", text: "" }] }); s.space.activeId = id; }); setTimeout(() => setRenamingId(id), 80); };
   const delPage = (id) => { if (sp.pages.length <= 1) return toast("Tiene que quedar al menos una página"); set(s => { s.space.pages = s.space.pages.filter(p => p.id !== id); if (s.space.activeId === id) s.space.activeId = s.space.pages[0].id; }); };
   const cycleEmoji = () => { const i = SPACE_ICONS.indexOf(active.icon); const next = SPACE_ICONS[(i + 1) % SPACE_ICONS.length]; patch(active.id, { icon: next }); };
 
@@ -199,9 +200,25 @@ function MiEspacio() {
       <div className="space-rail">
         <div className="mono" style={{ padding: "4px 8px 12px", fontSize: 9.5 }}>Mi Espacio</div>
         {sp.pages.map(p => (
-          <div key={p.id} className={`space-pageitem${p.id === active.id ? " on" : ""}`} onClick={() => setActive(p.id)}>
+          <div key={p.id}
+            className={`space-pageitem${p.id === active.id ? " on" : ""}`}
+            onClick={() => { setActive(p.id); setRenamingId(null); }}
+            onDoubleClick={e => { e.stopPropagation(); setActive(p.id); setRenamingId(p.id); }}
+            title="Doble click para renombrar">
             <span style={{ display: "grid", placeItems: "center", width: 18, height: 18, flex: "0 0 18px" }}><PageIcon name={p.icon} size={16} /></span>
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
+            {renamingId === p.id ? (
+              <input
+                autoFocus
+                value={p.title}
+                onChange={e => patch(p.id, { title: e.target.value })}
+                onBlur={() => setRenamingId(null)}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setRenamingId(null); }}
+                onClick={e => e.stopPropagation()}
+                style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "1px solid var(--violet-line)", borderRadius: 4, color: "var(--tx-1)", fontFamily: "var(--font-body)", fontSize: 12.5, padding: "1px 4px" }}
+              />
+            ) : (
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
+            )}
             <span className="space-del" onClick={e => { e.stopPropagation(); delPage(p.id); }}><Icon name="x" size={13} /></span>
           </div>
         ))}
