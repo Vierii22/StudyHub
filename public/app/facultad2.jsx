@@ -27,40 +27,7 @@ const ListWidget = ({ title, items, onChange, placeholder, accent }) => {
   );
 };
 
-/* drawer de personalización del pizarrón */
-const BoardDrawer = ({ subject, onAdd, onClose, onToggleSection, sections }) => {
-  const pos = React.useRef({ x: window.innerWidth - 340, y: 130 });
-  const [, force] = React.useReducer(x => x + 1, 0);
-  const dragStart = (e) => {
-    const sx = e.clientX, sy = e.clientY, ox = pos.current.x, oy = pos.current.y;
-    const mv = ev => { pos.current = { x: ox + ev.clientX - sx, y: oy + ev.clientY - sy }; force(); };
-    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
-    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-  };
-  return (
-    <div className="drawer" style={{ left: pos.current.x, top: pos.current.y }}>
-      <div className="drawer-head" onMouseDown={dragStart}>
-        <Icon name="dots" size={15} color="var(--tx-3)" />
-        <span style={{ fontWeight: 600, fontSize: 14 }}>Personalizar</span>
-        <span style={{ marginLeft: "auto", cursor: "pointer", color: "var(--tx-3)" }} onClick={onClose}><Icon name="x" size={16} /></span>
-      </div>
-      <div className="drawer-body">
-        <div className="mono" style={{ marginBottom: 10 }}>Agregar widget</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 18 }}>
-          {[["note","Nota","pen"],["list","Lista","check"],["postit","Post-it","note"],["heading","Encabezado","type"],["callout","Aviso","idea"],["code","Código","fileText"],["link","Link","link"],["image","Imagen","image"],["divider","Divisor","minus"]].map(([k, label, icon]) => (
-            <button key={k} className="addmini" onClick={() => onAdd(k)}><Icon name={icon} size={15} /> {label}</button>
-          ))}
-        </div>
-        <div className="mono" style={{ marginBottom: 10 }}>Secciones rápidas</div>
-        <div style={{ display: "grid", gap: 8 }}>
-          {sections.map(sec => (
-            <button key={sec.k} className="addbtn" onClick={() => onToggleSection(sec)}><Icon name="plus" size={15} /> {sec.label}</button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
+/* BoardDrawer movido a board.jsx como BoardAddPanel (portaleado — funciona en fullscreen) */
 
 const QUICK_SECTIONS = [
   { k: "temas", label: "Temas del parcial" },
@@ -166,7 +133,9 @@ const SubjectView = ({ subjectId, onBack }) => {
 
   const addBoardItem = (kind) => {
     const item = defaultBoardItem(kind, board.length);
-    setBoard([...board, item]);
+    /* frames van al inicio del array → se renderizan detrás de todo */
+    if (kind === "frame") setBoard([item, ...board]);
+    else setBoard([...board, item]);
     if (!customize) setCustomize(true);
     toast("Agregado al pizarrón");
   };
@@ -243,7 +212,16 @@ const SubjectView = ({ subjectId, onBack }) => {
 
       {/* CONTENIDO */}
       {s.boardMode ? (
-        <CanvaBoard items={board} onChange={setBoard} editing={customize} showDots={s.showDots} />
+        <CanvaBoard
+          items={board}
+          onChange={setBoard}
+          editing={customize}
+          showDots={s.showDots}
+          boardTitle={s.name}
+          onAddItem={addBoardItem}
+          quickSections={QUICK_SECTIONS}
+          onAddSection={addSectionToBoard}
+        />
       ) : (
         <>
           {panelEdit && <div className="mono" style={{ marginBottom: 12, color: "var(--violet-hi)", display: "flex", alignItems: "center", gap: 7 }}><Icon name="move" size={13} /> Arrastrá los widgets para reordenar · cambiá el tamaño de cada uno · agregá o quitá desde el panel</div>}
@@ -269,7 +247,7 @@ const SubjectView = ({ subjectId, onBack }) => {
         </>
       )}
 
-      {s.boardMode && customize && <BoardDrawer subject={s} onAdd={addBoardItem} onClose={() => setCustomize(false)} onToggleSection={addSectionToBoard} sections={QUICK_SECTIONS} />}
+      {/* BoardDrawer movido a board.jsx como BoardAddPanel (portaleado, funciona en fullscreen) */}
       {editModal && <SubjectModal subject={s} onClose={() => setEditModal(false)} />}
     </div>
   );
