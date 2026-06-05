@@ -366,9 +366,36 @@ function usePomoStore() {
   return s;
 }
 
+/* ── CHAT STORE — mensajes globales, sobreviven navegación ── */
+const _chatSubs = new Set();
+const _chatState = {
+  msgs:    [],   /* [{role, content, me, displayTime}] */
+  draft:   "",
+  typing:  false,
+};
+const _chatSnap  = () => ({ ..._chatState, msgs: [..._chatState.msgs] });
+const _chatNotify = () => _chatSubs.forEach(fn => fn(_chatSnap()));
+
+const ChatStore = {
+  get: _chatSnap,
+  sub(fn) { _chatSubs.add(fn); fn(_chatSnap()); return () => _chatSubs.delete(fn); },
+  addMsg(msg)      { _chatState.msgs = [..._chatState.msgs, msg]; _chatNotify(); },
+  setMsgs(msgs)    { _chatState.msgs = msgs; _chatNotify(); },
+  setDraft(v)      { _chatState.draft = v; _chatNotify(); },
+  setTyping(v)     { _chatState.typing = v; _chatNotify(); },
+  clear()          { _chatState.msgs = []; _chatState.draft = ""; _chatState.typing = false; _chatNotify(); },
+};
+
+function useChatStore() {
+  const [s, set] = React.useState(() => ChatStore.get());
+  React.useEffect(() => ChatStore.sub(set), []);
+  return s;
+}
+
 export {
   Store, useStore, uid, scaleToZoom, toast, ToastHost,
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
   PomoStore, usePomoStore,
+  ChatStore, useChatStore,
 };

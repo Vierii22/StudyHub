@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, playSound, addPomoMinutes, getPomoWeekMins, PomoStore, usePomoStore } from './store.jsx';
+import { Store, useStore, uid, toast, playSound, addPomoMinutes, getPomoWeekMins, PomoStore, usePomoStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, Chip, Modal, Field, PageHead, Empty } from './ui.jsx';
 
 /* ============================================================
@@ -169,10 +169,12 @@ const buildSystemPrompt = (data) => {
 };
 
 const ChatIA = () => {
-  const [data]            = useStore();
-  const [msgs, setMsgs]   = React.useState([]);
-  const [draft, setDraft] = React.useState("");
-  const [typing, setTyping] = React.useState(false);
+  const [data] = useStore();
+  /* ChatStore — los mensajes sobreviven al navegar a otra sección */
+  const chat   = useChatStore();
+  const msgs   = chat.msgs;
+  const draft  = chat.draft;
+  const typing = chat.typing;
   const endRef = React.useRef();
 
   React.useEffect(() => {
@@ -182,10 +184,12 @@ const ChatIA = () => {
   const send = async (textOverride) => {
     const text = (textOverride || draft).trim();
     if (!text || typing) return;
-    const userMsg = { role: "user", content: text };
+    const now = () => new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+    const userMsg = { role: "user", content: text, me: true, displayTime: now() };
     const newMsgs = [...msgs, userMsg];
-    setMsgs(newMsgs.map((m, i) => ({ ...m, displayTime: i === newMsgs.length - 1 ? new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }) : m.displayTime, me: m.role === "user" })));
-    setDraft(""); setTyping(true);
+    ChatStore.setMsgs(newMsgs);
+    ChatStore.setDraft("");
+    ChatStore.setTyping(true);
 
     try {
       const resp = await fetch("/api/chat", {
@@ -193,17 +197,16 @@ const ChatIA = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemPrompt: buildSystemPrompt(data),
-          messages: newMsgs,
+          messages: newMsgs.map(m => ({ role: m.me ? "user" : "assistant", content: m.content })),
         }),
       });
-
-      const json = await resp.json();
+      const json  = await resp.json();
       const reply = json.text || "No pude responder. Intentá de nuevo.";
-      setTyping(false);
-      setMsgs(m => [...m, { role: "assistant", content: reply, me: false, displayTime: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }) }]);
-    } catch (e) {
-      setTyping(false);
-      setMsgs(m => [...m, { role: "assistant", content: "Error de conexión. Verificá tu conexión a internet.", me: false, displayTime: "ahora" }]);
+      ChatStore.setTyping(false);
+      ChatStore.addMsg({ role: "assistant", content: reply, me: false, displayTime: now() });
+    } catch {
+      ChatStore.setTyping(false);
+      ChatStore.addMsg({ role: "assistant", content: "Error de conexión. Verificá tu internet.", me: false, displayTime: "ahora" });
     }
   };
 
@@ -255,7 +258,7 @@ const ChatIA = () => {
         </div>
 
         <form className="row" style={{ gap: 11, padding: 18, borderTop: "1px solid var(--line)" }} onSubmit={e => { e.preventDefault(); send(); }}>
-          <input className="input" placeholder="Preguntá, planificá, pedí ayuda…" value={draft} onChange={e => setDraft(e.target.value)} disabled={typing} />
+          <input className="input" placeholder="Preguntá, planificá, pedí ayuda…" value={draft} onChange={e => ChatStore.setDraft(e.target.value)} disabled={typing} />
           <Btn variant="primary" icon="arrowUp" style={{ flex: "0 0 auto", width: 48, height: 48, padding: 0, borderRadius: 14 }} disabled={typing}></Btn>
         </form>
       </div>
