@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "StudyHub - Tu sistema de vida personal (Web App)",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "build:jsx": "node scripts/build-jsx.js",
+    "dev": "node scripts/build-jsx.js && vite",
+    "build": "node scripts/build-jsx.js && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
     "vite": "^5.0.0"
   },
   "dependencies": {

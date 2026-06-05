@@ -121,12 +121,7 @@ const ROLES = [
   { id: "work", emoji: "💼", label: "Trabajo",                   sub: "Contanos en qué trabajás"    },
 ];
 
-const Field = ({ label, children }) => (
-  <div style={{ display: "grid", gap: 7 }}>
-    <div className="mono" style={{ fontSize: 10.5 }}>{label}</div>
-    {children}
-  </div>
-);
+/* Field viene de ui.jsx (carga antes en el bundle) */
 
 const Onboarding = ({ onDone }) => {
   const [step, setStep]         = React.useState(0);

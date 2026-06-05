@@ -2,9 +2,7 @@
    CONFIGURACIÓN — sección de página completa
    Con auth Supabase real: Telegram, password, borrar datos
    ============================================================ */
-const FONT_OPTS    = [{ id: "outfit-mono", label: "Outfit + Mono" }, { id: "outfit", label: "Outfit" }, { id: "grotesk", label: "Grotesk" }];
-const ACCENT_OPTS  = [{ id: "gradient", label: "Gradiente" }, { id: "mix", label: "Sólido" }];
-const VARIANT_OPTS = [{ id: "editorial", label: "Editorial" }, { id: "grid", label: "Grilla" }, { id: "focus", label: "Foco" }];
+/* FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS vienen de ui.jsx (carga antes en el bundle) */
 
 const ACCENT_SWATCHES = [
   { id: "violet", c: "#8b6dff" }, { id: "blue", c: "#4ec5e8" }, { id: "orange", c: "#f0764e" },
