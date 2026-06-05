@@ -819,20 +819,7 @@ a{ color:inherit; text-decoration:none; }
 <div class="ambient"></div>
 <div id="root"></div>
 
-<!-- Vite bridge: expone supabase y SupabaseStorage para los scripts Babel -->
-<script type="module">
-  import { supabase }        from './src/supabase.js';
-  import { SupabaseStorage } from './src/storage.js';
-  window._supabase       = supabase;
-  window.SupabaseStorage = SupabaseStorage;
-</script>
-
-<!-- React 18 production (minificado — sin devtools overhead) -->
-<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-<!-- Bundle pre-compilado (generado por npm run build:jsx) -->
-<!-- Reemplaza: @babel/standalone + 20 archivos JSX individuales -->
-<script defer src="/app.bundle.js"></script>
+<!-- Entry point ES modules — Vite bundlea todo -->
+<script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
