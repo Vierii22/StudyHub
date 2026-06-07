@@ -103,7 +103,7 @@ function LoadingScreen() {
 function App() {
   /* auth: "loading" | "login" | "onboarding" | "app" */
   const [auth, setAuth]   = useState("loading");
-  const [section, setSection] = useState(() => load("sh_section", "dashboard"));
+  const [section, setSection] = useState("dashboard");
   const [theme, setThemeState] = useState(() => {
     const t = load("sh_theme", DEFAULT_THEME);
     if (!localStorage.getItem("sh_layout_v2")) { t.variant = "editorial"; localStorage.setItem("sh_layout_v2", "1"); }
@@ -186,8 +186,7 @@ function App() {
     r.setProperty("--violet-line", a.v + "66");
   }, [data.settings.uiScale, data.settings.accent]);
 
-  /* ── sección persistida ────────────────────────────── */
-  useEffect(() => { localStorage.setItem("sh_section", JSON.stringify(section)); }, [section]);
+  /* sección NO persistida — siempre arranca en dashboard al abrir la app */
 
   /* ── morning modal ─────────────────────────────────── */
   useEffect(() => {
