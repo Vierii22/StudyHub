@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS, PRIO } from './store.jsx';
 import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel, TerminalCorners } from './ui.jsx';
 
 /* ============================================================
