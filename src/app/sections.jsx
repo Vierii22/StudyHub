@@ -59,7 +59,7 @@ const MissionCard = ({ m, set, onEdit }) => {
   const toggleSub = (i) => set(s => { const mm = s.missions.find(x => x.id === m.id); mm.subtasks[i].done = !mm.subtasks[i].done; });
   return (
     <div className="card" style={{ borderLeft: `3px solid ${PRIO[m.prio]}` }}>
-      <div className="row between">
+      <div className="row between mission-head">
         <div className="row" style={{ gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--surface-2)", display: "grid", placeItems: "center", color: PRIO[m.prio] }}><Icon name="target" size={20} /></div>
           <div>
@@ -310,20 +310,20 @@ const Calendario = () => {
       <div className="grid" style={{ gridTemplateColumns: "2.6fr 1fr" }}>
         {/* grilla del calendario */}
         <div className="card card-flush" style={{ overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--line)" }}>
+          <div className="cal-month-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--line)" }}>
             {DOW_ES.map((d, i) => <div key={d} className="mono" style={{ padding: "14px 0", textAlign: "center", fontSize: 10.5, color: i >= 5 ? "var(--violet-hi)" : "var(--tx-3)" }}>{d}</div>)}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
+          <div className="cal-month-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
             {Array.from({ length: offset }).map((_, i) => <div key={"b"+i} style={{ borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: "rgba(255,255,255,.012)" }}></div>)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
               const evs      = evByDay(d);
               const isToday  = d === todayDay;
               const isWeekend= ((offset + d - 1) % 7) >= 5;
               return (
-                <div key={d} onClick={() => setModal({ day: d, month: vMonth, year: vYear })} style={{ minHeight: 96, padding: 9, borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: isToday ? "var(--violet-soft)" : isWeekend ? "rgba(255,255,255,.015)" : "transparent", cursor: "pointer", transition: "background .14s" }}>
+                <div key={d} className="cal-day" onClick={() => setModal({ day: d, month: vMonth, year: vYear })} style={{ minHeight: 96, padding: 9, borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: isToday ? "var(--violet-soft)" : isWeekend ? "rgba(255,255,255,.015)" : "transparent", cursor: "pointer", transition: "background .14s" }}>
                   <div style={{ width: 26, height: 26, display: "grid", placeItems: "center", borderRadius: "50%", fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: isToday ? "#fff" : "var(--tx-2)", background: isToday ? "var(--violet)" : "transparent", marginBottom: 6 }}>{d}</div>
                   <div style={{ display: "grid", gap: 4 }}>
-                    {evs.slice(0, 2).map(e => <div key={e.id} onClick={ev => { ev.stopPropagation(); setModal({ event: e }); }} style={{ fontSize: 10.5, fontWeight: 600, color: "#fff", background: e.color, padding: "3px 7px", borderRadius: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</div>)}
+                    {evs.slice(0, 2).map(e => <div key={e.id} className="cal-event-pill" onClick={ev => { ev.stopPropagation(); setModal({ event: e }); }} style={{ fontSize: 10.5, fontWeight: 600, color: "#fff", background: e.color, padding: "3px 7px", borderRadius: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</div>)}
                     {evs.length > 2 && <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", paddingLeft: 2 }}>+{evs.length - 2} más</div>}
                   </div>
                 </div>

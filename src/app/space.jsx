@@ -171,6 +171,7 @@ function MiEspacio() {
   const [data, set] = useStore();
   const sp = data.space;
   const [focus, setFocus] = React.useState(false);
+  const [railOpen, setRailOpen] = React.useState(false);   /* mobile rail toggle */
   const active = sp.pages.find(p => p.id === sp.activeId) || sp.pages[0];
   const setActive = (id) => set(s => s.space.activeId = id);
   const patch = (id, p) => set(s => Object.assign(s.space.pages.find(x => x.id === id), p));
@@ -203,39 +204,70 @@ function MiEspacio() {
 
   if (focus) return <div className="space-focus"><div style={{ width: "min(820px,100%)", margin: "0 auto", padding: "40px 20px 80px" }}>{body}</div></div>;
 
+  /* Rail JSX — compartido entre desktop y mobile overlay */
+  const railEl = (onNav) => (
+    <>
+      <div className="mono" style={{ padding: "4px 8px 12px", fontSize: 9.5 }}>Mi Espacio</div>
+      {sp.pages.map(p => (
+        <div key={p.id}
+          className={`space-pageitem${p.id === active.id ? " on" : ""}`}
+          onClick={() => { setActive(p.id); setRenamingId(null); onNav && onNav(); }}
+          onDoubleClick={e => { e.stopPropagation(); setActive(p.id); setRenamingId(p.id); }}
+          title="Doble click para renombrar">
+          <span style={{ display: "grid", placeItems: "center", width: 18, height: 18, flex: "0 0 18px" }}><PageIcon name={p.icon} size={16} /></span>
+          {renamingId === p.id ? (
+            <input autoFocus value={p.title}
+              onChange={e => patch(p.id, { title: e.target.value })}
+              onBlur={() => setRenamingId(null)}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setRenamingId(null); }}
+              onClick={e => e.stopPropagation()}
+              style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "1px solid var(--violet-line)", borderRadius: 4, color: "var(--tx-1)", fontFamily: "var(--font-body)", fontSize: 12.5, padding: "1px 4px" }}
+            />
+          ) : (
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
+          )}
+          <span className="space-del" onClick={e => { e.stopPropagation(); delPage(p.id); }}><Icon name="x" size={13} /></span>
+        </div>
+      ))}
+      <button className="addbtn" style={{ marginTop: 8 }} onClick={() => { addPage(); onNav && onNav(); }}><Icon name="plus" size={15} /> Nueva página</button>
+    </>
+  );
+
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: 0 }}>
-      {/* rail de páginas */}
-      <div className="space-rail">
-        <div className="mono" style={{ padding: "4px 8px 12px", fontSize: 9.5 }}>Mi Espacio</div>
-        {sp.pages.map(p => (
-          <div key={p.id}
-            className={`space-pageitem${p.id === active.id ? " on" : ""}`}
-            onClick={() => { setActive(p.id); setRenamingId(null); }}
-            onDoubleClick={e => { e.stopPropagation(); setActive(p.id); setRenamingId(p.id); }}
-            title="Doble click para renombrar">
-            <span style={{ display: "grid", placeItems: "center", width: 18, height: 18, flex: "0 0 18px" }}><PageIcon name={p.icon} size={16} /></span>
-            {renamingId === p.id ? (
-              <input
-                autoFocus
-                value={p.title}
-                onChange={e => patch(p.id, { title: e.target.value })}
-                onBlur={() => setRenamingId(null)}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setRenamingId(null); }}
-                onClick={e => e.stopPropagation()}
-                style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "1px solid var(--violet-line)", borderRadius: 4, color: "var(--tx-1)", fontFamily: "var(--font-body)", fontSize: 12.5, padding: "1px 4px" }}
-              />
-            ) : (
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
-            )}
-            <span className="space-del" onClick={e => { e.stopPropagation(); delPage(p.id); }}><Icon name="x" size={13} /></span>
-          </div>
-        ))}
-        <button className="addbtn" style={{ marginTop: 8 }} onClick={addPage}><Icon name="plus" size={15} /> Nueva página</button>
+    <div style={{ display: "flex", height: "100%", minHeight: 0, position: "relative" }}>
+
+      {/* Overlay backdrop en mobile cuando rail está abierto */}
+      {railOpen && (
+        <div onClick={() => setRailOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 150 }}
+          className="space-rail-backdrop" />
+      )}
+
+      {/* Rail desktop — siempre visible */}
+      <div className="space-rail space-rail-desktop">
+        {railEl()}
       </div>
+
+      {/* Rail mobile — overlay lateral */}
+      <div className={`space-rail space-rail-mobile${railOpen ? " open" : ""}`}>
+        <div className="row between" style={{ padding: "8px 8px 12px", borderBottom: "1px solid var(--line)", marginBottom: 8 }}>
+          <span className="mono" style={{ fontSize: 9.5 }}>Mi Espacio</span>
+          <span style={{ cursor: "pointer", color: "var(--tx-3)" }} onClick={() => setRailOpen(false)}><Icon name="x" size={16} /></span>
+        </div>
+        {railEl(() => setRailOpen(false))}
+      </div>
+
       {/* contenido */}
       <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
-        <div className="page" style={{ maxWidth: 1200, paddingTop: 22 }}>{body}</div>
+        {/* Header mobile con botón páginas */}
+        <div className="space-mobile-header">
+          <button onClick={() => setRailOpen(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "var(--tx-1)", fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600 }}>
+            <Icon name="layers" size={16} />
+            {active.title}
+            <Icon name="chevR" size={14} color="var(--tx-3)" />
+          </button>
+        </div>
+        <div className="page" style={{ maxWidth: 1200, paddingTop: 12 }}>{body}</div>
       </div>
     </div>
   );

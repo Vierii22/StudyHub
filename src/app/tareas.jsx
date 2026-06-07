@@ -44,7 +44,7 @@ const TaskModal = ({ task, onClose }) => {
 
 const Tareas = ({ onOpenSubject }) => {
   const [data, set] = useStore();
-  const [view, setView] = React.useState("tabla");
+  const [view, setView] = React.useState(() => window.innerWidth < 768 ? "cards" : "tabla");
   const [sort, setSort] = React.useState("creacion");
   const [hideListed, setHideListed] = React.useState(false);
   const [detail, setDetail] = React.useState(null);
@@ -94,22 +94,20 @@ const Tareas = ({ onOpenSubject }) => {
       {/* VISTA TABLA */}
       {view === "tabla" && (
         <div className="card card-flush">
-          <div className="row" style={{ padding: "16px 22px", borderBottom: "1px solid var(--line)", gap: 16, color: "var(--tx-3)", fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: ".1em", textTransform: "uppercase" }}>
-            <span style={{ width: 21 }}></span><span style={{ flex: 1 }}>Nombre</span><span style={{ width: 70 }}>Prior.</span><span style={{ width: 80 }}>XP</span><span style={{ width: 90 }}>Vence</span><span style={{ width: 110 }}>Estado</span><span style={{ width: 60 }}></span>
-          </div>
           {tasks.length === 0 && <div className="empty" style={{ padding: 40 }}><span className="small">No tenés tareas. Agregá una abajo.</span></div>}
           {tasks.map(t => (
-            <div key={t.id} className="row" style={{ padding: "14px 22px", borderBottom: "1px solid var(--line)", gap: 16, opacity: t.done ? .5 : 1 }}>
+            <div key={t.id} className="task-row" style={{ opacity: t.done ? .5 : 1 }}>
               <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>{t.done && <Icon name="check" size={13} color="#fff" />}</div>
-              <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setDetail(t)}>
-                <div style={{ fontSize: 14.5, fontWeight: 500, textDecoration: t.done ? "line-through" : "none" }}>{t.t}</div>
-                {subjOf(t.subject) && <div className="mono" style={{ fontSize: 10, marginTop: 4, color: subjOf(t.subject).color }}>{subjOf(t.subject).name}</div>}
+              <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setDetail(t)}>
+                <div style={{ fontSize: 14.5, fontWeight: 500, textDecoration: t.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.t}</div>
+                <div className="row" style={{ gap: 7, marginTop: 5, flexWrap: "wrap" }}>
+                  {subjOf(t.subject) && <span className="mono" style={{ fontSize: 10, color: subjOf(t.subject).color }}>{subjOf(t.subject).name}</span>}
+                  <PrioBadge p={t.prio} />
+                  {t.due && t.due !== "—" && <DueBadge due={t.due} />}
+                </div>
               </div>
-              <span style={{ width: 70 }}><PrioBadge p={t.prio} /></span>
-              <span style={{ width: 80, fontFamily: "var(--font-mono)", fontSize: 12.5, color: "var(--violet-hi)" }}>+{t.xp}</span>
-              <span style={{ width: 90 }}><DueBadge due={t.due} /></span>
-              <span style={{ width: 110 }}><StatusBadge st={t.status} /></span>
-              <div className="row" style={{ width: 60, gap: 4 }}>
+              <div className="row" style={{ gap: 4, flex: "0 0 auto" }}>
+                <StatusBadge st={t.status} />
                 <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setDetail(t)}><Icon name="edit" size={14} /></div>
                 <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => del(t.id)}><Icon name="trash" size={14} /></div>
               </div>
