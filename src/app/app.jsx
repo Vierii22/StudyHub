@@ -200,9 +200,19 @@ function App() {
   }, [auth]);
 
   /* ── morning modal ─────────────────────────────────── */
+  /* No aparece el primer día de uso — solo desde el segundo día en adelante */
   useEffect(() => {
     if (auth === "app") {
-      const key = "sh_morning_" + new Date().toDateString();
+      const today    = new Date().toDateString();
+      const firstKey = "sh_app_first_date";
+      const firstDate = localStorage.getItem(firstKey);
+      if (!firstDate) {
+        // Primer login ever: registrar fecha, no mostrar modal hoy
+        localStorage.setItem(firstKey, today);
+        return;
+      }
+      if (firstDate === today) return; // todavía es el primer día
+      const key = "sh_morning_" + today;
       if (new Date().getHours() >= 5 && !localStorage.getItem(key)) {
         const t = setTimeout(() => {
           setMorning(true);

@@ -233,6 +233,7 @@ const SubjectView = ({ subjectId, onBack }) => {
           onAddItem={addBoardItem}
           quickSections={QUICK_SECTIONS}
           onAddSection={addSectionToBoard}
+          autoExpand={true}
         />
       ) : (
         <>

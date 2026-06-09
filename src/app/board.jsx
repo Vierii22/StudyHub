@@ -227,13 +227,13 @@ function BoardAddPanel({ onAdd, quickSections, onAddSection, onClose }) {
 }
 
 /* ── canvas principal ─────────────────────────────────────── */
-function CanvaBoard({ items, onChange, editing, showDots, minHeight = 680, onAddItem, quickSections, onAddSection, boardTitle }) {
+function CanvaBoard({ items, onChange, editing, showDots, minHeight = 680, onAddItem, quickSections, onAddSection, boardTitle, autoExpand = false }) {
   const wrapRef = React.useRef(null);
   const [colorFor,    setColorFor]    = React.useState(null);
   const [zoom,        setZoom]        = React.useState(1);
   const [pan,         setPan]         = React.useState({ x: 0, y: 0 });
   const [panning,     setPanning]     = React.useState(false);
-  const [expand,      setExpand]      = React.useState(false);
+  const [expand,      setExpand]      = React.useState(autoExpand);
   const [drawerOpen,  setDrawerOpen]  = React.useState(false);
   const drag = React.useRef(null);
 
