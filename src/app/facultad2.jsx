@@ -6,6 +6,9 @@ import { Store, useStore, uid, toast, COLORS } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Toggle, ProgressRing, SubjectDot } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 import { CanvaBoard, defaultBoardItem } from './board.jsx';
+import { SubjectModal, SubjectFiles } from './facultad.jsx';
+
+const SPAN_OPTS = [["¼", 3], ["⅓", 4], ["½", 6], ["⅔", 8], ["1", 12]];
 
 /* ============================================================
    VISTA INTERNA DE MATERIA — pizarrón Canva ⇄ widgets fijos

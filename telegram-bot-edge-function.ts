@@ -16,6 +16,41 @@ const COLORS       = ["#8b6dff","#3ecf9a","#e8639b","#4ec5e8","#e8b04e","#f0764e
 // finance:    {budget, expenses:[{id,cat,desc,monto,fecha,type}]}
 // ocio[]:     [{id, emoji, title, type, status, score, note}]
 
+// ─── Manual de uso de StudyHub (para responder preguntas sobre la app) ────────
+const APP_GUIDE = `
+=== MANUAL DE USO DE STUDYHUB ===
+
+SECCIONES Y CÓMO ACCEDER:
+- Dashboard: pantalla principal al abrir la app. Muestra widgets con XP, racha de días, tareas del día, próximos eventos, materias y horas de Pomodoro. Se personaliza desde Configuración > Dashboard.
+- Facultad: icono de capas en el sidebar. Acá creás y gestionás tus materias. Cada materia tiene widgets propios (temas, TPs, notas, fechas, links, archivos). También tiene un modo pizarrón libre estilo Canva.
+- Tareas: icono de check. Todas tus tareas. Podés filtrar por materia, prioridad y estado. Agregás con el botón "+".
+- Misiones: icono de rayo. Objetivos tipo videojuego con hitos. Al completarlos ganás XP.
+- Calendario: icono de calendario. Todos tus eventos. Navegás con las flechas. Podés importar/exportar archivos .ics.
+- Pomodoro: icono de reloj. Timer 25 min foco + 5 min descanso. Espacio para pausar. Registra horas automáticamente.
+- Chat IA: icono de burbuja. EstudioIA (Gemini). Tiene atajos rápidos arriba. Conoce tu perfil, materias y tareas.
+- Diario: icono de lápiz. Registro diario personal + seguimiento de sueño y energía matutinos.
+- Mi Espacio: icono de cuadro. Pizarrón libre con notas, listas, post-its, encabezados, código, links, tablas, imágenes.
+- Cocina: recetas y lista de compras.
+- Finanzas: control de gastos e ingresos.
+- Casa: lista de tareas del hogar.
+- Ocio: lista de películas, series y libros pendientes.
+- Configuración: esquina inferior del sidebar. Apariencia, dashboard, perfil, Telegram, cuenta.
+
+CÓMO HACER TAREAS COMUNES:
+- Agregar materia: Facultad → botón "+ Nueva materia".
+- Agregar tarea: Tareas → escribir en el campo de abajo y Enter, o botón "+".
+- Cambiar colores y fuente: Configuración > Apariencia.
+- Conectar Telegram (Hubby): Configuración > Integraciones → generar código → @Hubby_ia_bot.
+- Instalar como app (PWA): Configuración > Acerca de → "Instalar como app".
+- Cambiar contraseña: Configuración > Cuenta.
+- Personalizar dashboard: Configuración > Dashboard → "Abrir editor".
+- Mini Pomodoro flotante: cuando el timer está activo y navegás a otra sección, aparece un widget flotante abajo a la derecha.
+
+SISTEMA DE XP Y PROGRESO:
+- Completar tareas suma XP. El nivel sube acumulando XP.
+- La racha cuenta días consecutivos de uso de la app.
+`
+
 // ─── Prompt de clasificación ──────────────────────────────────────────────────
 const SECTION_INFO = `
 Sos el asistente inteligente de StudyHub, app de productividad para estudiantes.
@@ -23,6 +58,7 @@ Sos el asistente inteligente de StudyHub, app de productividad para estudiantes.
 === MODOS ===
 - intent_type "add": el usuario quiere guardar algo
 - intent_type "query": el usuario hace una pregunta sobre sus datos
+- intent_type "app_help": el usuario pregunta cómo usar la app (ej: "¿cómo agrego una materia?", "¿dónde está el pomodoro?", "¿qué funciones tiene?")
 
 === SECCIONES ===
 
@@ -133,6 +169,36 @@ async function setShData(supabase: ReturnType<typeof createClient>, userId: stri
     { user_id: userId, key: "sh_data", value: blob, updated_at: new Date().toISOString() },
     { onConflict: "user_id,key" }
   )
+}
+
+// ─── Modo APP HELP: responder preguntas sobre cómo usar la app ───────────────
+async function handleAppHelp(text: string, geminiKey: string): Promise<string> {
+  if (!geminiKey) {
+    return `📱 <b>¿Dudas sobre StudyHub?</b>\n\nPodés consultar el manual completo desde la app: Chat IA → preguntale a EstudioIA.`
+  }
+  try {
+    const prompt = `Sos Hubby, asistente de StudyHub. El usuario pregunta: "${text}"
+
+Usá este manual para responder:
+${APP_GUIDE}
+
+Respondé en español rioplatense, claro y conciso. Máximo 5 líneas. Usá emojis para hacerlo más legible. Sin JSON en la respuesta.`
+
+    const resp = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } }
+      })
+    })
+    const json = await resp.json()
+    const answer = json.candidates?.[0]?.content?.parts?.[0]?.text
+    if (answer) return `🤖 ${answer.trim()}`
+  } catch (e) {
+    console.log("AppHelp Gemini error:", e)
+  }
+  return `📱 Para dudas sobre la app, probá el Chat IA dentro de StudyHub — EstudioIA te explica todo en detalle.`
 }
 
 // ─── Modo LECTURA: responder preguntas ─────────────────────────────────────────
@@ -786,6 +852,13 @@ serve(async (req) => {
 
     // ── Clasificar con Gemini ────────────────────────────────────────────────
     const intent = await classifyWithGemini(text, geminiKey, supabase, userId)
+
+    // Modo APP HELP
+    if (intent.intent_type === "app_help") {
+      const answer = await handleAppHelp(text, geminiKey)
+      await sendMessage(chatId, telegramToken, answer)
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }
 
     // Modo QUERY
     if (intent.intent_type === "query") {

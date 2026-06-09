@@ -99,6 +99,7 @@ const Sidebar = ({ active, onNav, onLogout, isOpen, onClose }) => {
             item.sep
               ? <div className="nav-sep" key={"s" + i}></div>
               : <div key={item.id}
+                  data-tour={item.id}
                   className={`nav-item${active === item.id ? " active" : ""}`}
                   onClick={() => handleNav(item.id)}
                   onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}>
@@ -110,7 +111,7 @@ const Sidebar = ({ active, onNav, onLogout, isOpen, onClose }) => {
           <div className="collapse-btn" onClick={() => setExpanded(e => !e)} title={expanded ? "Colapsar barra" : "Expandir barra"}>
             <Icon name={expanded ? "chevL" : "chevR"} />
           </div>
-          <div className={`nav-item${active === "config" ? " active" : ""}`} onClick={() => handleNav("config")} onMouseEnter={e => showTip(e, "Configuración")} onMouseLeave={hideTip}>
+          <div data-tour="config" className={`nav-item${active === "config" ? " active" : ""}`} onClick={() => handleNav("config")} onMouseEnter={e => showTip(e, "Configuración")} onMouseLeave={hideTip}>
             <Icon name="gear" /><span className="nav-label">Configuración</span>
           </div>
           <div className="nav-item" onClick={onLogout} onMouseEnter={e => showTip(e, "Cerrar sesión")} onMouseLeave={hideTip} style={{ color: "#e8639b" }}>

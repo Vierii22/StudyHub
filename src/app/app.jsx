@@ -14,6 +14,8 @@ import { Pomodoro, ChatIA, Diario, Historial } from './sections2.jsx';
 import { Cocina, Finanzas, Casa, Ocio, Recetas } from './sections3.jsx';
 import { ConfigSection, MorningModal } from './config.jsx';
 import { MiEspacio } from './space.jsx';
+import { Landing } from './landing.jsx';
+import { Tutorial, TUTORIAL_KEY } from './tutorial.jsx';
 import { FeedbackWidget } from './feedback.jsx';
 import { supabase } from '../supabase.js';
 
@@ -101,8 +103,9 @@ function LoadingScreen() {
 }
 
 function App() {
-  /* auth: "loading" | "login" | "onboarding" | "app" */
+  /* auth: "loading" | "landing" | "login" | "onboarding" | "app" */
   const [auth, setAuth]   = useState("loading");
+  const [showTutorial, setShowTutorial] = useState(false);
   const [section, setSection] = useState("dashboard");
   const [theme, setThemeState] = useState(() => {
     const t = load("sh_theme", DEFAULT_THEME);
@@ -118,7 +121,7 @@ function App() {
   /* ── auth Supabase ─────────────────────────────────── */
   useEffect(() => {
     const sb = supabase;
-    if (!sb) { setAuth("login"); return; }
+    if (!sb) { setAuth("landing"); return; }
 
     const checkProfile = () => {
       const raw = localStorage.getItem("sh_data");
@@ -132,7 +135,7 @@ function App() {
       if (session) {
         setAuth(checkProfile() ? "app" : "onboarding");
       } else {
-        setAuth("login");
+        setAuth("landing");
       }
     });
 
@@ -152,7 +155,7 @@ function App() {
     /* escuchar cambios de sesión */
     const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
-        setAuth("login");
+        setAuth("landing");
         setSection("dashboard");
       }
       /* SIGNED_IN lo maneja el onboarding / login */
@@ -188,6 +191,14 @@ function App() {
 
   /* sección NO persistida — siempre arranca en dashboard al abrir la app */
 
+  /* ── tutorial (primera vez) ────────────────────────── */
+  useEffect(() => {
+    if (auth === "app" && !localStorage.getItem(TUTORIAL_KEY)) {
+      const t = setTimeout(() => setShowTutorial(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, [auth]);
+
   /* ── morning modal ─────────────────────────────────── */
   useEffect(() => {
     if (auth === "app") {
@@ -214,6 +225,13 @@ function App() {
 
   /* ── estados de carga / auth ───────────────────────── */
   if (auth === "loading") return <LoadingScreen />;
+
+  if (auth === "landing") return (
+    <>
+      <Landing onStart={() => setAuth("login")} />
+      <ToastHost />
+    </>
+  );
 
   if (auth === "login") return (
     <>
@@ -258,6 +276,7 @@ function App() {
           setTheme={setTheme}
           onEditDash={() => { setSection("dashboard"); setDashEditSignal(x => x + 1); toast('Tocá "Editar dashboard"'); }}
           onLogout={logout}
+          onTutorial={() => { setShowTutorial(true); nav("dashboard"); }}
         />
       );
       default: return <Dashboard variant={theme.variant} onNav={nav} onConnect={() => nav("config")} />;
@@ -285,6 +304,13 @@ function App() {
         </div>
       </div>
       {morning && <MorningModal onClose={() => setMorning(false)} />}
+      {showTutorial && (
+        <Tutorial
+          onDone={() => setShowTutorial(false)}
+          currentSection={section}
+          onNavigate={nav}
+        />
+      )}
       {section !== "pomodoro" && <PomoMini onOpen={() => nav("pomodoro")} />}
       <FeedbackWidget section={section} />
       <ToastHost />

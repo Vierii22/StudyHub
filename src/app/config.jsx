@@ -1,7 +1,8 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS, ALL_WIDGETS } from './store.jsx';
+import { TUTORIAL_KEY } from './tutorial.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Field, Modal, Seg, Toggle, ProgressRing, TerminalCorners, BrandBanner, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS, NAV } from './ui.jsx';
 import { supabase } from '../supabase.js';
 import { SupabaseStorage } from '../storage.js';
@@ -94,7 +95,7 @@ const InstallPWA = () => {
   );
 };
 
-const ConfigSection = ({ theme, setTheme, onEditDash, onLogout }) => {
+const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) => {
   const [data, set] = useStore();
   const [tab, setTab] = React.useState("apariencia");
 
@@ -195,14 +196,14 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout }) => {
       <PageHead title="Configuración" meta="Todo se guarda en la nube automáticamente" />
       <div className="grid" style={{ gridTemplateColumns: "210px 1fr", alignItems: "start" }}>
         {/* sub-nav */}
-        <div style={{ display: "grid", gap: 3, position: "sticky", top: 0 }}>
+        <div className="cfg-nav">
           {CONFIG_TABS.map(([id, label, icon]) => (
-            <div key={id} onClick={() => setTab(id)} className="row" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: tab === id ? "var(--violet-hi)" : "var(--tx-2)", background: tab === id ? "var(--violet-soft)" : "transparent", border: "1px solid " + (tab === id ? "var(--violet-line)" : "transparent") }}>
+            <div key={id} onClick={() => setTab(id)} className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: tab === id ? "var(--violet-hi)" : "var(--tx-2)", background: tab === id ? "var(--violet-soft)" : "transparent", border: "1px solid " + (tab === id ? "var(--violet-line)" : "transparent"), whiteSpace: "nowrap" }}>
               <Icon name={icon} size={16} />{label}
             </div>
           ))}
-          <div className="nav-sep"></div>
-          <div className="row" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: "#e8639b" }} onClick={onLogout}>
+          <div className="cfg-sep"></div>
+          <div className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: "#e8639b", whiteSpace: "nowrap" }} onClick={onLogout}>
             <Icon name="logout" size={16} />Cerrar sesión
           </div>
         </div>
@@ -350,6 +351,17 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout }) => {
 
             {/* Instalar como app */}
             <InstallPWA />
+
+            <div className="card card-2" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
+              <span style={{ width: 38, height: 38, borderRadius: 10, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}>
+                <Icon name="sparkles" size={18} />
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>Tour de la app</div>
+                <div className="small" style={{ marginTop: 3 }}>Volvé a ver el tutorial paso a paso.</div>
+              </div>
+              <Btn variant="secondary" onClick={() => { localStorage.removeItem(TUTORIAL_KEY); onTutorial?.(); }}>Ver tour</Btn>
+            </div>
 
             <div className="small" style={{ marginTop: 18, textAlign: "center", color: "var(--tx-3)" }}>
               Hecho con 💜 para estudiantes · Tus datos se sincronizan en la nube.

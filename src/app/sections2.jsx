@@ -3,6 +3,8 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, playSound, addPomoMinutes, getPomoWeekMins, PomoStore, usePomoStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, Chip, Modal, Field, PageHead, Empty } from './ui.jsx';
+import { MorningModal } from './config.jsx';
+import { APP_GUIDE } from './help-content.js';
 
 /* ============================================================
    POMODORO · CHAT IA (Gemini) · DIARIO · HISTORIAL
@@ -163,6 +165,7 @@ const buildSystemPrompt = (data) => {
     morning ? `Hoy el usuario tiene energía ${morning.energy}/5, durmió ${morning.sleep}h, humor: ${morning.mood}.` : "",
     weekMins > 0 ? `Esta semana estudió ${Math.round(weekMins)} minutos con Pomodoro.` : "",
     `Respondé en español, sé directo y práctico. Si tenés que hacer una lista, usá puntos. Máximo 4 párrafos cortos.`,
+    APP_GUIDE,
   ].filter(Boolean);
 
   return lines.join("\n");
