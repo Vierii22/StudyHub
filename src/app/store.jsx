@@ -57,20 +57,21 @@ const SEED = {
 };
 
 const ALL_WIDGETS = {
-  xp:        { label: "Total XP",           w: 4 },
-  tareas:    { label: "Tabla de tareas",     w: 8 },
-  agenda:    { label: "Agenda de hoy",       w: 6 },
-  materias:  { label: "Materias",            w: 6 },
-  racha:     { label: "Racha actual",        w: 4 },
-  horas:     { label: "Horas estudiadas",    w: 6 },
-  completas: { label: "Tareas completas",    w: 4 },
-  ring:      { label: "Ring cuatrimestre",   w: 4 },
-  semana:    { label: "Gráfico semana",      w: 8 },
-  reloj:     { label: "Reloj y fecha",       w: 4 },
-  nota:      { label: "Nota rápida",         w: 4 },
-  proximo:   { label: "Próximo evento",      w: 4 },
-  habitos:   { label: "Hábitos de hoy",      w: 4 },
-  frase:     { label: "Frase del día",       w: 6 },
+  xp:         { label: "Total XP",             w: 4 },
+  tareas:     { label: "Tabla de tareas",       w: 8 },
+  agenda:     { label: "Agenda de hoy",         w: 6 },
+  materias:   { label: "Materias",              w: 6 },
+  racha:      { label: "Racha actual",          w: 4 },
+  horas:      { label: "Horas estudiadas",      w: 6 },
+  completas:  { label: "Tareas completas",      w: 4 },
+  ring:       { label: "Ring cuatrimestre",     w: 4 },
+  semana:     { label: "Gráfico semana",        w: 8 },
+  reloj:      { label: "Reloj y fecha",         w: 4 },
+  nota:       { label: "Nota rápida",           w: 4 },
+  proximo:    { label: "Próximo evento",        w: 4 },
+  habitos:    { label: "Hábitos de hoy",        w: 4 },
+  frase:      { label: "Frase del día",         w: 6 },
+  objetivos:  { label: "Objetivos de hoy",      w: 6 },
 };
 
 /* ── helpers ────────────────────────────────────────────── */

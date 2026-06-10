@@ -232,10 +232,162 @@ const WFrase = () => {
   );
 };
 
+/* ── Objetivos de hoy ────────────────────────────────────────
+   Widget interactivo que crea/sincroniza la misión "Objetivos de hoy".
+   Los ítems se guardan directamente como subtareas de esa misión.
+   ─────────────────────────────────────────────────────────── */
+const HOY_TITLE = "Objetivos de hoy";
+
+const WObjetivos = ({ data, set, onOpen }) => {
+  const todayKey = new Date().toDateString(); // e.g. "Mon Jun 10 2026"
+  const [draft, setDraft] = React.useState("");
+
+  /* Buscar (o describir) la misión de hoy */
+  const mission = data.missions?.find(m => m.t === HOY_TITLE && m.todayKey === todayKey);
+
+  /* Crear la misión si no existe */
+  const ensureMission = () => {
+    let m = data.missions?.find(m => m.t === HOY_TITLE && m.todayKey === todayKey);
+    if (!m) {
+      m = { id: uid(), t: HOY_TITLE, desc: new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" }), prio: "alta", xp: 500, subtasks: [], expanded: true, todayKey };
+      set(s => { if (!s.missions) s.missions = []; s.missions.unshift(m); });
+    }
+    return m;
+  };
+
+  const addItem = () => {
+    if (!draft.trim()) return;
+    const t = draft.trim();
+    setDraft("");
+    ensureMission();
+    set(s => {
+      const mm = s.missions.find(m => m.t === HOY_TITLE && m.todayKey === todayKey);
+      if (mm) mm.subtasks.push({ t, done: false });
+    });
+    toast("Objetivo agregado");
+  };
+
+  const toggle = (i) => {
+    set(s => {
+      const mm = s.missions.find(m => m.t === HOY_TITLE && m.todayKey === todayKey);
+      if (mm) mm.subtasks[i].done = !mm.subtasks[i].done;
+    });
+  };
+
+  const removeItem = (i) => {
+    set(s => {
+      const mm = s.missions.find(m => m.t === HOY_TITLE && m.todayKey === todayKey);
+      if (mm) mm.subtasks.splice(i, 1);
+    });
+  };
+
+  const items = mission?.subtasks || [];
+  const done = items.filter(i => i.done).length;
+  const pct = items.length ? Math.round(done / items.length * 100) : 0;
+
+  return (
+    <div className="card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* header */}
+      <div className="row between" style={{ marginBottom: 12, flexShrink: 0 }}>
+        <div className="row" style={{ gap: 9 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--violet-soft)", display: "grid", placeItems: "center" }}>
+            <Icon name="target" size={15} color="var(--violet-hi)" />
+          </div>
+          <div>
+            <div className="h3" style={{ fontSize: 14 }}>Objetivos de hoy</div>
+            {items.length > 0 && <div className="mono" style={{ fontSize: 10, marginTop: 1 }}>{done}/{items.length} completos</div>}
+          </div>
+        </div>
+        {items.length > 0 && (
+          <span
+            className="link"
+            style={{ fontSize: 12 }}
+            onClick={() => onOpen("misiones")}
+          >
+            Ver misión →
+          </span>
+        )}
+      </div>
+
+      {/* barra de progreso — solo si hay items */}
+      {items.length > 0 && (
+        <div className="bar" style={{ marginBottom: 12, flexShrink: 0 }}>
+          <i style={{ width: pct + "%" }}></i>
+        </div>
+      )}
+
+      {/* lista scrolleable */}
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+        {items.length === 0 && (
+          <div style={{ flex: 1, display: "grid", placeItems: "center", textAlign: "center", color: "var(--tx-3)" }}>
+            <div>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🎯</div>
+              <div className="small">Escribí tus objetivos del día</div>
+            </div>
+          </div>
+        )}
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="row"
+            style={{ gap: 10, padding: "7px 4px", borderRadius: 6, transition: "background .1s" }}
+          >
+            <div
+              className={`cbox${item.done ? " on" : ""}`}
+              onClick={() => toggle(i)}
+              style={{ flexShrink: 0 }}
+            >
+              {item.done && <Icon name="check" size={13} color="#fff" />}
+            </div>
+            <span style={{
+              flex: 1,
+              fontSize: 14,
+              textDecoration: item.done ? "line-through" : "none",
+              opacity: item.done ? .45 : 1,
+              transition: "opacity .2s",
+              lineHeight: 1.35,
+            }}>
+              {item.t}
+            </span>
+            <span
+              style={{ cursor: "pointer", color: "var(--tx-3)", flexShrink: 0, opacity: 0.6 }}
+              onClick={() => removeItem(i)}
+            >
+              <Icon name="x" size={12} />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* input */}
+      <form
+        style={{ display: "flex", gap: 8, marginTop: 10, flexShrink: 0 }}
+        onSubmit={e => { e.preventDefault(); addItem(); }}
+      >
+        <input
+          className="input"
+          placeholder="Agregar objetivo…"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          style={{ flex: 1, padding: "9px 12px", fontSize: 13 }}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary"
+          style={{ flexShrink: 0, padding: "0 14px" }}
+        >
+          <Icon name="plus" size={15} />
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const WIDGET_COMP = {
   agenda: WAgenda, xp: WXP, tareas: WTareas, materias: WMaterias,
   racha: WRacha, horas: WHoras, completas: WCompletas, ring: WRing, semana: WSemana,
   reloj: WReloj, nota: WNota, proximo: WProximo, habitos: WHabitos, frase: WFrase,
+  objetivos: WObjetivos,
 };
 
 export { WIDGET_COMP, greetingTime };
