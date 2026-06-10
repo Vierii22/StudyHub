@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, PRIO, STATUS, getPomoWeekMins, getPomoWeekByDay } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Toggle, ProgressRing, SubjectDot, TerminalCorners } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
+import { useTaskForm, TaskFormModal } from './useTaskForm.js';
 
 /* ============================================================
    DASHBOARD WIDGETS — conectados al store
@@ -48,27 +49,35 @@ const WXP = ({ data }) => (
 const WTareas = ({ data, set, onOpen }) => {
   const active = data.tasks.filter(t => !t.done);
   const [draft, setDraft] = React.useState("");
+  const tf = useTaskForm();
   return (
-    <div className="card card-flush" style={{ height: "100%" }}>
-      <div className="row between" style={{ padding: "20px 22px 14px" }}><div className="h3">Tareas activas</div><span className="link" style={{ fontSize: 13 }} onClick={() => onOpen("tareas")}>Ver todas →</span></div>
-      <div style={{ borderTop: "1px solid var(--line)" }}>
-        {active.length === 0 && <div className="empty" style={{ padding: 24 }}><span className="small">Sin tareas pendientes</span></div>}
-        {active.slice(0, 4).map(t => {
-          const subj = data.subjects.find(s => s.id === t.subject);
-          return (
-            <div key={t.id} className="row" style={{ gap: 13, padding: "12px 22px", borderBottom: "1px solid var(--line)" }}>
-              <div className="cbox" onClick={() => set(s => { s.tasks.find(x => x.id === t.id).done = true; })}></div>
-              <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{t.t}</div>
-              <span className="prio" style={{ color: PRIO[t.prio], background: PRIO[t.prio] + "22" }}>{t.prio}</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: t.due === "Hoy" ? "var(--violet-hi)" : "var(--tx-3)", width: 56, textAlign: "right" }}>{t.due}</span>
-            </div>
-          );
-        })}
+    <div className="card card-flush" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div className="row between" style={{ padding: "20px 22px 14px", flexShrink: 0 }}>
+        <div className="h3">Tareas activas</div>
+        <div className="row" style={{ gap: 10 }}>
+          <span className="link" style={{ fontSize: 13 }} onClick={() => onOpen("tareas")}>Ver todas →</span>
+          <div className="icon-btn" style={{ width: 28, height: 28 }} title="Nueva tarea completa" onClick={() => tf.open()}>
+            <Icon name="plus" size={14} />
+          </div>
+        </div>
       </div>
-      <form className="row" style={{ gap: 10, padding: "14px 22px" }} onSubmit={e => { e.preventDefault(); if (draft.trim()) { set(s => s.tasks.push({ id: uid(), t: draft.trim(), desc: "", subject: null, due: "—", prio: "media", xp: 20, status: "pendiente", done: false })); setDraft(""); toast("Tarea agregada"); } }}>
-        <input className="input" placeholder="Agregar nueva tarea y enter…" value={draft} onChange={e => setDraft(e.target.value)} style={{ padding: "11px 14px", fontSize: 14 }} />
-        <Btn variant="primary" icon="plus" style={{ flex: "0 0 auto" }}></Btn>
+      <div style={{ borderTop: "1px solid var(--line)", flex: 1, overflowY: "auto" }}>
+        {active.length === 0 && <div className="empty" style={{ padding: 24 }}><span className="small">Sin tareas pendientes</span></div>}
+        {active.slice(0, 5).map(t => (
+          <div key={t.id} className="row" style={{ gap: 13, padding: "12px 22px", borderBottom: "1px solid var(--line)" }}>
+            <div className="cbox" onClick={() => set(s => { const task = s.tasks.find(x => x.id === t.id); task.done = true; task.status = "lista"; })}></div>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 500, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onClick={() => tf.open(t)}>{t.t}</div>
+            <span className="prio" style={{ color: PRIO[t.prio], background: PRIO[t.prio] + "22", flexShrink: 0 }}>{t.prio}</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: t.due === "Hoy" ? "var(--violet-hi)" : "var(--tx-3)", width: 56, textAlign: "right", flexShrink: 0 }}>{t.due}</span>
+          </div>
+        ))}
+      </div>
+      <form className="row" style={{ gap: 10, padding: "14px 22px", flexShrink: 0 }} onSubmit={e => { e.preventDefault(); if (draft.trim()) { set(s => s.tasks.push({ id: uid(), t: draft.trim(), desc: "", subject: null, due: "—", prio: "media", xp: 20, status: "pendiente", done: false })); setDraft(""); toast("Tarea agregada"); } }}>
+        <input className="input" placeholder="Agregar tarea rápida y enter…" value={draft} onChange={e => setDraft(e.target.value)} style={{ padding: "11px 14px", fontSize: 14 }} />
+        <Btn variant="secondary" icon="plus" style={{ flex: "0 0 auto" }} title="Agregar rápida"></Btn>
+        <Btn variant="primary" icon="settings" type="button" style={{ flex: "0 0 auto" }} title="Agregar con opciones" onClick={() => tf.open()}></Btn>
       </form>
+      <TaskFormModal hook={tf} />
     </div>
   );
 };
@@ -383,11 +392,103 @@ const WObjetivos = ({ data, set, onOpen }) => {
   );
 };
 
+/* ── Galería de fotos ─────────────────────────────────────────
+   Muestra una foto aleatoria de las subidas, con botón shuffle.
+   Las fotos se guardan en widgetConfig.dashboard.fotos.photos[]
+   ─────────────────────────────────────────────────────────── */
+const WFotos = ({ data, set }) => {
+  const photos = data.widgetConfig?.dashboard?.fotos?.photos || [];
+  const [idx, setIdx] = React.useState(() => photos.length ? Math.floor(Math.random() * photos.length) : 0);
+  const fileRef = React.useRef();
+
+  const shuffle = () => {
+    if (photos.length < 2) return;
+    setIdx(i => {
+      let next = Math.floor(Math.random() * photos.length);
+      while (next === i && photos.length > 1) next = Math.floor(Math.random() * photos.length);
+      return next;
+    });
+  };
+
+  const upload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target.result;
+      set(s => {
+        if (!s.widgetConfig) s.widgetConfig = {};
+        if (!s.widgetConfig.dashboard) s.widgetConfig.dashboard = {};
+        if (!s.widgetConfig.dashboard.fotos) s.widgetConfig.dashboard.fotos = { photos: [] };
+        s.widgetConfig.dashboard.fotos.photos.push(url);
+      });
+      setIdx(photos.length); // nuevo índice = última foto
+      toast("Foto agregada ✓");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const removePhoto = (i) => {
+    set(s => {
+      const arr = s.widgetConfig?.dashboard?.fotos?.photos;
+      if (arr) arr.splice(i, 1);
+    });
+    setIdx(prev => Math.max(0, prev - 1));
+  };
+
+  const current = photos[idx] || null;
+
+  return (
+    <div className="card" style={{ height: "100%", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+      {/* foto principal */}
+      <div style={{ flex: 1, position: "relative", background: "var(--surface-2)", minHeight: 140 }}>
+        {current
+          ? <img src={current} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : (
+            <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "var(--tx-3)", flexDirection: "column", gap: 8, padding: 20, textAlign: "center" }}>
+              <div style={{ fontSize: 36 }}>📷</div>
+              <div className="small">Subí fotos para verlas aquí</div>
+            </div>
+          )
+        }
+        {/* overlay con contador */}
+        {photos.length > 0 && (
+          <div className="mono" style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.55)", color: "#fff", fontSize: 10, padding: "3px 8px", borderRadius: 20 }}>
+            {idx + 1} / {photos.length}
+          </div>
+        )}
+      </div>
+
+      {/* controles */}
+      <div className="row between" style={{ padding: "11px 14px", borderTop: "1px solid var(--line)", flexShrink: 0, gap: 8 }}>
+        <MonoLabel style={{ fontSize: 10 }}>Galería de fotos</MonoLabel>
+        <div className="row" style={{ gap: 6 }}>
+          {current && (
+            <div className="icon-btn" style={{ width: 28, height: 28 }} title="Eliminar esta foto" onClick={() => removePhoto(idx)}>
+              <Icon name="trash" size={13} />
+            </div>
+          )}
+          {photos.length > 1 && (
+            <div className="icon-btn" style={{ width: 28, height: 28 }} title="Foto aleatoria" onClick={shuffle}>
+              <Icon name="refresh" size={14} />
+            </div>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={upload} />
+          <div className="icon-btn" style={{ width: 28, height: 28 }} title="Agregar foto" onClick={() => fileRef.current?.click()}>
+            <Icon name="plus" size={14} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const WIDGET_COMP = {
   agenda: WAgenda, xp: WXP, tareas: WTareas, materias: WMaterias,
   racha: WRacha, horas: WHoras, completas: WCompletas, ring: WRing, semana: WSemana,
   reloj: WReloj, nota: WNota, proximo: WProximo, habitos: WHabitos, frase: WFrase,
-  objetivos: WObjetivos,
+  objetivos: WObjetivos, fotos: WFotos,
 };
 
 export { WIDGET_COMP, greetingTime };

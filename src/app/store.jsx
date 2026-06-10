@@ -72,6 +72,7 @@ const ALL_WIDGETS = {
   habitos:    { label: "Hábitos de hoy",        w: 4 },
   frase:      { label: "Frase del día",         w: 6 },
   objetivos:  { label: "Objetivos de hoy",      w: 6 },
+  fotos:      { label: "Galería de fotos",       w: 6 },
 };
 
 /* ── helpers ────────────────────────────────────────────── */

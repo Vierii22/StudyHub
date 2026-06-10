@@ -198,22 +198,44 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 const DOW_ES    = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
 const EventModal = ({ day, month, year, event, onClose }) => {
-  const [, set] = useStore();
+  const [data, set] = useStore();
   /* fecha por defecto: parámetro day/month/year o fecha del evento o hoy */
   const defaultDate = event?.date ||
     (day && month != null && year ? `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}` : todayISO());
-  const [f, setF] = React.useState(event || { date: defaultDate, title: "", color: COLORS[0], desc: "" });
+  const [f, setF]           = React.useState(event || { date: defaultDate, title: "", color: COLORS[0], desc: "" });
+  const [syncTask, setSyncTask] = React.useState(false);
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
+
+  /* ¿Ya tiene tarea vinculada? */
+  const existingTaskId = event && Object.keys(data.taskCalendarMap || {}).find(k => data.taskCalendarMap[k] === event.id);
+  const hasLinkedTask  = !!existingTaskId;
+
   const save = () => {
     if (!f.title.trim()) return toast("Poné un título");
     if (!f.date)         return toast("Elegí una fecha");
-    const ev = { ...f, day: parseInt(f.date.slice(8,10)) };
-    set(s => { if (event) Object.assign(s.events.find(e => e.id === event.id), ev); else s.events.push({ id: uid(), ...ev }); });
+    const savedId = event?.id || uid();
+    const ev = { ...f, id: savedId, day: parseInt(f.date.slice(8,10)) };
+    set(s => { if (event) Object.assign(s.events.find(e => e.id === event.id), ev); else s.events.push(ev); });
     toast("Evento guardado");
+    /* Sync al guardar si se marcó el checkbox (solo eventos nuevos) */
+    if (syncTask && !hasLinkedTask) {
+      syncEventToTask(ev, data, set);
+      toast("Tarea creada desde el evento ✓");
+    }
     onClose();
   };
   const del = () => {
-    if (event) { set(s => s.events = s.events.filter(e => e.id !== event.id)); toast("Evento eliminado"); }
+    if (event) {
+      set(s => {
+        s.events = s.events.filter(e => e.id !== event.id);
+        /* limpiar mapeo y tarea vinculada */
+        if (existingTaskId) {
+          s.tasks = (s.tasks || []).filter(t => t.id !== existingTaskId);
+          if (s.taskCalendarMap) delete s.taskCalendarMap[existingTaskId];
+        }
+      });
+      toast("Evento eliminado");
+    }
     onClose();
   };
   return (
@@ -226,6 +248,21 @@ const EventModal = ({ day, month, year, event, onClose }) => {
           <Field label="Color"><div className="swatches">{COLORS.slice(0, 6).map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
         </div>
         <Field label="Descripción"><textarea className="input" rows={2} value={f.desc} onChange={e => up("desc", e.target.value)} /></Field>
+        {/* Sync a tareas */}
+        {!event && (
+          <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 10, background: syncTask ? "var(--violet-soft)" : "var(--surface-2)", cursor: "pointer", transition: "background .15s" }} onClick={() => setSyncTask(v => !v)}>
+            <div className={`cbox${syncTask ? " on" : ""}`} style={{ flexShrink: 0 }}>{syncTask && <Icon name="check" size={13} color="#fff" />}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Agregar también a Tareas</div>
+              <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>Se crea una tarea vinculada a este evento</div>
+            </div>
+          </div>
+        )}
+        {event && hasLinkedTask && (
+          <div className="mono" style={{ fontSize: 11, color: "var(--violet-hi)", background: "var(--violet-soft)", padding: "8px 12px", borderRadius: 8 }}>
+            ✓ Este evento tiene una tarea vinculada
+          </div>
+        )}
       </div>
     </Modal>
   );
