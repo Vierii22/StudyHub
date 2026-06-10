@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast } from './store.jsx';
 import { Btn, TerminalCorners } from './ui.jsx';
+import { supabase } from '../supabase.js';
 
 /* ============================================================
    FEEDBACK — botón flotante + panel "Ideas y comentarios"
@@ -22,10 +23,34 @@ const FeedbackWidget = ({ section }) => {
   // en Chat IA el bot\u00f3n de enviar vive abajo a la derecha: subimos el FAB para no taparlo
   const fabBottom = section === "chat" ? 102 : 26;
 
-  const send = () => {
+  const [sending, setSending] = React.useState(false);
+
+  const send = async () => {
     if (!text.trim()) return toast("Escribí tu mensaje primero");
-    toast("¡Gracias por tu feedback! 🙌");
-    setText(""); setContact(""); setOpen(false);
+    setSending(true);
+    try {
+      // Obtener user_id si está logueado
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id ?? null;
+
+      const { error } = await supabase.from("feedback").insert({
+        type,
+        message: text.trim(),
+        contact: contact.trim() || null,
+        section: section || null,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+      toast("¡Gracias por tu feedback! 🙌");
+      setText(""); setContact(""); setOpen(false);
+    } catch (e) {
+      console.error("Feedback error:", e);
+      toast("Error al enviar, intentá de nuevo");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -75,7 +100,7 @@ const FeedbackWidget = ({ section }) => {
           Opcional — dejalo si querés que te respondamos.
         </div>
 
-        <Btn variant="primary" icon="send" onClick={send} style={{ width: "100%", marginTop: 22, padding: "14px", fontSize: 15 }}>Enviar</Btn>
+        <Btn variant="primary" icon="send" onClick={send} disabled={sending} style={{ width: "100%", marginTop: 22, padding: "14px", fontSize: 15 }}>{sending ? "Enviando…" : "Enviar"}</Btn>
         </div>
         </div>
       )}
