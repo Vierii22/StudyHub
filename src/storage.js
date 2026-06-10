@@ -81,19 +81,75 @@ async function _initialSync() {
   const userId = await _getUserId();
   if (!userId) return;
   _currentUserId = userId;
+
   const { data, error } = await supabase
     .from('app_data')
     .select('key, value')
     .eq('user_id', userId);
+
   if (!error && data) {
+    const remoteKeys = new Set(data.map(r => r.key));
+
     for (const row of data) {
       const stored = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
       try { localStorage.setItem(row.key, stored); } catch (e) {}
     }
+
+    /* Smart sync: si hay datos locales con perfil que no están en Supabase, subirlos.
+       Esto cubre el caso donde el upload falló la primera vez (ej: sesión no establecida). */
+    const LOCAL_KEYS = ['sh_data'];
+    for (const key of LOCAL_KEYS) {
+      if (!remoteKeys.has(key)) {
+        const localVal = localStorage.getItem(key);
+        if (!localVal) continue;
+        try {
+          const parsed = JSON.parse(localVal);
+          if (parsed?.profile?.name) {
+            /* hay datos locales válidos — subirlos */
+            await supabase.from('app_data').upsert(
+              { user_id: userId, key, value: parsed, updated_at: new Date().toISOString() },
+              { onConflict: 'user_id,key' }
+            );
+          }
+        } catch (e) {}
+      }
+    }
   }
+
   _startRealtime(userId);
+  _startPolling(userId);
   window.dispatchEvent(new CustomEvent('sh:user-synced'));
 }
+
+/* Poll periódico + refresh on focus — fallback cuando el realtime no está activo */
+let _pollTimer = null;
+function _startPolling(userId) {
+  if (_pollTimer) clearInterval(_pollTimer);
+  /* descarga sh_data de Supabase y dispara sh:storage-sync si cambió */
+  const fetchLatest = async () => {
+    const { data, error } = await supabase
+      .from('app_data')
+      .select('key, value')
+      .eq('user_id', userId)
+      .eq('key', 'sh_data')
+      .maybeSingle();
+    if (error || !data) return;
+    const stored = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
+    const local  = localStorage.getItem('sh_data');
+    if (stored && stored !== local) {
+      try { localStorage.setItem('sh_data', stored); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('sh:storage-sync', { detail: { key: 'sh_data', value: data.value } }));
+    }
+  };
+  /* cada 60s */
+  _pollTimer = setInterval(fetchLatest, 60_000);
+  /* y cuando la pestaña recupera el foco */
+  window.removeEventListener('focus', _onFocus);
+  _onFocus = fetchLatest;
+  window.addEventListener('focus', _onFocus);
+}
+
+let _onFocus = null;
 
 // Re-sincronizar cuando cambia el usuario (login/logout en la misma pestaña)
 supabase.auth.onAuthStateChange((event, session) => {
@@ -106,6 +162,8 @@ supabase.auth.onAuthStateChange((event, session) => {
     _currentUserId = null;
     _clearLocalStorage();
     _stopRealtime();
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    if (_onFocus)   { window.removeEventListener('focus', _onFocus); _onFocus = null; }
   }
 });
 

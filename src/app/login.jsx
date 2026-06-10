@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS } from './store.jsx';
 import { Btn, Field, Modal, TerminalCorners } from './ui.jsx';
 import { supabase } from '../supabase.js';
 
