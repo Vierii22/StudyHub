@@ -32,6 +32,9 @@ const SEED = {
   dashWidgets: ["tareas","agenda","xp","racha","completas","ring","materias","horas"],
   dashSpans: {},
   dashNote: "",
+  widgetConfig: {},      /* { sectionId: { widgetKey: { colorOn, color, photoOn, photos[] } } } */
+  bgImages: {},          /* { sectionId: "url" } */
+  taskCalendarMap: {},   /* { taskId: eventId } — sync bidireccional */
   space: {
     activeId: "inicio",
     pages: [
@@ -144,6 +147,11 @@ function applyMigrations(data) {
       files: Array.isArray(s.files) ? s.files : [],
     }));
   }
+
+  /* backfill widget config, bg images, sync map */
+  if (!data.widgetConfig) data.widgetConfig = {};
+  if (!data.bgImages) data.bgImages = {};
+  if (!data.taskCalendarMap) data.taskCalendarMap = {};
 
   return data;
 }

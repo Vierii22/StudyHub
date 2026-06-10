@@ -309,7 +309,16 @@ function App() {
           section={section}
           onToggleSidebar={() => setSidebarOpen(o => !o)}
         />
-        <div className="scroll scroll-zoom" key={section + (openSubject || "")}>
+        <div
+          className="scroll scroll-zoom"
+          key={section + (openSubject || "")}
+          style={{
+            backgroundImage: data.bgImages?.[section] ? `url(${data.bgImages[section]})` : "none",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundAttachment: "fixed",
+          }}
+        >
           {render()}
         </div>
       </div>

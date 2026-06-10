@@ -7,6 +7,7 @@ import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Toggle, ProgressRing, Sub
 import { SmartList } from './widgets.jsx';
 import { CanvaBoard, defaultBoardItem } from './board.jsx';
 import { SubjectModal, SubjectFiles } from './facultad.jsx';
+import { syncTaskToCalendar } from './syncEngine.js';
 
 const SPAN_OPTS = [["¼", 3], ["⅓", 4], ["½", 6], ["⅔", 8], ["1", 12]];
 
@@ -120,7 +121,33 @@ const SubjectView = ({ subjectId, onBack }) => {
   if (!s) return null;
 
   const lists = s.lists || {};
-  const setList = (k, v) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.lists = { ...(sub.lists || {}), [k]: v }; });
+  const setList = (k, v) => {
+    set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.lists = { ...(sub.lists || {}), [k]: v }; });
+    // Si es el widget de tareas, sincronizar con data.tasks global
+    if (k === "tareas" && Array.isArray(v)) {
+      v.forEach(item => {
+        if (item.t && !data.tasks?.find(t => t.id === item.id && t.subject === subjectId)) {
+          const newTask = {
+            id: item.id || uid(),
+            t: item.t,
+            desc: item.desc || "",
+            subject: subjectId,
+            due: item.due || "—",
+            prio: item.prio || "media",
+            xp: item.xp || 20,
+            status: item.status || "pendiente",
+            done: item.done || false,
+          };
+          set(st => {
+            if (!st.tasks) st.tasks = [];
+            if (!st.tasks.find(t => t.id === newTask.id)) {
+              st.tasks.push(newTask);
+            }
+          });
+        }
+      });
+    }
+  };
   const setFiles = (v) => set(st => st.subjects.find(x => x.id === subjectId).files = v);
   const profLine = (s.profs && s.profs.length) ? s.profs.join(" · ") : (s.prof || "Sin profesor");
   const board = s.board || [];

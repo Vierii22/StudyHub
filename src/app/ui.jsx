@@ -296,9 +296,145 @@ const BrandBanner = ({ size = "md", children }) => (
   </div>
 );
 
+/* ---------- COLOR PICKER ---------- */
+const ColorPicker = ({ value = COLORS[0], onChange, label }) => (
+  <Field label={label || "Color"}>
+    <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+      {COLORS.map(color => (
+        <div
+          key={color}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: color,
+            cursor: "pointer",
+            border: value === color ? "2px solid #fff" : "2px solid transparent",
+            transition: "border .2s",
+          }}
+          onClick={() => onChange(color)}
+        />
+      ))}
+    </div>
+  </Field>
+);
+
+/* ---------- PHOTO UPLOADER ---------- */
+const PhotoUploader = ({ photos = [], onAdd, onRemove, label }) => (
+  <Field label={label || "Fotos"}>
+    <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+      {photos.map((photo, i) => (
+        <div
+          key={i}
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 8,
+            backgroundImage: `url(${photo})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            position: "relative",
+            cursor: "pointer",
+          }}
+          onClick={() => onRemove(i)}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              background: "#e8639b",
+              color: "#fff",
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </span>
+        </div>
+      ))}
+      <label
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 8,
+          border: "2px dashed var(--line)",
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
+          color: "var(--tx-3)",
+          fontSize: 24,
+        }}
+      >
+        ＋
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = ev => onAdd(ev.target.result);
+              reader.readAsDataURL(file);
+            }
+          }}
+        />
+      </label>
+    </div>
+  </Field>
+);
+
+/* ---------- IMAGE PICKER (para backgrounds) ---------- */
+const ImagePicker = ({ value, onChange, label }) => (
+  <Field label={label || "Imagen de fondo"}>
+    <div style={{ display: "grid", gap: 10 }}>
+      <label style={{ cursor: "pointer" }}>
+        <div
+          style={{
+            width: "100%",
+            height: 120,
+            borderRadius: 8,
+            border: "2px dashed var(--line)",
+            backgroundImage: value ? `url(${value})` : "none",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            display: "grid",
+            placeItems: "center",
+            color: "var(--tx-3)",
+            fontSize: 32,
+          }}
+        >
+          {!value && "📷"}
+        </div>
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = ev => onChange(ev.target.result);
+              reader.readAsDataURL(file);
+            }
+          }}
+        />
+      </label>
+      {value && <Btn variant="secondary" size="sm" onClick={() => onChange(null)}>Quitar fondo</Btn>}
+    </div>
+  </Field>
+);
+
 export {
   TerminalCorners, ProgressRing, Btn, Chip, MonoLabel,
   Sidebar, Header, AppearanceControl, PageHead, Seg, Field,
   Modal, Toggle, Empty, SubjectDot, BrandBanner,
+  ColorPicker, PhotoUploader, ImagePicker,
   NAV, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS,
 };

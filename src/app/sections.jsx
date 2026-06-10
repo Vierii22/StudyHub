@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, PRIO } from './store.jsx';
 import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel, TerminalCorners } from './ui.jsx';
+import { cleanupPastEvents, syncEventToTask } from './syncEngine.js';
 
 /* ============================================================
    MISIONES + CALENDARIO (con .ics import/export)
@@ -235,6 +236,13 @@ const Calendario = () => {
   const [modal,   setModal]   = React.useState(null);
   const [viewDate, setView]   = React.useState(() => new Date());
   const icsRef = React.useRef();
+
+  /* Limpiar eventos pasados al abrir calendario */
+  React.useEffect(() => {
+    cleanupPastEvents(set);
+    const iv = setInterval(() => cleanupPastEvents(set), 1000 * 60 * 60); // hourly
+    return () => clearInterval(iv);
+  }, [set]);
 
   const vYear  = viewDate.getFullYear();
   const vMonth = viewDate.getMonth();

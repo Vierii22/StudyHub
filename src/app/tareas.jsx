@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, PRIO, STATUS } from './store.jsx';
 import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel } from './ui.jsx';
+import { syncTaskToCalendar } from './syncEngine.js';
 
 /* ============================================================
    TAREAS — vistas tabla / cards / materias + modal detalle
@@ -21,7 +22,15 @@ const TaskModal = ({ task, onClose }) => {
   const [data, set] = useStore();
   const [f, setF] = React.useState(task);
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
-  const save = () => { set(s => Object.assign(s.tasks.find(t => t.id === task.id), f)); toast("Tarea guardada"); onClose(); };
+  const save = () => {
+    set(s => Object.assign(s.tasks.find(t => t.id === task.id), f));
+    // Sincronizar con calendario si tiene fecha
+    if (f.due && f.due !== "—") {
+      syncTaskToCalendar(f, data, set);
+    }
+    toast("Tarea guardada");
+    onClose();
+  };
   return (
     <Modal title="Detalle de tarea" icon="check" onClose={onClose}
       footer={<><span className="link" style={{ color: "#e8639b" }} onClick={() => { set(s => s.tasks = s.tasks.filter(t => t.id !== task.id)); toast("Tarea eliminada"); onClose(); }}>Eliminar</span><Btn variant="primary" onClick={save}>Guardar</Btn></>}>
@@ -59,7 +68,14 @@ const Tareas = ({ onOpenSubject }) => {
   const subjOf = (id) => data.subjects.find(s => s.id === id);
   const toggleDone = (id) => set(s => { const t = s.tasks.find(x => x.id === id); t.done = !t.done; t.status = t.done ? "lista" : "pendiente"; });
   const del = (id) => { set(s => s.tasks = s.tasks.filter(t => t.id !== id)); toast("Tarea eliminada"); };
-  const add = () => { if (draft.trim()) { set(s => s.tasks.push({ id: uid(), t: draft.trim(), desc: "", subject: null, due: "—", prio: "media", xp: 20, status: "pendiente", done: false })); setDraft(""); toast("Tarea agregada"); } };
+  const add = () => {
+    if (draft.trim()) {
+      const newTask = { id: uid(), t: draft.trim(), desc: "", subject: null, due: "—", prio: "media", xp: 20, status: "pendiente", done: false };
+      set(s => s.tasks.push(newTask));
+      setDraft("");
+      toast("Tarea agregada");
+    }
+  };
 
   const AddBar = () => (
     <form className="row" style={{ gap: 10, padding: "16px 22px" }} onSubmit={e => { e.preventDefault(); add(); }}>
