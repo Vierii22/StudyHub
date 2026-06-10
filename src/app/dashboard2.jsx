@@ -72,7 +72,28 @@ const Dashboard = ({ variant, onNav, onConnect }) => {
 
   const renderWidget = (k) => {
     const C = WIDGET_COMP[k];
-    return C ? <C data={data} set={set} onOpen={onNav} /> : null;
+    if (!C) return null;
+
+    const config = data.widgetConfig?.dashboard?.[k] || {};
+    const accentColor = config.colorOn ? config.color : null;
+
+    return (
+      <div style={{
+        height: "100%",
+        borderColor: accentColor ? accentColor : undefined,
+        borderWidth: accentColor ? "1.5px" : undefined,
+        borderStyle: accentColor ? "solid" : undefined,
+        borderRadius: "var(--r-lg)",
+        background: config.photoOn && config.photos?.length
+          ? `linear-gradient(135deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,.3) 100%), url(${config.photos[0]})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        overflow: "hidden",
+      }}>
+        <C data={data} set={set} onOpen={onNav} />
+      </div>
+    );
   };
 
   // variante foco: solo los 4 esenciales

@@ -252,6 +252,108 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) =>
             <ConfigRow label="Variante de dashboard" sub="Editorial · Grilla · Foco">
               <Seg opts={VARIANT_OPTS} value={theme.variant} onChange={v => setTheme("variant", v)} />
             </ConfigRow>
+
+            <div className="divider" style={{ margin: "18px 0" }}></div>
+            <div className="h3" style={{ marginBottom: 12 }}>Personalizar widgets</div>
+            <div className="small" style={{ marginBottom: 16 }}>Agrega color o fondo a widgets específicos.</div>
+            <div style={{ display: "grid", gap: 12 }}>
+              {Object.entries(ALL_WIDGETS).map(([key, widget]) => {
+                const config = data.widgetConfig?.dashboard?.[key] || {};
+                return (
+                  <div key={key} className="card card-2" style={{ padding: "12px 16px" }}>
+                    <div className="row between" style={{ gap: 12, alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{widget.label}</div>
+                      </div>
+                      <div className="row" style={{ gap: 8 }}>
+                        <Toggle on={config.colorOn || false} onChange={v => set(s => {
+                          if (!s.widgetConfig) s.widgetConfig = {};
+                          if (!s.widgetConfig.dashboard) s.widgetConfig.dashboard = {};
+                          s.widgetConfig.dashboard[key] = { ...config, colorOn: v };
+                        })} />
+                        <span className="small" style={{ fontSize: 12 }}>Color</span>
+                      </div>
+                    </div>
+                    {config.colorOn && (
+                      <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                        {COLORS.map(c => (
+                          <div
+                            key={c}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 6,
+                              background: c,
+                              cursor: "pointer",
+                              border: (config.color === c) ? "2px solid #fff" : "2px solid transparent",
+                            }}
+                            onClick={() => set(s => {
+                              if (!s.widgetConfig.dashboard[key]) s.widgetConfig.dashboard[key] = {};
+                              s.widgetConfig.dashboard[key].color = c;
+                            })}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="divider" style={{ margin: "18px 0" }}></div>
+            <div className="h3" style={{ marginBottom: 12 }}>Fondos por sección</div>
+            <div className="small" style={{ marginBottom: 16 }}>Agrega una imagen de fondo a cada sección.</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {["dashboard","facultad","tareas","calendario","misiones","diario","cocina","finanzas","casa","ocio"].map(sectionId => (
+                <div key={sectionId} style={{ display: "grid", gap: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, textTransform: "capitalize" }}>{sectionId}</div>
+                  <label style={{ display: "grid", gap: 6, cursor: "pointer" }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 80,
+                        borderRadius: 8,
+                        border: "1.5px dashed var(--line)",
+                        backgroundImage: data.bgImages?.[sectionId] ? `url(${data.bgImages[sectionId]})` : "none",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 24,
+                        color: "var(--tx-3)",
+                      }}
+                    >
+                      {!data.bgImages?.[sectionId] && "📷"}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = ev => {
+                            set(s => {
+                              if (!s.bgImages) s.bgImages = {};
+                              s.bgImages[sectionId] = ev.target.result;
+                            });
+                            toast("Fondo actualizado ✓");
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {data.bgImages?.[sectionId] && (
+                    <Btn variant="secondary" size="sm" onClick={() => set(s => { s.bgImages[sectionId] = null; toast("Fondo removido"); })}>
+                      Quitar fondo
+                    </Btn>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <button className="addbtn" style={{ marginTop: 16, justifyContent: "center", color: "#e8639b" }} onClick={() => { set(s => { s.dashWidgets = ["tareas","agenda","xp","racha","completas","ring","materias","horas"]; s.dashSpans = {}; }); toast("Dashboard restaurado"); }}>
               <Icon name="refresh" size={15} color="#e8639b" /> Restaurar dashboard por defecto
             </button>
