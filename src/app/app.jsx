@@ -102,6 +102,57 @@ function LoadingScreen() {
   );
 }
 
+/* Error Boundary — atrapa crashes de React y muestra pantalla de recuperación
+   en vez de pantalla negra */
+class AppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error("[StudyHub] Error capturado por boundary:", error, info);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{ height: "100%", display: "grid", placeItems: "center", background: "var(--bg)", padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 460 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💥</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, marginBottom: 10 }}>
+            Algo salió mal
+          </div>
+          <div style={{ fontSize: 14, color: "var(--tx-2)", marginBottom: 6, lineHeight: 1.6 }}>
+            La app encontró un error inesperado. Tus datos están guardados — recargá la página para continuar.
+          </div>
+          <details style={{ marginBottom: 22, textAlign: "left", background: "var(--surface-2)", borderRadius: 10, padding: "10px 14px", cursor: "pointer" }}>
+            <summary style={{ fontSize: 12, color: "var(--tx-3)", fontFamily: "var(--font-mono)" }}>Ver detalle del error</summary>
+            <pre style={{ fontSize: 11, color: "#e8639b", marginTop: 8, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+              {this.state.error?.message || String(this.state.error)}
+            </pre>
+          </details>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>
+              🔄 Recargar
+            </button>
+            <button className="btn btn-secondary" onClick={() => {
+              localStorage.removeItem("sh_data");
+              window.location.reload();
+            }}>
+              🗑️ Limpiar datos y recargar
+            </button>
+          </div>
+          <div style={{ marginTop: 14, fontSize: 11, color: "var(--tx-3)" }}>
+            "Limpiar datos" solo si el error persiste — se van a re-descargar de la nube.
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 function App() {
   /* auth: "loading" | "landing" | "login" | "confirm-email" | "onboarding" | "app" */
   const [auth, setAuth]   = useState("loading");
@@ -356,4 +407,4 @@ function App() {
 }
 
 // Render moved to src/main.jsx
-export { App };
+export { App, AppErrorBoundary };
