@@ -92,6 +92,19 @@ function _rawGet(key) {
 function applyMigrations(data) {
   if (!data) data = JSON.parse(JSON.stringify(SEED));
 
+  /* ── backfill campos críticos (nunca deben ser undefined) ── */
+  if (!data.profile)  data.profile  = { ...SEED.profile };
+  else                data.profile  = { ...SEED.profile, ...data.profile };
+  if (!Array.isArray(data.subjects))  data.subjects  = [];
+  if (!Array.isArray(data.tasks))     data.tasks     = [];
+  if (!Array.isArray(data.missions))  data.missions  = [];
+  if (!Array.isArray(data.events))    data.events    = [];
+  if (!Array.isArray(data.journal))   data.journal   = [];
+  if (data.xp    == null) data.xp    = 0;
+  if (data.level == null) data.level = 1;
+  if (data.streak== null) data.streak= 0;
+  if (data.journalDraft == null) data.journalDraft = "";
+
   /* backfill de claves nuevas */
   if (!data.settings)    data.settings    = { ...SEED.settings };
   else                   data.settings    = { ...SEED.settings, ...data.settings };
