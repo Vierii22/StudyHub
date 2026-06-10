@@ -124,15 +124,25 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) =>
     });
   }, []);
 
+  /* helper: obtiene el user_id de la sesión activa (compatible con confirmación pendiente) */
+  const getSbUserId = async (sb) => {
+    try {
+      const { data: sd } = await sb.auth.getSession();
+      if (sd?.session?.user?.id) return sd.session.user.id;
+      const { data: ud } = await sb.auth.getUser();
+      return ud?.user?.id || null;
+    } catch (_) { return null; }
+  };
+
   /* cargar código Telegram al abrir la pestaña */
   React.useEffect(() => {
     if (tab !== "integr") return;
     (async () => {
       const sb = supabase;
       if (!sb) return;
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) return;
-      const { data: row } = await sb.from("telegram_links").select("link_code,linked").eq("user_id", session.user.id).maybeSingle();
+      const userId = await getSbUserId(sb);
+      if (!userId) return;
+      const { data: row } = await sb.from("telegram_links").select("link_code,linked").eq("user_id", userId).maybeSingle();
       if (row) {
         setTgCode(row.link_code);
         setTgLinked(row.linked);
@@ -145,15 +155,15 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) =>
   const genTgCode = async () => {
     setTgLoad(true);
     const sb = supabase;
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) { toast("Necesitás estar logueado"); setTgLoad(false); return; }
+    const userId = await getSbUserId(sb);
+    if (!userId) { toast("Necesitás estar logueado"); setTgLoad(false); return; }
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "";
     for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
     const newCode = "SH-" + s;
-    await sb.from("telegram_links").delete().eq("user_id", session.user.id);
+    await sb.from("telegram_links").delete().eq("user_id", userId);
     const { error } = await sb.from("telegram_links").insert({
-      user_id:    session.user.id,
+      user_id:    userId,
       link_code:  newCode,
       linked:     false,
       created_at: new Date().toISOString(),

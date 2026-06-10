@@ -142,17 +142,28 @@ const Onboarding = ({ onDone }) => {
   /* cuando llega al paso Hubby, registra el código en Supabase */
   React.useEffect(() => {
     if (step !== 3) return;
+    const freshCode = genHubbyCode();
+    setCode(freshCode);
     (async () => {
       const sb = supabase;
       if (!sb) return;
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) return;
-      const uid = session.user.id;
-      const freshCode = genHubbyCode();
-      setCode(freshCode);
-      await sb.from("telegram_links").delete().eq("user_id", uid);
+
+      /* Intentar obtener el usuario — funciona con session o con token de confirmación pendiente */
+      let userId = null;
+      try {
+        const { data: sessionData } = await sb.auth.getSession();
+        userId = sessionData?.session?.user?.id;
+        if (!userId) {
+          const { data: userData } = await sb.auth.getUser();
+          userId = userData?.user?.id;
+        }
+      } catch (_) { /* ignorar — igual mostramos el código */ }
+
+      if (!userId) return; /* sin sesión todavía, el código se muestra igual pero no se guarda */
+
+      await sb.from("telegram_links").delete().eq("user_id", userId);
       await sb.from("telegram_links").insert({
-        user_id: uid,
+        user_id: userId,
         link_code: freshCode,
         linked: false,
         created_at: new Date().toISOString(),
