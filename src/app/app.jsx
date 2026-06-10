@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { Icon } from './icons.jsx';
 import { Store, useStore, toast, scaleToZoom, ToastHost, PomoStore, usePomoStore } from './store.jsx';
 import { Sidebar, Header } from './ui.jsx';
-import { Login, Onboarding } from './login.jsx';
+import { Login, Onboarding, ConfirmEmail } from './login.jsx';
 import { Dashboard } from './dashboard2.jsx';
 import { Facultad } from './facultad.jsx';
 import { SubjectView } from './facultad2.jsx';
@@ -103,8 +103,10 @@ function LoadingScreen() {
 }
 
 function App() {
-  /* auth: "loading" | "landing" | "login" | "onboarding" | "app" */
+  /* auth: "loading" | "landing" | "login" | "confirm-email" | "onboarding" | "app" */
   const [auth, setAuth]   = useState("loading");
+  const [pendingEmail, setPendingEmail] = useState(""); // email pendiente de confirmación
+  const authRef = useRef("loading"); // ref para leer auth dentro de callbacks sin stale closure
   const [showTutorial, setShowTutorial] = useState(false);
   const [section, setSection] = useState("dashboard");
   const [theme, setThemeState] = useState(() => {
@@ -117,6 +119,9 @@ function App() {
   const [dashEditSignal, setDashEditSignal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data] = useStore();
+
+  /* mantener ref sincronizado con el estado real */
+  useEffect(() => { authRef.current = auth; }, [auth]);
 
   /* ── auth Supabase ─────────────────────────────────── */
   useEffect(() => {
@@ -158,7 +163,13 @@ function App() {
         setAuth("landing");
         setSection("dashboard");
       }
-      /* SIGNED_IN lo maneja el onboarding / login */
+      /* Cuando el usuario confirma el email, Supabase dispara SIGNED_IN.
+         Si estábamos esperando confirmación → avanzar al onboarding. */
+      if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session) {
+        if (authRef.current === "confirm-email") {
+          setAuth(checkProfile() ? "app" : "onboarding");
+        }
+      }
     });
 
     return () => {
@@ -247,8 +258,15 @@ function App() {
     <>
       <Login
         onEnter={() => setAuth("app")}
-        onRegister={() => setAuth("onboarding")}
+        onRegister={(email) => { setPendingEmail(email); setAuth("confirm-email"); }}
       />
+      <ToastHost />
+    </>
+  );
+
+  if (auth === "confirm-email") return (
+    <>
+      <ConfirmEmail email={pendingEmail} />
       <ToastHost />
     </>
   );

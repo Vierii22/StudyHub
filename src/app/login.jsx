@@ -46,7 +46,7 @@ const Login = ({ onEnter, onRegister }) => {
     const { error: err } = await sb().auth.signUp({ email, password });
     setLoading(false);
     if (err) { setError(err.message); return; }
-    onRegister(); /* → setAuth("onboarding") en app.jsx */
+    onRegister(email); /* → setAuth("confirm-email") en app.jsx */
   };
 
   const submit = () => mode === "login" ? handleLogin() : handleRegister();
@@ -328,4 +328,57 @@ const Onboarding = ({ onDone }) => {
   );
 };
 
-export { Login, Onboarding, Field };
+/* ── CONFIRM EMAIL ──────────────────────────────────────── */
+const ConfirmEmail = ({ email }) => {
+  const [resent, setResent] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  const resend = async () => {
+    setLoading(true);
+    const sb = supabase;
+    if (sb) await sb.auth.resend({ type: "signup", email });
+    setLoading(false);
+    setResent(true);
+    setTimeout(() => setResent(false), 5000);
+  };
+
+  return (
+    <div style={{ position: "relative", zIndex: 1, height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="card tcorners fade-in" style={{ width: 460, padding: "44px 40px", textAlign: "center", background: "#121217" }}>
+        <TerminalCorners />
+
+        {/* ícono */}
+        <div style={{ width: 72, height: 72, borderRadius: 20, background: "var(--violet-soft)", border: "1px solid var(--violet-line)", display: "grid", placeItems: "center", margin: "0 auto 22px" }}>
+          <Icon name="send" size={32} color="var(--violet-hi)" />
+        </div>
+
+        <div className="h1" style={{ fontSize: 26, marginBottom: 10 }}>
+          Confirmá tu email
+        </div>
+
+        <div style={{ fontSize: 14.5, color: "var(--tx-2)", lineHeight: 1.6, marginBottom: 6 }}>
+          Te mandamos un link de confirmación a:
+        </div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--violet-hi)", marginBottom: 22, wordBreak: "break-all" }}>
+          {email}
+        </div>
+
+        <div style={{ fontSize: 13.5, color: "var(--tx-3)", lineHeight: 1.7, marginBottom: 28, background: "var(--surface-2)", borderRadius: 12, padding: "14px 18px" }}>
+          Abrí el mail y tocá el link de confirmación.<br />
+          <strong style={{ color: "var(--tx-2)" }}>No vas a poder entrar hasta que confirmes.</strong>
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <Btn variant="primary" icon="refresh" onClick={resend} disabled={loading || resent}>
+            {resent ? "¡Reenviado!" : loading ? "Enviando…" : "Reenviar email"}
+          </Btn>
+          <div className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginTop: 4 }}>
+            Una vez que confirmes, esta pantalla avanza automáticamente.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export { Login, Onboarding, ConfirmEmail, Field };
