@@ -3,7 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, COLORS, PRIO, STATUS } from './store.jsx';
 import { Btn, Chip, PageHead, Empty, MonoLabel } from './ui.jsx';
-import { useTaskForm, TaskFormModal } from './useTaskForm.js';
+import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
 
 /* ============================================================
    TAREAS — vistas tabla / cards / materias + modal
