@@ -95,9 +95,15 @@ const InstallPWA = () => {
   );
 };
 
-const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) => {
+const ROLES_CONFIG = [
+  { id: "uni",  label: "Universidad",  emoji: "🎓" },
+  { id: "sec",  label: "Secundaria",   emoji: "🏫" },
+  { id: "work", label: "Trabajo",      emoji: "💼" },
+];
+
+const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, initialTab }) => {
   const [data, set] = useStore();
-  const [tab, setTab] = React.useState("apariencia");
+  const [tab, setTab] = React.useState(initialTab || "apariencia");
 
   /* ── Cuenta ── */
   const [userEmail, setUserEmail] = React.useState(data.profile?.email || "");
@@ -371,6 +377,7 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) =>
 
           {/* ── PERFIL ── */}
           {tab === "perfil" && <div className="fade-in" style={{ display: "grid", gap: 14 }}>
+            {/* foto + nombre */}
             <div className="row" style={{ gap: 16, marginBottom: 4 }}>
               {p.photo
                 ? <img src={p.photo} style={{ width: 58, height: 58, borderRadius: 16, objectFit: "cover" }} />
@@ -384,8 +391,48 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial }) =>
               <Field label="Nombre"><input className="input" value={p.name || ""} onChange={e => { upProfile("name", e.target.value); upProfile("initial", e.target.value[0]?.toUpperCase() || p.initial); }} /></Field>
               <Field label="Inicial avatar"><input className="input" value={p.initial || ""} maxLength={1} onChange={e => upProfile("initial", e.target.value.toUpperCase())} /></Field>
             </div>
-            <Field label="Facultad / Universidad"><input className="input" value={p.uni || ""} onChange={e => upProfile("uni", e.target.value)} /></Field>
-            <Field label="Carrera"><input className="input" value={p.career || ""} onChange={e => upProfile("career", e.target.value)} /></Field>
+
+            {/* selector de rol — igual que en el onboarding */}
+            <Field label="¿A qué te dedicás?">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                {ROLES_CONFIG.map(r => (
+                  <div
+                    key={r.id}
+                    onClick={() => upProfile("role", r.id)}
+                    style={{
+                      padding: "12px 10px",
+                      borderRadius: 12,
+                      border: `1.5px solid ${p.role === r.id ? "var(--violet)" : "var(--line-2)"}`,
+                      background: p.role === r.id ? "var(--violet-soft)" : "var(--surface-2)",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      transition: "all .15s",
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 5 }}>{r.emoji}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: p.role === r.id ? "var(--violet-hi)" : "var(--tx-2)" }}>{r.label}</div>
+                  </div>
+                ))}
+              </div>
+            </Field>
+
+            {/* campos según rol */}
+            {p.role === "work" ? (
+              <Field label="¿En qué trabajás?">
+                <textarea className="input" rows={3} value={p.career || ""} onChange={e => upProfile("career", e.target.value)} placeholder="Describí tu trabajo…" style={{ resize: "vertical" }} />
+              </Field>
+            ) : (
+              <>
+                <Field label={p.role === "sec" ? "Escuela" : "Facultad / Universidad"}>
+                  <input className="input" value={p.uni || ""} onChange={e => upProfile("uni", e.target.value)} />
+                </Field>
+                {p.role !== "sec" && (
+                  <Field label="Carrera">
+                    <input className="input" value={p.career || ""} onChange={e => upProfile("career", e.target.value)} />
+                  </Field>
+                )}
+              </>
+            )}
           </div>}
 
           {/* ── INTEGRACIONES (Telegram) ── */}

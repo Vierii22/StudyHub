@@ -285,8 +285,10 @@ function App() {
     }
   }, [auth]);
 
+  const [configInitTab, setConfigInitTab] = useState(null);
   const setTheme  = (k, v) => setThemeState(t => ({ ...t, [k]: v }));
   const nav       = (s)    => { setOpenSubject(null); setSection(s); setSidebarOpen(false); };
+  const navConfig = (tab)  => { setConfigInitTab(tab); nav("config"); };
   const logout    = ()     => {
     const sb = supabase;
     if (sb) sb.auth.signOut();
@@ -334,7 +336,7 @@ function App() {
     if (section === "facultad" && openSubject)
       return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} />;
     switch (section) {
-      case "dashboard":  return <Dashboard key={dashEditSignal} variant={theme.variant} onNav={nav} onConnect={() => nav("config")} />;
+      case "dashboard":  return <Dashboard key={dashEditSignal} variant={theme.variant} onNav={nav} onConnect={() => navConfig("integr")} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
       case "misiones":   return <Misiones />;
@@ -356,6 +358,8 @@ function App() {
           onEditDash={() => { setSection("dashboard"); setDashEditSignal(x => x + 1); toast('Tocá "Editar dashboard"'); }}
           onLogout={logout}
           onTutorial={() => { setShowTutorial(true); nav("dashboard"); }}
+          initialTab={configInitTab}
+          key={configInitTab || "config"}
         />
       );
       default: return <Dashboard variant={theme.variant} onNav={nav} onConnect={() => nav("config")} />;
