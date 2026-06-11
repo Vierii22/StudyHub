@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="StudyHub" />
-<meta name="theme-color" content="#0d0d12" />
+<meta name="theme-color" content="#0c0b09" />
 <title>StudyHub</title>
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/assets/logo-circle.png" />
@@ -24,7 +24,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <style>
 
 /* ============================================================
@@ -32,36 +32,39 @@
    Un solo acento (violeta) · fondo profundo · cards casi invisibles
    ============================================================ */
 :root{
-  /* — Superficies — */
-  --bg:          #0d0d12;
-  --surface-1:   #141419;   /* card nivel 1 */
-  --surface-2:   #1b1b22;   /* card nivel 2 / inputs */
-  --surface-3:   #22222b;   /* hover / activos */
-  --line:        rgba(255,255,255,.06);
-  --line-2:      rgba(255,255,255,.11);
+  /* — Superficies (Carbón: negro cálido) — */
+  --bg:          #0c0b09;
+  --surface-1:   #14120e;   /* card nivel 1 */
+  --surface-2:   #1b1814;   /* card nivel 2 / inputs */
+  --surface-3:   #23201a;   /* hover / activos */
+  --line:        rgba(255,240,200,.06);
+  --line-2:      rgba(255,240,200,.12);
 
-  /* — Texto — */
-  --tx-1:        #f3f3f7;   /* principal */
-  --tx-2:        #9a9aa6;   /* secundario */
-  --tx-3:        #5d5d68;   /* terciario / meta */
+  /* — Texto (crema, no blanco puro) — */
+  --tx-1:        #f2ead8;   /* principal */
+  --tx-2:        #a59a82;   /* secundario */
+  --tx-3:        #645c4c;   /* terciario / meta */
 
-  /* — Acento violeta (único) — */
-  --violet:      #8b6dff;
-  --violet-2:    #c264e8;
-  --violet-hi:   #a48cff;
-  --violet-soft: rgba(139,109,255,.13);
-  --violet-line: rgba(139,109,255,.40);
-  --grad:        linear-gradient(135deg, #8b6dff 0%, #c264e8 100%);
+  /* — Acento ámbar (las vars siguen llamándose violet por compat) — */
+  --violet:      #e8a33d;
+  --violet-2:    #ff7847;
+  --violet-hi:   #f2b95c;
+  --violet-soft: rgba(232,163,61,.12);
+  --violet-line: rgba(232,163,61,.38);
+  --grad:        linear-gradient(135deg, #e8a33d 0%, #ff7847 100%);
+
+  /* — Fuente hero editorial — */
+  --font-hero:   'Instrument Serif';
 
   /* — fill conmutable (gradiente vs sólido) — */
   --fill:        var(--grad);
   --fill-soft:   var(--violet-soft);
 
-  /* — Radios — */
-  --r-sm: 7px;
-  --r:    10px;
-  --r-lg: 13px;
-  --r-xl: 18px;
+  /* — Radios (más generosos, look 2026) — */
+  --r-sm: 8px;
+  --r:    12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
 
   /* — Zoom global de UI (slider 1–100 lo maneja) — */
   --ui-zoom: 0.92;
@@ -93,7 +96,18 @@
 
 /* ===== TEMAS CON PERSONALIDAD ===== */
 
-/* Medianoche (default — ya está en :root, esto es alias explícito) */
+/* Carbón (nuevo default — negro cálido + crema + ámbar) */
+[data-theme="carbon"]{
+  --bg:#0c0b09; --surface-1:#14120e; --surface-2:#1b1814; --surface-3:#23201a;
+  --line:rgba(255,240,200,.06); --line-2:rgba(255,240,200,.12);
+  --tx-1:#f2ead8; --tx-2:#a59a82; --tx-3:#645c4c;
+  --violet:#e8a33d; --violet-2:#ff7847; --violet-hi:#f2b95c;
+  --violet-soft:rgba(232,163,61,.12); --violet-line:rgba(232,163,61,.38);
+  --grad:linear-gradient(135deg,#e8a33d 0%,#ff7847 100%);
+  color-scheme:dark;
+}
+
+/* Medianoche (el clásico violeta) */
 [data-theme="medianoche"]{
   --bg:#0d0d12; --surface-1:#141419; --surface-2:#1b1b22; --surface-3:#22222b;
   --line:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.11);
@@ -933,6 +947,116 @@ a{ color:inherit; text-decoration:none; }
 }
 
 /* ============================================================
+   HOY v2 — dashboard rediseñado (hero editorial + captura + coach)
+   ============================================================ */
+
+/* Textura de grano sutil sobre el fondo — mata el "flat template" */
+.app::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.app > *{ position:relative; z-index:1; }
+
+/* — Hero — */
+.hoy-hero{ padding:10px 0 6px; }
+.hoy-fecha{
+  font-family:var(--font-mono); font-size:11px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--violet-hi);
+  margin-bottom:10px;
+}
+.hoy-saludo{
+  font-family:var(--font-hero),serif; font-style:italic; font-weight:400;
+  font-size:clamp(34px,4.6vw,54px); line-height:1.04; letter-spacing:-.01em;
+  color:var(--tx-1);
+}
+.hoy-saludo em{ font-style:italic; color:var(--violet-hi); }
+.hoy-sub{ margin-top:10px; color:var(--tx-2); font-size:13.5px; }
+.hoy-dayline{
+  margin-top:16px; height:4px; border-radius:99px; background:var(--surface-2);
+  overflow:hidden; max-width:520px;
+}
+.hoy-dayline > div{ height:100%; border-radius:99px; background:var(--grad); transition:width 1s ease; }
+
+/* — Captura universal — */
+.capture-bar{
+  display:flex; align-items:center; gap:13px;
+  background:var(--surface-1); border:1px solid var(--line-2);
+  border-radius:18px; padding:15px 20px;
+  box-shadow:0 24px 60px -32px rgba(0,0,0,.85);
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.capture-bar:focus-within{
+  border-color:var(--violet-line);
+  box-shadow:0 24px 60px -28px rgba(0,0,0,.9), 0 0 0 3px var(--violet-soft);
+}
+.capture-bar input{
+  flex:1; background:none; border:none; outline:none;
+  font-size:15.5px; color:var(--tx-1); font-family:var(--font-body);
+  min-width:0;
+}
+.capture-bar input::placeholder{ color:var(--tx-3); }
+.capture-chip{
+  font-family:var(--font-mono); font-size:10px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:4px 10px; border-radius:99px; white-space:nowrap; flex:0 0 auto;
+  animation:fade-up .18s ease;
+}
+@keyframes fade-up{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
+
+/* — Coach "¿Y ahora qué?" — */
+.coach-card{
+  position:relative; overflow:hidden;
+  border-radius:var(--r-xl); padding:22px 24px;
+  background:linear-gradient(130deg, var(--violet-soft) 0%, transparent 55%), var(--surface-1);
+  border:1px solid var(--violet-line);
+}
+.coach-card::after{
+  content:""; position:absolute; top:-60px; right:-60px; width:180px; height:180px;
+  border-radius:50%; background:var(--violet-soft); filter:blur(40px); pointer-events:none;
+}
+.coach-label{
+  font-family:var(--font-mono); font-size:10px; font-weight:700;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--violet-hi);
+  display:flex; align-items:center; gap:7px; margin-bottom:10px;
+}
+.coach-title{
+  font-size:19px; font-weight:700; line-height:1.3; letter-spacing:-.01em;
+}
+.coach-reason{ margin-top:7px; font-size:13px; color:var(--tx-2); line-height:1.55; }
+
+/* — Timeline de hoy — */
+.tl-item{
+  display:flex; align-items:flex-start; gap:13px;
+  padding:11px 2px; border-bottom:1px solid var(--line);
+}
+.tl-item:last-child{ border-bottom:none; }
+.tl-dot{ width:9px; height:9px; border-radius:99px; margin-top:5px; flex:0 0 auto; }
+.tl-done{ opacity:.45; }
+.tl-done .tl-text{ text-decoration:line-through; }
+
+/* — Stats strip — */
+.stat-strip{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+}
+.stat-mini{
+  background:var(--surface-1); border:1px solid var(--line);
+  border-radius:var(--r-lg); padding:14px 16px;
+}
+.stat-mini .v{
+  font-family:var(--font-hero),serif; font-style:italic;
+  font-size:30px; line-height:1; color:var(--tx-1);
+}
+.stat-mini .l{
+  margin-top:6px; font-family:var(--font-mono); font-size:9.5px; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--tx-3);
+}
+@media (max-width:768px){
+  .stat-strip{ grid-template-columns:repeat(2,1fr); }
+  .hoy-saludo{ font-size:32px; }
+}
+
+/* ============================================================
    PRESS FEEDBACK UNIVERSAL
    .pressable + componentes clave heredan el feedback
    ============================================================ */
@@ -1179,7 +1303,7 @@ a{ color:inherit; text-decoration:none; }
 .cbox.done .cbox-check-path{ stroke-dashoffset:0; }
 
 /* --- Número contando (hook JS useCountUp lo activa) --- */
-.count-up{ tabular-nums; }
+.count-up{ font-variant-numeric:tabular-nums; }
 
 /* --- Hover con vida en desktop (cards) --- */
 @media(hover:hover) and (prefers-reduced-motion:no-preference){

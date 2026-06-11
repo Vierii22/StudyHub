@@ -73,6 +73,8 @@ const ALL_WIDGETS = {
   frase:      { label: "Frase del día",         w: 6 },
   objetivos:  { label: "Objetivos de hoy",      w: 6 },
   fotos:      { label: "Galería de fotos",       w: 6 },
+  captura:    { label: "Captura universal",      w: 8 },
+  coach:      { label: "¿Y ahora qué?",          w: 6 },
 };
 
 /* ── helpers ────────────────────────────────────────────── */

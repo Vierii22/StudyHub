@@ -236,4 +236,4 @@ const Palette = ({ onNav, onClose }) => {
   );
 };
 
-export { Palette };
+export { Palette, parseCapture };

@@ -5,6 +5,7 @@ import { Store, useStore, uid, toast, COLORS, PRIO, STATUS, getPomoWeekMins, get
 import { Btn, Chip, MonoLabel, PageHead, Empty, Toggle, ProgressRing, SubjectDot, TerminalCorners } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
+import { CaptureBar, CoachCard } from './coach.jsx';
 
 /* ============================================================
    DASHBOARD WIDGETS — conectados al store
@@ -489,6 +490,8 @@ const WIDGET_COMP = {
   racha: WRacha, horas: WHoras, completas: WCompletas, ring: WRing, semana: WSemana,
   reloj: WReloj, nota: WNota, proximo: WProximo, habitos: WHabitos, frase: WFrase,
   objetivos: WObjetivos, fotos: WFotos,
+  captura: ({ data, set, onOpen }) => <div style={{ display: "flex", alignItems: "center", height: "100%" }}><div style={{ flex: 1 }}><CaptureBar data={data} set={set} onOpen={onOpen} /></div></div>,
+  coach: ({ data, onOpen }) => <CoachCard data={data} onNav={onOpen} />,
 };
 
 export { WIDGET_COMP, greetingTime };

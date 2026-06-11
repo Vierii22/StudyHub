@@ -25,7 +25,7 @@ import { supabase } from '../supabase.js';
    APP ROOT — auth Supabase + router + tema + zoom + acento
    ============================================================ */
 const { useState, useEffect, useRef } = React;
-const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "medianoche" };
+const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "carbon" };
 const load = (k, f) => { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } };
 
 const ACCENTS = {
@@ -168,6 +168,8 @@ function App() {
   const [theme, setThemeState] = useState(() => {
     const t = load("sh_theme", DEFAULT_THEME);
     if (!localStorage.getItem("sh_layout_v2")) { t.variant = "editorial"; localStorage.setItem("sh_layout_v2", "1"); }
+    /* migración única al rediseño Carbón — se puede volver desde Config > Apariencia */
+    if (!localStorage.getItem("sh_theme_v3")) { t.namedTheme = "carbon"; localStorage.setItem("sh_theme_v3", "1"); }
     return t;
   });
   const [openSubject, setOpenSubject] = useState(null);
@@ -253,21 +255,28 @@ function App() {
     r.setAttribute("data-font",       theme.font);
     r.setAttribute("data-accent",     theme.accent);
     r.setAttribute("data-variant",    theme.variant);
-    r.setAttribute("data-theme",      theme.namedTheme || "medianoche");
+    r.setAttribute("data-theme",      theme.namedTheme || "carbon");
     localStorage.setItem("sh_theme", JSON.stringify(theme));
   }, [theme]);
 
   /* ── zoom + acento desde settings ─────────────────── */
   useEffect(() => {
-    document.documentElement.style.setProperty("--ui-zoom", scaleToZoom(data.settings.uiScale));
-    const a = ACCENTS[data.settings.accent] || ACCENTS.violet;
     const r = document.documentElement.style;
-    r.setProperty("--violet",      a.v);
-    r.setProperty("--violet-2",    a.v2);
-    r.setProperty("--violet-hi",   a.hi);
-    r.setProperty("--grad",        `linear-gradient(135deg, ${a.v} 0%, ${a.v2} 100%)`);
-    r.setProperty("--violet-soft", a.v + "22");
-    r.setProperty("--violet-line", a.v + "66");
+    r.setProperty("--ui-zoom", scaleToZoom(data.settings.uiScale));
+    const ACCENT_VARS = ["--violet", "--violet-2", "--violet-hi", "--grad", "--violet-soft", "--violet-line"];
+    /* Con el acento default ("violet") no pisamos nada: manda el tema con nombre.
+       Solo si el usuario eligió un swatch distinto, ese acento gana sobre el tema. */
+    if (!data.settings.accent || data.settings.accent === "violet") {
+      ACCENT_VARS.forEach(p => r.removeProperty(p));
+    } else {
+      const a = ACCENTS[data.settings.accent] || ACCENTS.violet;
+      r.setProperty("--violet",      a.v);
+      r.setProperty("--violet-2",    a.v2);
+      r.setProperty("--violet-hi",   a.hi);
+      r.setProperty("--grad",        `linear-gradient(135deg, ${a.v} 0%, ${a.v2} 100%)`);
+      r.setProperty("--violet-soft", a.v + "22");
+      r.setProperty("--violet-line", a.v + "66");
+    }
   }, [data.settings.uiScale, data.settings.accent]);
 
   /* sección NO persistida — siempre arranca en dashboard al abrir la app */

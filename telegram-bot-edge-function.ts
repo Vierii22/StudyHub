@@ -203,15 +203,24 @@ async function handleQuery(
   try {
     const subject = data.subject as string | undefined
     const question = data.query_text as string || "Respondé con la info relevante"
-    const prompt = `Sos el asistente de StudyHub. El usuario preguntó: "${question}"
+    const APP_GUIDE = `=== MANUAL DE USO DE STUDYHUB ===
+SECCIONES: Dashboard (widgets XP/racha/tareas/eventos), Facultad (materias con pizarrón), Tareas (filtros por materia/prioridad), Misiones (XP gamificado), Calendario (eventos + .ics), Pomodoro (25min foco), Chat IA (Gemini con contexto del usuario), Diario (registro + sueño/energía), Mi Espacio (pizarrón libre), Cocina, Finanzas, Casa, Ocio, Configuración.
+CÓMO HACER COSAS COMUNES: Agregar materia → Facultad → "+ Nueva materia". Agregar tarea → Tareas → campo de abajo + Enter, o botón "+". Ver progreso → Facultad → porcentaje en cada materia. Pizarrón de materia → Facultad → click materia → activar "Modo pizarrón". Personalizar dashboard → Config > Dashboard → "Abrir editor". Cambiar tema/colores → Config > Apariencia → selector de Tema (Medianoche/Papel/Terminal/Sakura/Océano). Conectar Telegram → Config > Integraciones → generar código → @Hubby_ia_bot. Command palette → Ctrl+K (busca secciones, tareas, materias o crea desde texto libre). Tab bar en celular → íconos en la parte de abajo. Instalar como app → Config > Acerca de → "Instalar como app".
+BOT DE TELEGRAM — COMANDOS: /tareas (ver pendientes), /agenda (próximos eventos), /pomo (iniciar pomodoro), /nota [texto] (guardar nota), /gasto [monto] [descripción] (registrar gasto), /ingreso [monto] [descripción], /ayuda (ver ejemplos).`
+
+    const prompt = `Sos Hubby, el asistente de StudyHub. El usuario preguntó via Telegram: "${question}"
 ${subject ? `Contexto adicional: está preguntando sobre "${subject}".` : ""}
 
-Estos son sus datos actuales de ${contextLabel}:
-${JSON.stringify(rawData, null, 2).slice(0, 3000)}
+MANUAL DE LA APP (usalo si pregunta cómo hacer algo o qué es algo):
+${APP_GUIDE}
+
+Datos actuales del usuario en ${contextLabel}:
+${JSON.stringify(rawData, null, 2).slice(0, 2500)}
 
 Respondé en español, de forma clara y concisa. Máximo 5 líneas. No uses JSON en la respuesta.
 Si pregunta por temas de parcial, buscá en el campo "notes" o "tp" de la materia correspondiente.
-Si pregunta qué tiene pendiente, mostrá solo los items con done:false.`
+Si pregunta qué tiene pendiente, mostrá solo los items con done:false.
+Si pregunta cómo usar la app o qué hace alguna función, respondé usando el MANUAL DE LA APP de arriba.`
 
     const response = await fetch(`${GEMINI_API}?key=${geminiKey}`, {
       method: "POST",

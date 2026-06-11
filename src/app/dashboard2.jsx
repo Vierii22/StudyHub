@@ -1,9 +1,10 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, ALL_WIDGETS, getAllTasks } from './store.jsx';
+import { Store, useStore, uid, toast, ALL_WIDGETS, getAllTasks, getPomoWeekMins } from './store.jsx';
 import { Btn, Chip, MonoLabel, Modal, Field } from './ui.jsx';
 import { WIDGET_COMP, greetingTime } from './dashboard.jsx';
+import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
 
 /* ============================================================
    DASHBOARD SHELL — grilla 12 col, modo edición, 3 variantes
@@ -109,20 +110,60 @@ const Dashboard = ({ variant, onNav, onConnect }) => {
   const setSpan = (k, v) => set(s => { s.dashSpans = { ...(s.dashSpans || {}), [k]: v }; });
 
   const p = data.profile;
+
+  /* ── datos del hero ── */
+  const now = new Date();
+  const gt = greetingTime();
+  const saludo = gt === "mañana" ? "Buen día" : gt === "tarde" ? "Buenas tardes" : "Buenas noches";
+  const fecha = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  /* progreso del día académico: 7:00 → 24:00 */
+  const dayPct = Math.min(100, Math.max(0, ((now.getHours() * 60 + now.getMinutes()) - 420) / 1020 * 100));
+  const all = getAllTasks(data);
+  const activas = all.filter(t => !t.done).length;
+  const hechasHoy = all.filter(t => t.done).length;
+  const weekHrs = Math.round(getPomoWeekMins() / 6) / 10;
+
   return (
     <div className="page page-cozy">
       <HubbyBanner data={data} onConnect={onConnect} />
-      <div className="page-head">
-        <div>
-          <h1 className="h1" style={{ fontSize: 22 }}>Hola, <span style={{ color: "var(--violet-hi)" }}>{p.name}</span> <Icon name={greetingTime() === "noche" ? "moon" : "sun"} size={19} color="var(--violet-hi)" style={{ verticalAlign: "-3px" }} /></h1>
-          <div className="small" style={{ marginTop: 8, color: "var(--tx-2)" }}>{(() => { const all = getAllTasks(data); return `${all.filter(t=>!t.done).length} tareas activas · ${Math.round(all.filter(t=>t.done).length / Math.max(1,all.length) * 100)}% completadas · racha ${data.streak}`; })()}</div>
+
+      {/* ── HERO editorial ── */}
+      <div className="hoy-hero">
+        <div className="hoy-fecha">{fecha}</div>
+        <div className="row between" style={{ alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+          <h1 className="hoy-saludo">{saludo}, <em>{p.name}</em></h1>
+          <div className="wrap-gap">
+            {edit
+              ? <><Btn variant="secondary" icon="refresh" onClick={() => { set(s => { s.dashWidgets = JSON.parse(JSON.stringify(["tareas","agenda","xp","racha","completas","ring","materias","horas"])); s.dashSpans = {}; }); toast("Dashboard restaurado"); }}>Restaurar</Btn>
+                  <Btn variant="primary" icon="check" onClick={() => { setEdit(false); toast("Cambios guardados"); }}>Listo</Btn></>
+              : <Btn variant="secondary" icon="edit" onClick={() => setEdit(true)}>Editar</Btn>}
+          </div>
         </div>
-        <div className="wrap-gap">
-          {edit
-            ? <><Btn variant="secondary" icon="refresh" onClick={() => { set(s => { s.dashWidgets = JSON.parse(JSON.stringify(["tareas","agenda","xp","racha","completas","ring","materias","horas"])); s.dashSpans = {}; }); toast("Dashboard restaurado"); }}>Restaurar</Btn>
-                <Btn variant="primary" icon="check" onClick={() => { setEdit(false); toast("Cambios guardados"); }}>Listo</Btn></>
-            : <Btn variant="secondary" icon="edit" onClick={() => setEdit(true)}>Editar dashboard</Btn>}
-        </div>
+        <div className="hoy-sub">{activas} tareas activas · racha de {data.streak || 0} días</div>
+        <div className="hoy-dayline" title={`${Math.round(dayPct)}% del día`}><div style={{ width: `${dayPct}%` }}></div></div>
+      </div>
+
+      {/* ── CAPTURA UNIVERSAL ── */}
+      <div style={{ margin: "18px 0" }}>
+        <CaptureBar data={data} set={set} onOpen={onNav} />
+      </div>
+
+      {/* ── COACH + HOY ── */}
+      <div className="grid" style={{ gridTemplateColumns: "repeat(12,1fr)", marginBottom: 16 }}>
+        <div style={{ gridColumn: "span 7" }} className="dash-col-coach"><CoachCard data={data} onNav={onNav} /></div>
+        <div style={{ gridColumn: "span 5" }} className="dash-col-hoy"><TodayTimeline data={data} set={set} onNav={onNav} /></div>
+      </div>
+
+      {/* ── STATS STRIP ── */}
+      <div className="stat-strip" style={{ marginBottom: 22 }}>
+        {[
+          [data.streak || 0, "racha · días"],
+          [`nv ${data.level || 1}`, `${data.xp || 0} xp`],
+          [weekHrs, "hs foco · semana"],
+          [hechasHoy, "tareas hechas"],
+        ].map(([v, l], i) => (
+          <div key={i} className="stat-mini"><div className="v">{v}</div><div className="l">{l}</div></div>
+        ))}
       </div>
 
       {edit && <div className="mono" style={{ marginBottom: 12, color: "var(--violet-hi)", display: "flex", alignItems: "center", gap: 7 }}><Icon name="move" size={13} /> Arrastrá los widgets para reordenar · usá los tamaños de cada uno · agregá desde el panel</div>}
