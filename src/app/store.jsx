@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { SupabaseStorage } from '../storage.js';
+import { SupabaseStorage, DOMAIN_MAP } from '../storage.js';
 
 /* ============================================================
    STORE — persistencia Supabase + localStorage + realtime
@@ -179,16 +179,28 @@ function makeStore() {
 
   const subs = new Set();
 
-  const persist = () => {
+  /* Snapshot de un dominio para detectar cambios */
+  const _snap = (domainKey) => {
+    const fields = DOMAIN_MAP[domainKey];
+    if (!fields) return "";
+    return JSON.stringify(fields.reduce((acc, f) => { acc[f] = data[f]; return acc; }, {}));
+  };
+
+  const persist = (changedDomains = null) => {
     try {
-      const json = JSON.stringify(data);
-      /* siempre localStorage primero (síncrono, sin latencia) */
-      localStorage.setItem("sh_data", json);
-      /* si SupabaseStorage está disponible, también sube a la nube */
-      if (SupabaseStorage) {
-        SupabaseStorage.setItem("sh_data", json);
+      /* localStorage: siempre el blob completo (lectura rápida al arrancar) */
+      localStorage.setItem("sh_data", JSON.stringify(data));
+
+      /* Supabase: solo los dominios que cambiaron */
+      if (!SupabaseStorage) return;
+      const toUpload = changedDomains || Object.keys(DOMAIN_MAP);
+      for (const dk of toUpload) {
+        const fields = DOMAIN_MAP[dk];
+        if (!fields) continue;
+        const domainData = fields.reduce((acc, f) => { acc[f] = data[f]; return acc; }, {});
+        SupabaseStorage.setItem(dk, JSON.stringify(domainData));
       }
-    } catch (e) {
+    } catch {
       toast("⚠️ Almacenamiento lleno — probá con archivos más chicos");
     }
   };
@@ -197,18 +209,44 @@ function makeStore() {
 
   return {
     get: () => data,
-    set: (fn) => { fn(data); persist(); notify(); },
+    set: (fn) => {
+      /* Snapshot antes de la mutación para detectar qué dominio cambió */
+      const before = {};
+      for (const dk of Object.keys(DOMAIN_MAP)) before[dk] = _snap(dk);
+
+      fn(data);
+
+      const changed = Object.keys(DOMAIN_MAP).filter(dk => _snap(dk) !== before[dk]);
+      persist(changed.length ? changed : null);
+      notify();
+    },
     sub: (f)  => { subs.add(f); return () => subs.delete(f); },
     reset: () => {
       data = applyMigrations(null);
       persist(); notify();
     },
-    /* reemplaza el blob completo desde la nube (realtime) */
+    /* reemplaza el blob completo desde la nube (legacy sh_data) */
     _replace: (incoming) => {
       const next = applyMigrations(typeof incoming === "string" ? JSON.parse(incoming) : incoming);
       const nextJson = JSON.stringify(next);
-      if (nextJson === JSON.stringify(data)) return; /* anti-loop */
+      if (nextJson === JSON.stringify(data)) return;
       data = next;
+      notify();
+    },
+    /* merge parcial de un dominio (realtime de clave granular) */
+    _mergeDomain: (domainKey, incoming) => {
+      const fields = DOMAIN_MAP[domainKey];
+      if (!fields) return;
+      const parsed = typeof incoming === "string" ? JSON.parse(incoming) : incoming;
+      let changed = false;
+      for (const f of fields) {
+        if (!(f in parsed)) continue;
+        if (JSON.stringify(parsed[f]) !== JSON.stringify(data[f])) changed = true;
+        data[f] = parsed[f];
+      }
+      if (!changed) return;
+      /* actualizar localStorage sin subir a Supabase (ya vino de la nube) */
+      try { localStorage.setItem("sh_data", JSON.stringify(data)); } catch {}
       notify();
     },
   };
@@ -223,10 +261,15 @@ function useStore() {
 }
 
 /* ── realtime & auth sync ───────────────────────────────── */
-/* cuando SupabaseStorage sincroniza un cambio remoto */
 window.addEventListener("sh:storage-sync", (e) => {
-  if (e.detail && e.detail.key === "sh_data" && e.detail.value != null) {
-    Store._replace(e.detail.value);
+  if (!e.detail || e.detail.value == null) return;
+  const { key, value } = e.detail;
+  if (key === "sh_data") {
+    /* legacy: blob completo */
+    Store._replace(value);
+  } else if (DOMAIN_MAP[key]) {
+    /* granular: solo el dominio que cambió */
+    Store._mergeDomain(key, value);
   }
 });
 
@@ -415,10 +458,34 @@ function useChatStore() {
   return s;
 }
 
+/* Fuente única de verdad para la racha actual */
+const getStreak = () => Store.get().streak || 0;
+
+/* Todas las tareas: globales + las de materia que aún no están en data.tasks */
+const getAllTasks = (data) => {
+  const global = data.tasks || [];
+  const globalIds = new Set(global.map(t => t.id));
+  const subjectTasks = [];
+  for (const s of (data.subjects || [])) {
+    const items = s.lists?.tareas || [];
+    for (const item of items) {
+      if (item.id && !globalIds.has(item.id) && item.t) {
+        subjectTasks.push({
+          ...item,
+          subject: s.id,
+          status: item.status || (item.done ? "lista" : "pendiente"),
+        });
+      }
+    }
+  }
+  return [...global, ...subjectTasks];
+};
+
 export {
   Store, useStore, uid, scaleToZoom, toast, ToastHost,
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
+  getStreak, getAllTasks,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,
 };

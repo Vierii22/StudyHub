@@ -7,8 +7,41 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
-  "background_color": "#18181d",
-  "theme_color": "#8b5cf6",
+  "orientation": "portrait",
+  "background_color": "#0d0d12",
+  "theme_color": "#8b6dff",
+  "shortcuts": [
+    {
+      "name": "Nueva tarea",
+      "short_name": "Tarea",
+      "description": "Agregar una tarea rápida",
+      "url": "/?section=tareas&action=new",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pomodoro",
+      "short_name": "Pomodoro",
+      "description": "Iniciar sesión de foco",
+      "url": "/?section=pomodoro",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Hoy",
+      "short_name": "Dashboard",
+      "description": "Ver el resumen de hoy",
+      "url": "/?section=dashboard",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "/assets/icon-192.png",

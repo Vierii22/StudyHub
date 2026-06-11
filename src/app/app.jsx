@@ -17,13 +17,15 @@ import { MiEspacio } from './space.jsx';
 import { Landing } from './landing.jsx';
 import { Tutorial, TUTORIAL_KEY } from './tutorial.jsx';
 import { FeedbackWidget } from './feedback.jsx';
+import { TabBar } from './tabbar.jsx';
+import { Palette } from './palette.jsx';
 import { supabase } from '../supabase.js';
 
 /* ============================================================
    APP ROOT — auth Supabase + router + tema + zoom + acento
    ============================================================ */
 const { useState, useEffect, useRef } = React;
-const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial" };
+const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "medianoche" };
 const load = (k, f) => { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } };
 
 const ACCENTS = {
@@ -159,7 +161,10 @@ function App() {
   const [pendingEmail, setPendingEmail] = useState(""); // email pendiente de confirmación
   const authRef = useRef("loading"); // ref para leer auth dentro de callbacks sin stale closure
   const [showTutorial, setShowTutorial] = useState(false);
-  const [section, setSection] = useState("dashboard");
+  const [section, setSection] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("section") || "dashboard";
+  });
   const [theme, setThemeState] = useState(() => {
     const t = load("sh_theme", DEFAULT_THEME);
     if (!localStorage.getItem("sh_layout_v2")) { t.variant = "editorial"; localStorage.setItem("sh_layout_v2", "1"); }
@@ -169,10 +174,23 @@ function App() {
   const [morning, setMorning] = useState(false);
   const [dashEditSignal, setDashEditSignal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [data] = useStore();
 
   /* mantener ref sincronizado con el estado real */
   useEffect(() => { authRef.current = auth; }, [auth]);
+
+  /* ── Ctrl/Cmd+K → command palette ─────────────────── */
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   /* ── auth Supabase ─────────────────────────────────── */
   useEffect(() => {
@@ -232,9 +250,10 @@ function App() {
   /* ── tema ──────────────────────────────────────────── */
   useEffect(() => {
     const r = document.documentElement;
-    r.setAttribute("data-font",    theme.font);
-    r.setAttribute("data-accent",  theme.accent);
-    r.setAttribute("data-variant", theme.variant);
+    r.setAttribute("data-font",       theme.font);
+    r.setAttribute("data-accent",     theme.accent);
+    r.setAttribute("data-variant",    theme.variant);
+    r.setAttribute("data-theme",      theme.namedTheme || "medianoche");
     localStorage.setItem("sh_theme", JSON.stringify(theme));
   }, [theme]);
 
@@ -286,8 +305,22 @@ function App() {
   }, [auth]);
 
   const [configInitTab, setConfigInitTab] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const upd = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", upd);
+    return () => window.removeEventListener("resize", upd);
+  }, []);
   const setTheme  = (k, v) => setThemeState(t => ({ ...t, [k]: v }));
-  const nav       = (s)    => { setOpenSubject(null); setSection(s); setSidebarOpen(false); };
+  const nav = (s) => {
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        setOpenSubject(null); setSection(s); setSidebarOpen(false);
+      });
+    } else {
+      setOpenSubject(null); setSection(s); setSidebarOpen(false);
+    }
+  };
   const navConfig = (tab)  => { setConfigInitTab(tab); nav("config"); };
   const logout    = ()     => {
     const sb = supabase;
@@ -338,7 +371,7 @@ function App() {
     switch (section) {
       case "dashboard":  return <Dashboard key={dashEditSignal} variant={theme.variant} onNav={nav} onConnect={() => navConfig("integr")} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} />;
-      case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
+      case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
       case "misiones":   return <Misiones />;
       case "calendario": return <Calendario />;
       case "pomodoro":   return <Pomodoro />;
@@ -367,20 +400,24 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <Sidebar
-        active={section}
-        onNav={nav}
-        onLogout={logout}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+    <div className={`app${isMobile ? " app-mobile" : ""}`} data-anim="on">
+      {/* Sidebar: oculto en mobile (reemplazado por TabBar) */}
+      {!isMobile && (
+        <Sidebar
+          active={section}
+          onNav={nav}
+          onLogout={logout}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
       <div className="main">
         <Header
           profile={data.profile}
           onNav={nav}
           section={section}
           onToggleSidebar={() => setSidebarOpen(o => !o)}
+          onOpenPalette={() => setPaletteOpen(true)}
         />
         <div
           className="scroll scroll-zoom"
@@ -390,6 +427,7 @@ function App() {
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundAttachment: "fixed",
+            paddingBottom: isMobile ? "80px" : undefined,
           }}
         >
           {render()}
@@ -404,6 +442,14 @@ function App() {
         />
       )}
       {section !== "pomodoro" && <PomoMini onOpen={() => nav("pomodoro")} />}
+      {isMobile && (
+        <TabBar
+          active={section}
+          onNav={nav}
+          onCapture={() => nav("tareas")}
+        />
+      )}
+      {paletteOpen && <Palette onNav={nav} onClose={() => setPaletteOpen(false)} />}
       <FeedbackWidget section={section} />
       <ToastHost />
     </div>

@@ -2,7 +2,7 @@ import React from 'react';
 
 import ReactDOM from 'react-dom';
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, scaleToZoom, toast, COLORS, ALL_WIDGETS, PomoStore, usePomoStore } from './store.jsx';
+import { Store, useStore, uid, scaleToZoom, toast, COLORS, ALL_WIDGETS, PomoStore, usePomoStore, getStreak } from './store.jsx';
 
 /* ============================================================
    UI PRIMITIVES
@@ -53,37 +53,62 @@ const MonoLabel = ({ children, accent }) => (
 );
 
 /* ---------- SIDEBAR ---------- */
+/* 5 ítems principales + grupo "Vida" colapsable */
+const NAV_MAIN = [
+  { id: "dashboard",  label: "Hoy",      short: "Hoy",     icon: "home" },
+  { id: "facultad",   label: "Facultad", short: "Facultad",icon: "layers" },
+  { id: "tareas",     label: "Tareas",   short: "Tareas",  icon: "check" },
+  { id: "pomodoro",   label: "Enfoque",  short: "Foco",    icon: "clock" },
+  { id: "chat",       label: "Hubby",    short: "Hubby",   icon: "chat" },
+];
+const NAV_VIDA = [
+  { id: "diario",    label: "Diario",    icon: "pen" },
+  { id: "cocina",    label: "Cocina",    icon: "mug" },
+  { id: "finanzas",  label: "Finanzas",  icon: "coins" },
+  { id: "casa",      label: "Casa",      icon: "house" },
+  { id: "ocio",      label: "Ocio",      icon: "sparkles" },
+];
+const NAV_EXTRA = [
+  { id: "misiones",  label: "Misiones",  icon: "bolt" },
+  { id: "calendario",label: "Calendario",icon: "calendar" },
+  { id: "espacio",   label: "Mi Espacio",icon: "box" },
+  { id: "historial", label: "Historial", icon: "clock" },
+];
+/* Array plano para mantener compatibilidad con TabBar y otras referencias */
 const NAV = [
-  { id: "dashboard", label: "Dashboard", short: "Inicio", icon: "home" },
-  { id: "facultad",  label: "Facultad",  short: "Facultad", icon: "layers" },
-  { id: "misiones",  label: "Misiones",  short: "Misión", icon: "bolt" },
-  { id: "calendario",label: "Calendario",short: "Agenda", icon: "calendar" },
-  { id: "tareas",    label: "Tareas",    short: "Tareas", icon: "check" },
-  { id: "pomodoro",  label: "Pomodoro",  short: "Foco", icon: "clock" },
+  ...NAV_MAIN,
   { sep: true },
-  { id: "chat",      label: "Chat IA",   short: "Chat", icon: "chat" },
-  { id: "diario",    label: "Diario",    short: "Diario", icon: "pen" },
-  { id: "espacio",   label: "Mi Espacio", short: "Espacio", icon: "box" },
-  { id: "cocina",    label: "Cocina",    short: "Cocina", icon: "mug" },
-  { id: "finanzas",  label: "Finanzas",  short: "Plata", icon: "coins" },
-  { id: "casa",      label: "Casa",      short: "Casa", icon: "house" },
-  { id: "ocio",      label: "Ocio",      short: "Ocio", icon: "sparkles" },
+  ...NAV_VIDA,
 ];
 
 const Sidebar = ({ active, onNav, onLogout, isOpen, onClose }) => {
   const [expanded, setExpanded] = React.useState(() => { try { return JSON.parse(localStorage.getItem("sh_sidebar")) ?? false; } catch { return false; } });
+  const [vidaOpen, setVidaOpen] = React.useState(() => { try { return JSON.parse(localStorage.getItem("sh_vida")) ?? true; } catch { return true; } });
   const [tip, setTip] = React.useState(null);
   React.useEffect(() => { localStorage.setItem("sh_sidebar", JSON.stringify(expanded)); }, [expanded]);
+  React.useEffect(() => { localStorage.setItem("sh_vida", JSON.stringify(vidaOpen)); }, [vidaOpen]);
   const showTip = (e, label) => { if (expanded) return; const r = e.currentTarget.getBoundingClientRect(); setTip({ label, top: r.top + r.height / 2, left: r.right + 12 }); };
   const hideTip = () => setTip(null);
   React.useEffect(() => { if (expanded) setTip(null); }, [expanded]);
 
-  /* En móvil: navegar cierra el sidebar */
   const handleNav = (id) => { onNav(id); if (onClose) onClose(); };
+  const isVidaActive = NAV_VIDA.some(item => item.id === active);
+  const isExtraActive = NAV_EXTRA.some(item => item.id === active);
+
+  const NavItem = ({ item }) => (
+    <div
+      key={item.id}
+      data-tour={item.id}
+      className={`nav-item${active === item.id ? " active" : ""}`}
+      onClick={() => handleNav(item.id)}
+      onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}
+    >
+      <Icon name={item.icon} /><span className="nav-label">{item.label}</span>
+    </div>
+  );
 
   return (
     <React.Fragment>
-      {/* Backdrop (solo visible en móvil cuando isOpen) */}
       <div className={`sidebar-backdrop${isOpen ? " visible" : ""}`} onClick={onClose} />
 
       <aside className={`sidebar${expanded ? " expanded" : ""}${isOpen ? " mobile-open" : ""}`}>
@@ -94,19 +119,44 @@ const Sidebar = ({ active, onNav, onLogout, isOpen, onClose }) => {
             <div className="mono" style={{ fontSize: 8.5, letterSpacing: ".22em", marginTop: 3 }}>Tu centro de estudio</div>
           </div>
         </div>
+
         <nav className="sidebar-nav">
-          {NAV.map((item, i) =>
-            item.sep
-              ? <div className="nav-sep" key={"s" + i}></div>
-              : <div key={item.id}
-                  data-tour={item.id}
-                  className={`nav-item${active === item.id ? " active" : ""}`}
-                  onClick={() => handleNav(item.id)}
-                  onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}>
-                  <Icon name={item.icon} /><span className="nav-label">{item.label}</span>
-                </div>
-          )}
+          {/* 5 ítems principales */}
+          {NAV_MAIN.map(item => <NavItem key={item.id} item={item} />)}
+
+          {/* ── Grupo Vida ── */}
+          <div className="nav-sep" />
+          <div
+            className={`nav-item${isVidaActive ? " active" : ""}`}
+            onClick={() => setVidaOpen(v => !v)}
+            onMouseEnter={e => showTip(e, "Vida")} onMouseLeave={hideTip}
+            style={{ justifyContent: "space-between" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Icon name="sparkles" />
+              <span className="nav-label">Vida</span>
+            </div>
+            <span className="nav-label" style={{ fontSize: 10, color: "var(--tx-3)", transition: "transform .2s", transform: vidaOpen ? "rotate(90deg)" : "none" }}>
+              <Icon name="chevR" size={12} />
+            </span>
+          </div>
+          {vidaOpen && NAV_VIDA.map(item => (
+            <div
+              key={item.id}
+              data-tour={item.id}
+              className={`nav-item nav-sub${active === item.id ? " active" : ""}`}
+              onClick={() => handleNav(item.id)}
+              onMouseEnter={e => showTip(e, item.label)} onMouseLeave={hideTip}
+            >
+              <Icon name={item.icon} size={15} /><span className="nav-label">{item.label}</span>
+            </div>
+          ))}
+
+          {/* ── Extras (misiones, calendario, espacio, historial) ── */}
+          <div className="nav-sep" />
+          {NAV_EXTRA.map(item => <NavItem key={item.id} item={item} />)}
         </nav>
+
         <div className="sidebar-foot">
           <div className="collapse-btn" onClick={() => setExpanded(e => !e)} title={expanded ? "Colapsar barra" : "Expandir barra"}>
             <Icon name={expanded ? "chevL" : "chevR"} />
@@ -202,9 +252,33 @@ const AppearanceControl = ({ open, onClose, theme, setTheme }) => {
   );
 };
 
+/* ---------- SYNC STATUS CHIP ---------- */
+const SyncChip = () => {
+  const [status, setStatus] = React.useState(navigator.onLine ? "ok" : "offline");
+  React.useEffect(() => {
+    const handler = (e) => setStatus(e.detail);
+    window.addEventListener("sh:sync-status", handler);
+    window.addEventListener("online",  () => setStatus("syncing"));
+    window.addEventListener("offline", () => setStatus("offline"));
+    return () => window.removeEventListener("sh:sync-status", handler);
+  }, []);
+  if (status === "ok") return null;
+  const label = status === "offline" ? "Sin conexión" : "Sincronizando…";
+  const color  = status === "offline" ? "#e8639b" : "#e8b04e";
+  return (
+    <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color, padding: "3px 9px", borderRadius: 99, border: `1px solid ${color}55`, background: `${color}15`, whiteSpace: "nowrap" }}>
+      {label}
+    </div>
+  );
+};
+
 /* ---------- HEADER ---------- */
-const Header = ({ profile, onNav, section, onToggleSidebar }) => {
+const Header = ({ profile, onNav, section, onToggleSidebar, onOpenPalette }) => {
+  const [data] = useStore();
   const incomplete = !profile.uni || !profile.career;
+  const streak = data.streak || 0;
+  /* detectar plataforma para el shortcut del buscador */
+  const isMac = navigator.platform?.toUpperCase().includes("MAC");
   return (
     <header className="header">
       {/* Hamburger — visible solo en móvil via CSS */}
@@ -219,13 +293,18 @@ const Header = ({ profile, onNav, section, onToggleSidebar }) => {
         </div>
       </div>
       <div style={{ flex: 1 }}></div>
-      <div className="searchbar">
+      <div className="searchbar" style={{ cursor: "pointer" }} onClick={onOpenPalette}>
         <Icon name="search" size={16} />
-        <input placeholder="Buscar…" />
-        <span className="kbd">⌘K</span>
+        <span style={{ flex: 1, fontSize: 14, color: "var(--tx-3)" }}>Buscar…</span>
+        <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
       </div>
       <div style={{ flex: 1 }}></div>
-      <Chip accent dot><Icon name="fire" size={11} /> racha 1</Chip>
+      <SyncChip />
+      {streak > 0 && (
+        <Chip accent dot>
+          <Icon name="fire" size={11} /> racha {streak}
+        </Chip>
+      )}
       <div className="icon-btn" onClick={() => onNav("chat")} title="Chat IA"><Icon name="chat" size={17} /></div>
       <div className="icon-btn" title="Notificaciones"><Icon name="bell" size={17} /></div>
     </header>
@@ -269,12 +348,40 @@ const Toggle = ({ on, onChange }) => (
   </div>
 );
 
-const Empty = ({ icon = "layout", title, sub }) => (
+/* ---------- HUBBY PLACEHOLDER (mascota, futuras poses) ---------- */
+const HubbyIcon = ({ size = 48, mood = "idle" }) => {
+  const colors = {
+    idle:      { body: "#8b6dff", pupils: "#fff" },
+    happy:     { body: "#3ecf9a", pupils: "#fff" },
+    sleepy:    { body: "#5d5d68", pupils: "#fff" },
+    focused:   { body: "#4ec5e8", pupils: "#fff" },
+    worried:   { body: "#e8639b", pupils: "#fff" },
+  };
+  const c = colors[mood] || colors.idle;
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="22" fill={c.body} />
+      <ellipse cx="17" cy="22" rx="3.5" ry={mood === "sleepy" ? 1.5 : 3.5} fill={c.pupils} />
+      <ellipse cx="31" cy="22" rx="3.5" ry={mood === "sleepy" ? 1.5 : 3.5} fill={c.pupils} />
+      <circle cx="17" cy="23" r="1.5" fill={c.body} />
+      <circle cx="31" cy="23" r="1.5" fill={c.body} />
+      {mood === "happy" && <path d="M17 30 Q24 36 31 30" stroke={c.pupils} strokeWidth="2" strokeLinecap="round" fill="none" />}
+      {mood === "worried" && <path d="M17 32 Q24 28 31 32" stroke={c.pupils} strokeWidth="2" strokeLinecap="round" fill="none" />}
+      {mood === "sleepy" && <path d="M19 31 Q24 33 29 31" stroke={c.pupils} strokeWidth="2" strokeLinecap="round" fill="none" />}
+      {(mood === "idle" || mood === "focused") && <path d="M18 30 Q24 34 30 30" stroke={c.pupils} strokeWidth="2" strokeLinecap="round" fill="none" />}
+    </svg>
+  );
+};
+
+const Empty = ({ icon, hubby, title, sub, action, onAction }) => (
   <div className="empty">
-    <div>
-      <div style={{ color: "var(--tx-3)" }}><Icon name={icon} size={36} /></div>
-      <div className="h3" style={{ marginTop: 14 }}>{title}</div>
-      {sub && <div className="small" style={{ marginTop: 7, maxWidth: 340, textWrap: "pretty" }}>{sub}</div>}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      {hubby
+        ? <HubbyIcon size={56} mood={hubby} />
+        : <div style={{ color: "var(--tx-3)" }}><Icon name={icon || "layout"} size={36} /></div>}
+      <div className="h3" style={{ marginTop: 16, fontSize: 16 }}>{title}</div>
+      {sub && <div className="small" style={{ marginTop: 7, maxWidth: 320, textWrap: "pretty", lineHeight: 1.6 }}>{sub}</div>}
+      {action && <button className="btn btn-secondary btn-sm" style={{ marginTop: 16 }} onClick={onAction}>{action}</button>}
     </div>
   </div>
 );
@@ -431,10 +538,97 @@ const ImagePicker = ({ value, onChange, label }) => (
   </Field>
 );
 
+/* ---------- BOTTOM SHEET ---------- */
+/* Versión mobile-first de Modal: se desliza desde abajo con handle.
+   En desktop se comporta como un modal centrado normal. */
+const Sheet = ({ open, onClose, title, children, footer, snap = "auto" }) => {
+  const [dragging, setDragging] = React.useState(false);
+  const startY = React.useRef(0);
+  const sheetRef = React.useRef(null);
+
+  /* Cerrar con Escape */
+  React.useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const onPointerDown = (e) => {
+    startY.current = e.clientY;
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!dragging || !sheetRef.current) return;
+    const delta = Math.max(0, e.clientY - startY.current);
+    sheetRef.current.style.transform = `translateY(${delta}px)`;
+  };
+  const onPointerUp = (e) => {
+    setDragging(false);
+    const delta = e.clientY - startY.current;
+    if (sheetRef.current) sheetRef.current.style.transform = "";
+    if (delta > 80) onClose();
+  };
+
+  return (
+    <div
+      className="overlay"
+      onClick={onClose}
+      style={{ alignItems: "flex-end", padding: 0 }}
+    >
+      <div
+        ref={sheetRef}
+        className="modal"
+        style={{
+          width: "min(560px, 100%)",
+          borderRadius: "22px 22px 0 0",
+          padding: "0 0 env(safe-area-inset-bottom)",
+          margin: 0,
+          transition: dragging ? "none" : "transform .3s cubic-bezier(.2,.8,.2,1)",
+          maxHeight: snap === "full" ? "95dvh" : "80dvh",
+          overflowY: "auto",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle de arrastre */}
+        <div
+          style={{ padding: "14px 0 10px", cursor: "grab", touchAction: "none" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        >
+          <div style={{
+            width: 40, height: 4, background: "var(--line-2)",
+            borderRadius: 99, margin: "0 auto",
+          }} />
+        </div>
+        <div style={{ padding: "0 22px 22px" }}>
+          {title && (
+            <div className="row between" style={{ marginBottom: 18 }}>
+              <div className="h2">{title}</div>
+              <div className="icon-btn" onClick={onClose}><Icon name="x" size={18} /></div>
+            </div>
+          )}
+          {children}
+          {footer && (
+            <div className="row between" style={{ marginTop: 20, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+              {footer}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export {
   TerminalCorners, ProgressRing, Btn, Chip, MonoLabel,
   Sidebar, Header, AppearanceControl, PageHead, Seg, Field,
-  Modal, Toggle, Empty, SubjectDot, BrandBanner,
-  ColorPicker, PhotoUploader, ImagePicker,
+  Modal, Sheet, Toggle, Empty, SubjectDot, BrandBanner,
+  ColorPicker, PhotoUploader, ImagePicker, HubbyIcon,
   NAV, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS,
 };

@@ -241,6 +241,28 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
             <ConfigRow label="Color de acento" sub="Tono principal de la app">
               <div className="swatches">{ACCENT_SWATCHES.map(s => <div key={s.id} className={`swatch${st.accent === s.id ? " sel" : ""}`} style={{ background: s.c }} title={s.id} onClick={() => setSetting("accent", s.id)} />)}</div>
             </ConfigRow>
+            <ConfigRow label="Tema" sub="Cambia paleta, superficies y acento en conjunto">
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                {[
+                  { id: "medianoche", label: "Medianoche", bg: "#0d0d12", accent: "#8b6dff" },
+                  { id: "papel",      label: "Papel",      bg: "#f5f0e8", accent: "#6c7c2f" },
+                  { id: "terminal",   label: "Terminal",   bg: "#000",    accent: "#00ff46" },
+                  { id: "sakura",     label: "Sakura",     bg: "#1a0d14", accent: "#e8639b" },
+                  { id: "oceano",     label: "Océano",     bg: "#040d1a", accent: "#29b6f6" },
+                ].map(t => (
+                  <div key={t.id}
+                    onClick={() => setTheme("namedTheme", t.id)}
+                    title={t.label}
+                    style={{
+                      width: 40, height: 40, borderRadius: 10, cursor: "pointer",
+                      background: t.bg, border: `2.5px solid ${(theme.namedTheme || "medianoche") === t.id ? t.accent : "transparent"}`,
+                      boxShadow: `inset 0 0 0 3px ${t.accent}55`,
+                      transition: "border-color .15s",
+                    }}
+                  />
+                ))}
+              </div>
+            </ConfigRow>
             <ConfigRow label="Tipografía">
               <Seg opts={FONT_OPTS} value={theme.font} onChange={v => setTheme("font", v)} />
             </ConfigRow>
@@ -542,11 +564,16 @@ const MorningModal = ({ onClose }) => {
   const energyLabels = ["Agotado","Bajo","Normal","Bien","Con pilas"];
 
   const save = () => {
+    const isoDate = new Date().toISOString().slice(0, 10); /* YYYY-MM-DD */
     set(s => {
       if (!Array.isArray(s.morning)) s.morning = [];
+      /* Evitar duplicado del mismo día */
+      s.morning = s.morning.filter(m => (m.isoDate || "") !== isoDate);
       s.morning.unshift({
-        date:   new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" }),
-        energy, sleep, mood: mood || "🙂", wake: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }),
+        isoDate,
+        date: new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" }),
+        energy, sleep: Number(sleep), mood: mood || "🙂",
+        wake: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }),
       });
       if (s.morning.length > 30) s.morning = s.morning.slice(0, 30);
     });

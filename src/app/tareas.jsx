@@ -1,8 +1,8 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, COLORS, PRIO, STATUS } from './store.jsx';
-import { Btn, Chip, PageHead, Empty, MonoLabel } from './ui.jsx';
+import { useStore, uid, toast, COLORS, PRIO, STATUS, getAllTasks } from './store.jsx';
+import { Btn, Chip, PageHead, Empty, MonoLabel, HubbyIcon } from './ui.jsx';
 import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
 
 /* ============================================================
@@ -18,7 +18,7 @@ const DueBadge = ({ due }) => {
   return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: isToday ? "#e8b04e" : "var(--tx-3)" }}>{isToday ? "¡HOY!" : due}</span>;
 };
 
-const Tareas = ({ onOpenSubject }) => {
+const Tareas = ({ onOpenSubject, autoNew }) => {
   const [data, set] = useStore();
   const [view, setView]           = React.useState(() => window.innerWidth < 768 ? "cards" : "tabla");
   const [sort, setSort]           = React.useState("creacion");
@@ -27,7 +27,11 @@ const Tareas = ({ onOpenSubject }) => {
   /* hook unificado — crea Y edita tareas con el mismo modal */
   const tf = useTaskForm();
 
-  let tasks = [...data.tasks];
+  /* PWA shortcut: abrir modal de nueva tarea al montar si viene de shortcut */
+  React.useEffect(() => { if (autoNew) tf.open(); }, []);
+
+  const allTasks = getAllTasks(data);
+  let tasks = [...allTasks];
   if (hideListed) tasks = tasks.filter(t => !t.done);
   const order = { alta: 0, media: 1, baja: 2 };
   if (sort === "prioridad") tasks.sort((a, b) => order[a.prio] - order[b.prio]);
@@ -62,7 +66,7 @@ const Tareas = ({ onOpenSubject }) => {
 
   return (
     <div className="page page-wide">
-      <PageHead title="Tareas" meta={`${data.tasks.length} en total · ${data.tasks.filter(t => t.done).length} completas`}>
+      <PageHead title="Tareas" meta={`${allTasks.length} en total · ${allTasks.filter(t => t.done).length} completas`}>
         <select className="sel-input" value={sort} onChange={e => setSort(e.target.value)}>
           <option value="creacion">Creación</option>
           <option value="prioridad">Prioridad</option>
@@ -83,9 +87,9 @@ const Tareas = ({ onOpenSubject }) => {
       {/* stats */}
       <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 24 }}>
         {[
-          ["Pendientes",  data.tasks.filter(t => !t.done).length,                data.tasks.filter(t => t.prio === "alta" && !t.done).length + " de alta prioridad"],
-          ["Para hoy",    data.tasks.filter(t => t.due === "Hoy").length,         "Vencen hoy"],
-          ["Completadas", data.tasks.filter(t => t.done).length,                  "Esta semana"],
+          ["Pendientes",  allTasks.filter(t => !t.done).length,                allTasks.filter(t => t.prio === "alta" && !t.done).length + " de alta prioridad"],
+          ["Para hoy",    allTasks.filter(t => t.due === "Hoy").length,         "Vencen hoy"],
+          ["Completadas", allTasks.filter(t => t.done).length,                  "Esta semana"],
         ].map(([l, v, sub]) => (
           <div key={l} className="card">
             <MonoLabel>{l}</MonoLabel>
@@ -98,7 +102,7 @@ const Tareas = ({ onOpenSubject }) => {
       {/* ── TABLA ── */}
       {view === "tabla" && (
         <div className="card card-flush">
-          {tasks.length === 0 && <div className="empty" style={{ padding: 40 }}><span className="small">No tenés tareas. Usá el botón "Nueva tarea" de arriba.</span></div>}
+          {tasks.length === 0 && <Empty hubby="happy" title="Sin tareas pendientes" sub='Usá "Nueva tarea" arriba o escribí rápido abajo.' />}
           {tasks.map(t => (
             <div key={t.id} className="task-row" style={{ opacity: t.done ? .5 : 1 }}>
               <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>

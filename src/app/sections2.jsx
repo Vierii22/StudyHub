@@ -270,16 +270,36 @@ const ChatIA = () => {
 };
 
 /* ── DIARIO + SUEÑO ─────────────────────────────────────── */
-const shortDay = (d = "") => {
-  const wd  = (d.split(",")[0] || "").trim().slice(0, 3);
-  const num = (d.match(/\d+/) || [""])[0];
+const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+/* Parsea tanto ISO (YYYY-MM-DD) como el string de locale viejo */
+const shortDay = (m) => {
+  /* Preferir isoDate (nuevo formato) */
+  if (m.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(m.isoDate)) {
+    /* Usar UTC para evitar desfases de timezone */
+    const [, , dayStr] = m.isoDate.split("-");
+    const d = new Date(m.isoDate + "T12:00:00");
+    return { wd: DIAS_ES[d.getDay()], num: parseInt(dayStr, 10) };
+  }
+  /* Fallback: string de locale como "viernes, 5 de junio" */
+  const str = m.date || "";
+  const wd  = (str.split(",")[0] || "").trim().slice(0, 3);
+  const num = (str.match(/\d+/) || ["?"])[0];
   return { wd: wd.charAt(0).toUpperCase() + wd.slice(1), num };
 };
+
 const ENERGY_LABELS = ["Agotado", "Bajo", "Normal", "Bien", "Con pilas"];
 
 const SleepPanel = ({ morning, onRegister }) => {
-  const series = [...morning].slice(0, 7).reverse();
-  const sleeps = series.map(m => m.sleep);
+  /* Deduplicar por isoDate, tomar los 7 más recientes, ordenar cronológicamente */
+  const seen = new Set();
+  const unique = (morning || []).filter(m => {
+    const key = m.isoDate || m.date;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  const series = unique.slice(0, 7).reverse();
+  const sleeps = series.map(m => Number(m.sleep) || 0);
   const avg    = sleeps.length ? sleeps.reduce((a, b) => a + b, 0) / sleeps.length : 0;
   const max    = Math.max(9, ...sleeps);
   const last   = morning[0];
@@ -293,21 +313,28 @@ const SleepPanel = ({ morning, onRegister }) => {
           </div>
           <div style={{ display: "flex", gap: 26 }}>
             <div><div className="display" style={{ fontSize: 36, color: "var(--violet-hi)" }}>{avg.toFixed(1)}<span style={{ fontSize: 18 }}>h</span></div><div className="small" style={{ fontSize: 11.5 }}>Promedio</div></div>
-            {last && <div><div className="display" style={{ fontSize: 36 }}>{last.sleep}<span style={{ fontSize: 18 }}>h</span></div><div className="small" style={{ fontSize: 11.5 }}>Anoche</div></div>}
+            {last && <div><div className="display" style={{ fontSize: 36 }}>{Number(last.sleep) || 0}<span style={{ fontSize: 18 }}>h</span></div><div className="small" style={{ fontSize: 11.5 }}>Anoche</div></div>}
           </div>
         </div>
         <Btn variant="secondary" icon="sun" onClick={onRegister}>Registrar hoy</Btn>
       </div>
       <div className="row" style={{ gap: "clamp(8px,2vw,20px)", alignItems: "flex-end", height: 168, paddingTop: 8 }}>
         {series.map((m, i) => {
-          const { wd, num } = shortDay(m.date);
+          const { wd, num } = shortDay(m);
           const isLast = i === series.length - 1;
-          const h = Math.max(10, (m.sleep / max) * 130);
+          const hrs = Number(m.sleep) || 0;
+          const h = hrs > 0 ? Math.max(16, (hrs / max) * 130) : 8;
+          const barColor = isLast
+            ? "var(--fill)"
+            : hrs >= 7 ? "rgba(62,207,154,.55)" : hrs >= 5 ? "rgba(232,176,78,.55)" : "rgba(232,99,155,.45)";
           return (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, height: "100%", justifyContent: "flex-end" }}>
+            <div key={m.isoDate || i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, height: "100%", justifyContent: "flex-end" }}>
               <div style={{ fontSize: 17 }}>{m.mood}</div>
-              <div className="mono" style={{ fontSize: 10, color: isLast ? "var(--violet-hi)" : "var(--tx-3)" }}>{m.sleep}h</div>
-              <div title={`${m.sleep}h · ${ENERGY_LABELS[(m.energy || 1) - 1]}`} style={{ width: "78%", maxWidth: 46, height: h, borderRadius: 8, background: isLast ? "var(--fill)" : "var(--surface-3)", transition: "height .5s cubic-bezier(.2,.8,.2,1)" }}></div>
+              <div className="mono" style={{ fontSize: 10, color: isLast ? "var(--violet-hi)" : "var(--tx-3)" }}>{hrs}h</div>
+              <div
+                title={`${hrs}h · ${ENERGY_LABELS[((m.energy || 1)) - 1]}`}
+                style={{ width: "78%", maxWidth: 46, height: h, borderRadius: 8, background: barColor, transition: "height .5s cubic-bezier(.2,.8,.2,1)" }}
+              />
               <div className="mono" style={{ fontSize: 9.5, textAlign: "center", lineHeight: 1.3 }}>{wd}<br />{num}</div>
             </div>
           );

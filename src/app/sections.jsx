@@ -94,20 +94,22 @@ const MissionCard = ({ m, set, onEdit }) => {
 const Misiones = () => {
   const [data, set] = useStore();
   const [modal, setModal] = React.useState(null);
-  const earned = data.missions.reduce((a, m) => a + Math.round(m.xp * m.subtasks.filter(s => s.done).length / Math.max(1, m.subtasks.length)), 0);
-  const avail  = data.missions.reduce((a, m) => a + m.xp, 0);
-  const byPrio = (p) => data.missions.filter(m => m.prio === p);
+  /* Filtrar las misiones "Objetivos de hoy" — se muestran solo en el widget del dashboard */
+  const missions = (data.missions || []).filter(m => !m.todayKey);
+  const earned = missions.reduce((a, m) => a + Math.round(m.xp * m.subtasks.filter(s => s.done).length / Math.max(1, m.subtasks.length)), 0);
+  const avail  = missions.reduce((a, m) => a + m.xp, 0);
+  const byPrio = (p) => missions.filter(m => m.prio === p);
   return (
     <div className="page page-wide">
-      <PageHead title="Misiones" meta={`${data.missions.length} activas`}>
+      <PageHead title="Misiones" meta={`${missions.length} activas`}>
         <Btn variant="primary" icon="plus" onClick={() => setModal("new")}>Nueva misión</Btn>
       </PageHead>
       <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 28 }}>
         <div className="card card-hero tcorners"><TerminalCorners /><MonoLabel>XP ganado</MonoLabel><div className="display" style={{ fontSize: 56, color: "#fff", marginTop: 10 }}>{earned.toLocaleString("es")}</div></div>
         <div className="card"><MonoLabel>XP disponible</MonoLabel><div className="stat" style={{ fontSize: 48, marginTop: 10 }}>{avail.toLocaleString("es")}</div><div className="small" style={{ marginTop: 8 }}>Al completar todo</div></div>
-        <div className="card"><MonoLabel>Completadas</MonoLabel><div className="stat" style={{ fontSize: 48, marginTop: 10 }}>0 / {data.missions.length}</div><div className="small" style={{ marginTop: 8 }}>Este cuatrimestre</div></div>
+        <div className="card"><MonoLabel>Completadas</MonoLabel><div className="stat" style={{ fontSize: 48, marginTop: 10 }}>0 / {missions.length}</div><div className="small" style={{ marginTop: 8 }}>Este cuatrimestre</div></div>
       </div>
-      {data.missions.length === 0 && <Empty icon="target" title="Sin misiones" sub="Creá tu primera misión con el botón de arriba." />}
+      {missions.length === 0 && <Empty icon="target" title="Sin misiones" sub="Creá tu primera misión con el botón de arriba." />}
       {["alta", "media", "baja"].map(p => byPrio(p).length > 0 && (
         <div key={p} style={{ marginBottom: 28 }}>
           <div className="row" style={{ gap: 9, marginBottom: 14 }}><span style={{ width: 8, height: 8, borderRadius: 99, background: PRIO[p] }}></span><span className="mono" style={{ color: PRIO[p] }}>{p} prioridad · {byPrio(p).length}</span></div>

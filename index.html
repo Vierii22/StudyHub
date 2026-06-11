@@ -2,7 +2,7 @@
 <html lang="es" data-font="outfit-mono" data-accent="gradient" data-variant="editorial">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -91,9 +91,74 @@
 [data-accent="gradient"] { --fill: var(--grad); }
 [data-accent="mix"]      { --fill: var(--violet); }
 
+/* ===== TEMAS CON PERSONALIDAD ===== */
+
+/* Medianoche (default — ya está en :root, esto es alias explícito) */
+[data-theme="medianoche"]{
+  --bg:#0d0d12; --surface-1:#141419; --surface-2:#1b1b22; --surface-3:#22222b;
+  --line:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.11);
+  --tx-1:#f3f3f7; --tx-2:#9a9aa6; --tx-3:#5d5d68;
+  --violet:#8b6dff; --violet-2:#c264e8; --violet-hi:#a48cff;
+  --violet-soft:rgba(139,109,255,.13); --violet-line:rgba(139,109,255,.40);
+  --grad:linear-gradient(135deg,#8b6dff 0%,#c264e8 100%);
+  color-scheme:dark;
+}
+
+/* Papel — crema cálido, tinta oscura, acento amarillo verdoso */
+[data-theme="papel"]{
+  --bg:#f5f0e8; --surface-1:#faf6ee; --surface-2:#ede8dd; --surface-3:#e0dbd0;
+  --line:rgba(0,0,0,.09); --line-2:rgba(0,0,0,.15);
+  --tx-1:#1a1814; --tx-2:#5a5648; --tx-3:#9a9488;
+  --violet:#6c7c2f; --violet-2:#8f9e40; --violet-hi:#526022;
+  --violet-soft:rgba(108,124,47,.12); --violet-line:rgba(108,124,47,.38);
+  --grad:linear-gradient(135deg,#6c7c2f 0%,#8f9e40 100%);
+  color-scheme:light;
+}
+
+/* Terminal — fondo negro puro, verde fósforo, todo mono */
+[data-theme="terminal"]{
+  --bg:#000; --surface-1:#0a0a0a; --surface-2:#111; --surface-3:#1a1a1a;
+  --line:rgba(0,255,70,.08); --line-2:rgba(0,255,70,.14);
+  --tx-1:#00ff46; --tx-2:#00c435; --tx-3:#007820;
+  --violet:#00ff46; --violet-2:#00c435; --violet-hi:#00ff46;
+  --violet-soft:rgba(0,255,70,.08); --violet-line:rgba(0,255,70,.30);
+  --grad:linear-gradient(135deg,#00ff46 0%,#00c435 100%);
+  --font-body:'JetBrains Mono'; --font-display:'JetBrains Mono';
+  color-scheme:dark;
+}
+
+/* Sakura — rosa pálido, acento frambuesa */
+[data-theme="sakura"]{
+  --bg:#1a0d14; --surface-1:#221018; --surface-2:#2b1520; --surface-3:#361b29;
+  --line:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.11);
+  --tx-1:#fce4ec; --tx-2:#c2849a; --tx-3:#7a4f61;
+  --violet:#e8639b; --violet-2:#d44a82; --violet-hi:#f28ab5;
+  --violet-soft:rgba(232,99,155,.13); --violet-line:rgba(232,99,155,.38);
+  --grad:linear-gradient(135deg,#e8639b 0%,#d44a82 100%);
+  color-scheme:dark;
+}
+
+/* Oceano — azul profundo, acento cian */
+[data-theme="oceano"]{
+  --bg:#040d1a; --surface-1:#091424; --surface-2:#0f1d30; --surface-3:#16273e;
+  --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+  --tx-1:#e4f0ff; --tx-2:#7aa8d0; --tx-3:#3f6a8e;
+  --violet:#29b6f6; --violet-2:#0288d1; --violet-hi:#4fc3f7;
+  --violet-soft:rgba(41,182,246,.13); --violet-line:rgba(41,182,246,.38);
+  --grad:linear-gradient(135deg,#29b6f6 0%,#0288d1 100%);
+  color-scheme:dark;
+}
+
 *{ box-sizing:border-box; margin:0; padding:0; }
-html,body{ height:100%; }
+html{
+  height:100%;
+  /* Evita que iOS amplíe el texto al rotar */
+  -webkit-text-size-adjust:100%;
+  /* Sin highlight azul en tap */
+  -webkit-tap-highlight-color:transparent;
+}
 body{
+  height:100%;
   background:var(--bg);
   color:var(--tx-1);
   font-family:var(--font-body), system-ui, sans-serif;
@@ -103,6 +168,30 @@ body{
   text-rendering:optimizeLegibility;
   font-variant-numeric:tabular-nums;
   font-feature-settings:"tnum";
+  /* Sin rebote blanco en overscroll */
+  overscroll-behavior:none;
+}
+/* El contenido de la app no se selecciona accidentalmente */
+.app{ user-select:none; }
+/* Pero sí en inputs y contenido editable */
+input,textarea,[contenteditable]{ user-select:text; }
+/* Evitar auto-zoom de iOS al enfocar inputs */
+input,select,textarea{ font-size:16px; }
+/* Áreas de toque mínimas en dispositivos táctiles */
+@media(pointer:coarse){
+  .btn,.nav-item,[role=button],.tab-bar button{ min-height:44px; }
+}
+/* Safe areas para el header en notch */
+.header{ padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+/* View Transitions — fade + slide sutil entre secciones */
+@media(prefers-reduced-motion:no-preference){
+  ::view-transition-old(root){ animation:vt-slide-out 200ms ease both; }
+  ::view-transition-new(root){ animation:vt-slide-in  200ms ease both; }
+  @keyframes vt-slide-out{ to{ opacity:0; transform:translateY(6px); } }
+  @keyframes vt-slide-in { from{ opacity:0; transform:translateY(-6px); } }
+}
+@media(prefers-reduced-motion:reduce){
+  ::view-transition-old(root),::view-transition-new(root){ animation:none; }
 }
 .tnum{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
 #root{ height:100%; }
@@ -250,6 +339,9 @@ body{
 .sidebar:not(.expanded) .nav-item.active::before{ left:0; }
 .sidebar-foot{ padding:8px 12px 14px; display:flex; flex-direction:column; gap:3px; }
 .nav-sep{ height:1px; background:var(--line); margin:7px 6px; }
+/* ítems del subgrupo Vida: indentados y más chicos */
+.nav-sub{ height:38px; font-size:12.5px; padding-left:22px; }
+.sidebar:not(.expanded) .nav-sub{ padding-left:0; justify-content:center; }
 .collapse-btn{
   display:flex; align-items:center; justify-content:center;
   width:34px; height:34px; border-radius:9px; cursor:pointer; margin:0 0 5px auto;
@@ -826,6 +918,54 @@ a{ color:inherit; text-decoration:none; }
 }
 
 /* ============================================================
+   TAB BAR — solo visible en mobile (montado condicionalmente)
+   ============================================================ */
+.tab-bar{
+  /* El JS ya lo monta solo en mobile — pero aseguramos que no aparezca en desktop */
+  display:none;
+}
+@media(max-width:768px){
+  .tab-bar{ display:flex !important; }
+  /* Ocultar hamburguesa del header cuando hay tab bar */
+  .app-mobile .header-hamburger{ display:none !important; }
+  /* El sidebar no se monta en mobile — el espacio es todo del main */
+  .app-mobile .main{ padding-bottom:0; }
+}
+
+/* ============================================================
+   PRESS FEEDBACK UNIVERSAL
+   .pressable + componentes clave heredan el feedback
+   ============================================================ */
+.pressable,
+.btn,
+.icon-btn,
+.cbox,
+.tab-item,
+.swatch,
+.nav-item,
+.addbtn,
+.addmini,
+.seg button,
+.cfg-tab{
+  transition:transform .1s ease, opacity .1s ease;
+  cursor:pointer;
+}
+.pressable:active,
+.btn:active,
+.icon-btn:active,
+.cbox:active,
+.tab-item:active,
+.swatch:active,
+.nav-item:active,
+.addbtn:active,
+.addmini:active,
+.seg button:active,
+.cfg-tab:active{
+  transform:scale(.96);
+  opacity:.82;
+}
+
+/* ============================================================
    TAREAS — task-row (vista tabla mobile-first)
    ============================================================ */
 .task-row {
@@ -986,6 +1126,101 @@ a{ color:inherit; text-decoration:none; }
   .space-rail-mobile  { display: flex; }
   .space-mobile-header { display: flex; }
 }
+
+/* ============================================================
+   SISTEMA DE ANIMACIONES — motion.css integrado
+   Respeta prefers-reduced-motion y el toggle data-anim="off"
+   ============================================================ */
+
+/* --- Entrada en cascada para widgets y cards --- */
+@media(prefers-reduced-motion:no-preference){
+  [data-anim="on"] .stagger-in > *,
+  [data-anim="on"] .card,
+  [data-anim="on"] .task-row{
+    animation:fadeSlideUp 220ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  [data-anim="on"] .stagger-in > *:nth-child(1){ animation-delay:  0ms; }
+  [data-anim="on"] .stagger-in > *:nth-child(2){ animation-delay: 40ms; }
+  [data-anim="on"] .stagger-in > *:nth-child(3){ animation-delay: 80ms; }
+  [data-anim="on"] .stagger-in > *:nth-child(4){ animation-delay:120ms; }
+  [data-anim="on"] .stagger-in > *:nth-child(5){ animation-delay:160ms; }
+  [data-anim="on"] .stagger-in > *:nth-child(n+6){ animation-delay:200ms; }
+}
+@keyframes fadeSlideUp{
+  from{ opacity:0; transform:translateY(10px); }
+  to  { opacity:1; transform:none; }
+}
+
+/* --- Barras de progreso — crecen al montar --- */
+@media(prefers-reduced-motion:no-preference){
+  [data-anim="on"] .bar i{
+    animation:barGrow 600ms cubic-bezier(.2,.8,.2,1) both;
+    transform-origin:left center;
+  }
+}
+@keyframes barGrow{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+
+/* --- Completar tarea — check se dibuja + fila se desvanece --- */
+.task-done-anim{
+  animation:taskFade 500ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes taskFade{
+  0%  { opacity:1; max-height:60px; }
+  60% { opacity:.3; }
+  100%{ opacity:0; max-height:0; padding-top:0; padding-bottom:0; border:none; overflow:hidden; }
+}
+
+/* --- Checkbox SVG check animado --- */
+.cbox-check-path{
+  stroke-dasharray:18;
+  stroke-dashoffset:18;
+  transition:stroke-dashoffset .25s cubic-bezier(.2,.8,.2,1);
+}
+.cbox.done .cbox-check-path{ stroke-dashoffset:0; }
+
+/* --- Número contando (hook JS useCountUp lo activa) --- */
+.count-up{ tabular-nums; }
+
+/* --- Hover con vida en desktop (cards) --- */
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  [data-anim="on"] .card.hoverable:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 32px -12px rgba(0,0,0,.5);
+  }
+  [data-anim="on"] .nav-item:hover svg{
+    transform:scale(1.1);
+    transition:transform .15s ease;
+  }
+}
+
+/* --- Pomodoro: el countdown late cuando está corriendo --- */
+@media(prefers-reduced-motion:no-preference){
+  .pomo-running .pomo-display{
+    animation:pomoBeat 2s ease-in-out infinite;
+  }
+}
+@keyframes pomoBeat{
+  0%,100%{ transform:scale(1); }
+  50%     { transform:scale(1.012); }
+}
+
+/* --- Skeleton shimmer (mientras carga datos) --- */
+.skeleton{
+  background:linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size:200% 100%;
+  border-radius:6px;
+}
+@media(prefers-reduced-motion:no-preference){
+  .skeleton{ animation:shimmer 1.4s infinite; }
+}
+@keyframes shimmer{ to{ background-position:-200% 0; } }
+
+/* --- Level up confetti overlay (activado por JS con clase) --- */
+.levelup-anim{
+  position:fixed; inset:0; pointer-events:none; z-index:9999;
+  animation:levelupFade 2.2s ease forwards;
+}
+@keyframes levelupFade{ 0%{opacity:1;} 70%{opacity:1;} 100%{opacity:0;} }
 </style>
 </head>
 <body>

@@ -96,7 +96,13 @@ const Icon = ({ name, size = 20, ...rest }) => {
     pin: <><path d="M12 22v-7" /><path d="M8 4h8l-1 5 3 3H6l3-3-1-5Z" /></>,
     table: <><rect x="3" y="4.5" width="18" height="15" rx="2" /><path d="M3 10h18M3 15h18M9 4.5v15M15 4.5v15" /></>,
     sortAsc: <><path d="M7 17V5M3 9l4-4 4 4M14 8h7M14 13h5M14 18h3" /></>,
-    sortDesc: <><path d="M7 5v12M3 13l4 4 4-4M14 8h3M14 13h5M14 18h7" /></>
+    sortDesc: <><path d="M7 5v12M3 13l4 4 4-4M14 8h3M14 13h5M14 18h7" /></>,
+    timer: <><circle cx="12" cy="13" r="7" /><path d="M12 10v4l2.5 2M9 2h6M12 2v4" /></>,
+    chef: <><path d="M12 15v6M8 21h8M6 9a6 6 0 0 1 12 0c0 2.5-1.3 4.5-3 5.5H9C7.3 13.5 6 11.5 6 9Z" /><path d="M6 9H4M20 9h-2" /></>,
+    cash: <><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="3" /><path d="M6 6v1M18 6v1M6 17v1M18 17v1" /></>,
+    space: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3M3 12h2M19 12h2M12 3v2M12 19v2" /></>,
+    enter: <><path d="M15 4v6h-10M5 10 9 6M5 10 9 14" /></>,
+    home: <><path d="M3 11.5 12 4l9 7.5M5 10v10h5v-5h4v5h5V10" /></>
   };
   return <svg {...P}>{paths[name] || null}</svg>;
 };

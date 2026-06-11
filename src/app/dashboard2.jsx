@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, ALL_WIDGETS } from './store.jsx';
+import { Store, useStore, uid, toast, ALL_WIDGETS, getAllTasks } from './store.jsx';
 import { Btn, Chip, MonoLabel, Modal, Field } from './ui.jsx';
 import { WIDGET_COMP, greetingTime } from './dashboard.jsx';
 
@@ -115,7 +115,7 @@ const Dashboard = ({ variant, onNav, onConnect }) => {
       <div className="page-head">
         <div>
           <h1 className="h1" style={{ fontSize: 22 }}>Hola, <span style={{ color: "var(--violet-hi)" }}>{p.name}</span> <Icon name={greetingTime() === "noche" ? "moon" : "sun"} size={19} color="var(--violet-hi)" style={{ verticalAlign: "-3px" }} /></h1>
-          <div className="small" style={{ marginTop: 8, color: "var(--tx-2)" }}>{data.tasks.filter(t => !t.done).length} tareas activas · {Math.round(data.tasks.filter(t=>t.done).length / Math.max(1,data.tasks.length) * 100)}% del día · racha {data.streak}</div>
+          <div className="small" style={{ marginTop: 8, color: "var(--tx-2)" }}>{(() => { const all = getAllTasks(data); return `${all.filter(t=>!t.done).length} tareas activas · ${Math.round(all.filter(t=>t.done).length / Math.max(1,all.length) * 100)}% completadas · racha ${data.streak}`; })()}</div>
         </div>
         <div className="wrap-gap">
           {edit
