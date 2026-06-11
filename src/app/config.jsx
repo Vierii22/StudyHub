@@ -244,8 +244,8 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
             <ConfigRow label="Tema" sub="Cambia paleta, superficies y acento en conjunto">
               <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                 {[
-                  { id: "carbon",     label: "Carbón",     bg: "#0c0b09", accent: "#e8a33d" },
                   { id: "medianoche", label: "Medianoche", bg: "#0d0d12", accent: "#8b6dff" },
+                  { id: "carbon",     label: "Carbón",     bg: "#0c0b09", accent: "#e8a33d" },
                   { id: "papel",      label: "Papel",      bg: "#f5f0e8", accent: "#6c7c2f" },
                   { id: "terminal",   label: "Terminal",   bg: "#000",    accent: "#00ff46" },
                   { id: "sakura",     label: "Sakura",     bg: "#1a0d14", accent: "#e8639b" },
@@ -256,7 +256,7 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
                     title={t.label}
                     style={{
                       width: 40, height: 40, borderRadius: 10, cursor: "pointer",
-                      background: t.bg, border: `2.5px solid ${(theme.namedTheme || "carbon") === t.id ? t.accent : "transparent"}`,
+                      background: t.bg, border: `2.5px solid ${(theme.namedTheme || "medianoche") === t.id ? t.accent : "transparent"}`,
                       boxShadow: `inset 0 0 0 3px ${t.accent}55`,
                       transition: "border-color .15s",
                     }}

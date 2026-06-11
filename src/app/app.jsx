@@ -25,7 +25,7 @@ import { supabase } from '../supabase.js';
    APP ROOT — auth Supabase + router + tema + zoom + acento
    ============================================================ */
 const { useState, useEffect, useRef } = React;
-const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "carbon" };
+const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "medianoche" };
 const load = (k, f) => { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } };
 
 const ACCENTS = {
@@ -168,8 +168,8 @@ function App() {
   const [theme, setThemeState] = useState(() => {
     const t = load("sh_theme", DEFAULT_THEME);
     if (!localStorage.getItem("sh_layout_v2")) { t.variant = "editorial"; localStorage.setItem("sh_layout_v2", "1"); }
-    /* migración única al rediseño Carbón — se puede volver desde Config > Apariencia */
-    if (!localStorage.getItem("sh_theme_v3")) { t.namedTheme = "carbon"; localStorage.setItem("sh_theme_v3", "1"); }
+    /* migración v4: vuelta a Medianoche (el Carbón quedó como opción en Config) */
+    if (!localStorage.getItem("sh_theme_v4")) { t.namedTheme = "medianoche"; localStorage.setItem("sh_theme_v4", "1"); }
     return t;
   });
   const [openSubject, setOpenSubject] = useState(null);
@@ -255,7 +255,7 @@ function App() {
     r.setAttribute("data-font",       theme.font);
     r.setAttribute("data-accent",     theme.accent);
     r.setAttribute("data-variant",    theme.variant);
-    r.setAttribute("data-theme",      theme.namedTheme || "carbon");
+    r.setAttribute("data-theme",      theme.namedTheme || "medianoche");
     localStorage.setItem("sh_theme", JSON.stringify(theme));
   }, [theme]);
 
