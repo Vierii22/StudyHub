@@ -12,6 +12,43 @@ const COLORS = ["#8b6dff","#3ecf9a","#e8639b","#4ec5e8","#e8b04e","#f0764e","#6d
 const PRIO   = { alta: "#e8639b", media: "#e8b04e", baja: "#3ecf9a" };
 const STATUS = { pendiente: "Pendiente", progreso: "En progreso", lista: "Lista" };
 
+/* ── esquema de evaluación / notas del cuatrimestre ──────── */
+const DEFAULT_EVAL = { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "promedio", threshold: 7 }, promedioOn: true };
+const PASSING = 4; /* nota mínima para aprobar (escala 1-10) */
+
+/* nota promedio de lo cargado (parciales + coloquio + final configurados) */
+function subjectPromedio(s) {
+  const ev = s.eval || DEFAULT_EVAL, g = s.grades || {};
+  const keys = [...Array.from({ length: ev.parciales || 0 }, (_, i) => "p" + (i + 1)), ...(ev.coloquio ? ["coloquio"] : []), ...(ev.final ? ["final"] : [])];
+  const vals = keys.map(k => g[k]).filter(v => v != null && v !== "");
+  if (!vals.length) return null;
+  return Math.round((vals.reduce((a, b) => a + Number(b), 0) / vals.length) * 10) / 10;
+}
+
+/* estado derivado de la materia: cursando | regular | recuperar | aprobada | promocionada */
+function deriveEstado(s) {
+  if (s.promoManual) return "promocionada";
+  const ev = s.eval || DEFAULT_EVAL, g = s.grades || {};
+  const promo = ev.promo || {};
+  const parcialVals = Array.from({ length: ev.parciales || 0 }, (_, i) => g["p" + (i + 1)]).filter(v => v != null && v !== "").map(Number);
+  const allParciales = (ev.parciales || 0) > 0 && parcialVals.length === ev.parciales;
+  const anyFail = parcialVals.some(v => v < PASSING);
+
+  if (promo.on && promo.mode !== "manual" && allParciales && !anyFail) {
+    const thr = promo.threshold ?? 7;
+    const meets = promo.mode === "parciales"
+      ? parcialVals.every(v => v >= thr)
+      : (parcialVals.reduce((a, b) => a + b, 0) / parcialVals.length) >= thr;
+    if (meets) return "promocionada";
+  }
+
+  const finalVal = ev.final ? g.final : (ev.coloquio ? g.coloquio : null);
+  if (finalVal != null && finalVal !== "") return Number(finalVal) >= PASSING ? "aprobada" : "recuperar";
+  if (anyFail) return "recuperar";
+  if (allParciales) return "regular";
+  return "cursando";
+}
+
 /* SEED vacío — sólo estructura, sin datos de demo */
 const SEED = {
   profile: { name: "", initial: "", role: "uni", uni: "", career: "", year: "1", email: "", photo: null, hubby: false },
@@ -162,6 +199,9 @@ function applyMigrations(data) {
       photo: s.photo ?? null,
       profs: Array.isArray(s.profs) ? s.profs : (s.prof ? [s.prof] : []),
       files: Array.isArray(s.files) ? s.files : [],
+      eval: s.eval || { ...DEFAULT_EVAL },
+      grades: s.grades || {},
+      promoManual: s.promoManual || false,
     }));
   }
 
@@ -488,6 +528,7 @@ export {
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
   getStreak, getAllTasks,
+  DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,
 };

@@ -12,6 +12,7 @@ import { Tareas } from './tareas.jsx';
 import { Calendario } from './sections.jsx';
 import { ChatIA } from './sections2.jsx';
 import { Ocio } from './sections3.jsx';
+import { Notas } from './notas.jsx';
 import { ConfigSection } from './config.jsx';
 import { Landing } from './landing.jsx';
 import { Tutorial, TUTORIAL_KEY } from './tutorial.jsx';
@@ -97,15 +98,6 @@ class AppErrorBoundary extends React.Component {
       </div>
     );
   }
-}
-
-function NotasStub() {
-  return (
-    <div style={{ padding: "48px 24px", textAlign: "center" }}>
-      <div className="h2" style={{ marginBottom: 8 }}>Notas del cuatrimestre</div>
-      <div className="small" style={{ color: "var(--tx-2)" }}>En construcción — la rediseñamos en breve.</div>
-    </div>
-  );
 }
 
 function App() {
@@ -337,7 +329,7 @@ function App() {
       case "calendario": return <Calendario />;
       case "chat":       return <ChatIA />;
       case "ocio":       return <Ocio />;
-      case "notas":      return <NotasStub />;
+      case "notas":      return <Notas />;
       case "config":     return (
         <ConfigSection
           theme={theme}

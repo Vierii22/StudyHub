@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 
@@ -106,7 +106,7 @@ const SubjectModal = ({ subject, preset, onClose }) => {
     if (!f.name.trim()) return toast("Poné un nombre");
     set(s => {
       if (subject) Object.assign(s.subjects.find(x => x.id === subject.id), { ...f, prof: f.profs[0] || "" });
-      else s.subjects.push({ id: uid(), ...f, prof: f.profs[0] || "", pct: 0, board: null, boardMode: false, showDots: true, lists: f.lists || {} });
+      else s.subjects.push({ id: uid(), ...f, prof: f.profs[0] || "", pct: 0, board: null, boardMode: false, showDots: true, lists: f.lists || {}, eval: { ...DEFAULT_EVAL }, grades: {}, promoManual: false });
     });
     toast(subject ? "Materia actualizada" : "Materia creada");
     onClose();
