@@ -8,7 +8,7 @@ import { SupabaseStorage, DOMAIN_MAP } from '../storage.js';
    Todos los componentes escriben via Store.set(fn).
    La sincronización con la nube es transparente.
    ============================================================ */
-const COLORS = ["#8b6dff","#3ecf9a","#e8639b","#4ec5e8","#e8b04e","#f0764e","#6d8bff","#c264e8"];
+const COLORS = ["#D9551F","#C68A2E","#7E8A4F","#5F7470","#9C4A2E","#A98A5C"];
 const PRIO   = { alta: "#e8639b", media: "#e8b04e", baja: "#3ecf9a" };
 const STATUS = { pendiente: "Pendiente", progreso: "En progreso", lista: "Lista" };
 
@@ -202,6 +202,9 @@ function applyMigrations(data) {
       eval: s.eval || { ...DEFAULT_EVAL },
       grades: s.grades || {},
       promoManual: s.promoManual || false,
+      schedule: Array.isArray(s.schedule) ? s.schedule : [],
+      commission: s.commission ?? "",
+      year: s.year ?? "",
     }));
   }
 

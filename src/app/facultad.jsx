@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
 import { SmartList } from './widgets.jsx';
 
@@ -71,85 +71,148 @@ const SubjectFiles = ({ files = [], onChange, accent = "#8b6dff" }) => {
   );
 };
 
-/* ---------- editor de profesores (múltiples) ---------- */
-const ProfsEditor = ({ profs = [], onChange }) => {
+/* ---------- pieza reutilizable: caja cálida (nunca oscura) ---------- */
+const warmField = (active) => ({
+  width: "100%", background: "var(--field)", color: "var(--soft)",
+  border: "1.5px solid " + (active ? "var(--org)" : "var(--line)"),
+  borderRadius: 10, padding: "10px 13px", fontFamily: "var(--font-body)", fontSize: 13.5,
+});
+
+const SectionHead = ({ icon, label }) => (
+  <div className="row" style={{ gap: 9, marginBottom: 12 }}>
+    <span style={{ width: 26, height: 26, borderRadius: 8, background: "var(--org)", color: "#fff", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name={icon} size={14} /></span>
+    <span style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)" }}>{label}</span>
+  </div>
+);
+
+/* ---------- horarios por día (distintos horarios por día) ---------- */
+const DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+const ScheduleEditor = ({ rows = [], onChange }) => {
+  const upd = (i, patch) => onChange(rows.map((r, j) => j === i ? { ...r, ...patch } : r));
+  const add = () => onChange([...rows, { day: "lun", from: "18:00", to: "20:00" }]);
+  const remove = (i) => onChange(rows.filter((_, j) => j !== i));
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {rows.map((r, i) => (
+        <div key={i} className="row" style={{ gap: 8 }}>
+          <select value={r.day} onChange={e => upd(i, { day: e.target.value })} style={{ ...warmField(false), flex: "0 0 90px" }}>
+            {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <input type="time" value={r.from} onChange={e => upd(i, { from: e.target.value })} style={warmField(false)} />
+          <span style={{ color: "var(--tx-3)", flex: "0 0 auto" }}>—</span>
+          <input type="time" value={r.to} onChange={e => upd(i, { to: e.target.value })} style={warmField(false)} />
+          <span className="icon-btn" style={{ width: 32, height: 32, flex: "0 0 auto" }} onClick={() => remove(i)}><Icon name="trash" size={14} /></span>
+        </div>
+      ))}
+      <button type="button" className="btn-soft" style={{ justifyContent: "center" }} onClick={add}><Icon name="plus" size={14} />Agregar horario</button>
+    </div>
+  );
+};
+
+/* ---------- temario inicial (con tirador para ordenar) ---------- */
+const TemarioEditor = ({ items = [], onChange }) => {
   const [draft, setDraft] = React.useState("");
-  const addProf = () => { const v = draft.trim(); if (v) { onChange([...profs, v]); setDraft(""); } };
+  const add = () => { const t = draft.trim(); if (!t) return; onChange([...items, { id: uid(), t, resumido: false, estudiado: false, repasos: 0 }]); setDraft(""); };
+  const remove = (i) => onChange(items.filter((_, j) => j !== i));
+  const move = (i, dir) => { const j = i + dir; if (j < 0 || j >= items.length) return; const arr = [...items]; [arr[i], arr[j]] = [arr[j], arr[i]]; onChange(arr); };
   return (
     <div>
-      {profs.length > 0 && (
-        <div className="chiprow" style={{ marginBottom: 10 }}>
-          {profs.map((p, i) => (
-            <span key={i} className="chip" style={{ paddingRight: 6 }}>
-              <Icon name="user" size={12} />{p}
-              <span style={{ cursor: "pointer", color: "var(--tx-3)", display: "inline-flex" }} onClick={() => onChange(profs.filter((_, j) => j !== i))}><Icon name="x" size={13} /></span>
-            </span>
+      {items.length > 0 && (
+        <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+          {items.map((it, i) => (
+            <div key={it.id} className="row" style={{ gap: 8, alignItems: "center", background: "var(--field)", borderRadius: 9, padding: "8px 10px" }}>
+              <span style={{ color: "var(--tx-3)", flex: "0 0 auto", display: "flex" }}><Icon name="dots" size={14} /></span>
+              <span style={{ flex: 1, fontSize: 13.5, color: "var(--soft)" }}>{it.t}</span>
+              <span onClick={() => move(i, -1)} style={{ cursor: "pointer", color: "var(--tx-3)", display: "flex" }}><Icon name="chevL" size={13} style={{ transform: "rotate(90deg)" }} /></span>
+              <span onClick={() => move(i, 1)} style={{ cursor: "pointer", color: "var(--tx-3)", display: "flex" }}><Icon name="chevL" size={13} style={{ transform: "rotate(-90deg)" }} /></span>
+              <span onClick={() => remove(i)} style={{ cursor: "pointer", color: "var(--tx-3)", display: "flex" }}><Icon name="x" size={14} /></span>
+            </div>
           ))}
         </div>
       )}
-      <form className="row" style={{ gap: 8 }} onSubmit={e => { e.preventDefault(); addProf(); }}>
-        <input className="input" value={draft} onChange={e => setDraft(e.target.value)} placeholder="Agregar profesor/a y enter…" />
-        <Btn variant="secondary" icon="plus" style={{ flex: "0 0 auto" }}></Btn>
+      <form className="row" style={{ gap: 8 }} onSubmit={e => { e.preventDefault(); add(); }}>
+        <input style={warmField(false)} value={draft} onChange={e => setDraft(e.target.value)} placeholder="Agregar tema y enter…" />
+        <span className="icon-btn" style={{ width: 38, height: 38, flex: "0 0 auto" }} onClick={add}><Icon name="plus" size={16} /></span>
       </form>
     </div>
   );
 };
 
-/* ---------- Modal nueva/editar materia ---------- */
+/* ---------- Modal nueva/editar materia (DESIGN.md punto 7) ---------- */
 const SubjectModal = ({ subject, preset, onClose }) => {
   const [, set] = useStore();
   const [f, setF] = React.useState(subject
-    ? { profs: subject.prof && !subject.profs ? [subject.prof] : (subject.profs || []), files: [], photo: null, ...subject }
-    : { name: "", profs: [], next: "", link: "", color: COLORS[0], photo: null, files: [], notes: "", lists: {}, ...(preset || {}) });
+    ? { files: [], schedule: [], ...subject }
+    : { name: "", year: "", commission: "", link: "", color: COLORS[0], files: [], schedule: [], lists: {}, ...(preset || {}) });
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
+  const upList = (k, v) => setF(x => ({ ...x, lists: { ...(x.lists || {}), [k]: v } }));
   const save = () => {
     if (!f.name.trim()) return toast("Poné un nombre");
     set(s => {
-      if (subject) Object.assign(s.subjects.find(x => x.id === subject.id), { ...f, prof: f.profs[0] || "" });
-      else s.subjects.push({ id: uid(), ...f, prof: f.profs[0] || "", pct: 0, board: null, boardMode: false, showDots: true, lists: f.lists || {}, eval: { ...DEFAULT_EVAL }, grades: {}, promoManual: false });
+      if (subject) Object.assign(s.subjects.find(x => x.id === subject.id), f);
+      else s.subjects.push({ id: uid(), ...f, pct: 0, board: null, boardMode: false, showDots: true, lists: f.lists || {}, eval: { ...DEFAULT_EVAL }, grades: {}, promoManual: false });
     });
     toast(subject ? "Materia actualizada" : "Materia creada");
     onClose();
   };
-  const uploadPhoto = (e) => { const file = e.target.files[0]; if (file) { const r = new FileReader(); r.onload = () => up("photo", r.result); r.readAsDataURL(file); } };
   return (
     <Modal title={subject ? "Editar materia" : "Nueva materia"} icon="book" onClose={onClose} wide
-      footer={<><span className="link" style={{ color: "var(--tx-3)" }} onClick={onClose}>Cancelar</span><Btn variant="primary" onClick={save}>Guardar materia</Btn></>}>
-      <div style={{ display: "grid", gap: 16, maxHeight: "64vh", overflowY: "auto", paddingRight: 4 }}>
-        {/* foto de portada */}
+      footer={<><span className="link" style={{ color: "var(--tx-3)" }} onClick={onClose}>Cancelar</span>
+        <button className="btnC-crear" onClick={save}><span className="btnC-chip"><Icon name="plus" size={13} /></span>{subject ? "Guardar cambios" : "Crear materia"}</button></>}>
+      <div style={{ display: "grid", gap: 22, maxHeight: "64vh", overflowY: "auto", paddingRight: 4 }}>
+
         <div>
-          <div className="mono" style={{ marginBottom: 9 }}>Foto de la materia</div>
-          <label style={{ display: "block", position: "relative", height: 124, borderRadius: "var(--r-lg)", overflow: "hidden", cursor: "pointer", border: "1px solid var(--line-2)", background: f.photo ? `url(${f.photo}) center/cover` : `linear-gradient(135deg, ${f.color}, ${f.color}aa)` }}>
-            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", background: "rgba(0,0,0,.32)", color: "#fff" }}>
-              <div style={{ textAlign: "center" }}><Icon name="camera" size={22} /><div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 5 }}>{f.photo ? "Cambiar foto" : "Subir foto de portada"}</div></div>
+          <SectionHead icon="book" label="Datos" />
+          <div style={{ display: "grid", gap: 12 }}>
+            <label>
+              <div className="mono" style={{ marginBottom: 6, fontSize: 10 }}>NOMBRE *</div>
+              <input style={warmField(true)} value={f.name} onChange={e => up("name", e.target.value)} placeholder="Ej: Álgebra" autoFocus />
+            </label>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <label>
+                <div className="mono" style={{ marginBottom: 6, fontSize: 10 }}>AÑO</div>
+                <input style={warmField(false)} value={f.year} onChange={e => up("year", e.target.value)} placeholder="1°, 2°…" />
+              </label>
+              <label>
+                <div className="mono" style={{ marginBottom: 6, fontSize: 10 }}>PRÓXIMO EVENTO</div>
+                <input style={warmField(false)} value={f.next || ""} onChange={e => up("next", e.target.value)} placeholder="Parcial · lun 18hs" />
+              </label>
             </div>
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={uploadPhoto} />
-          </label>
-          {f.photo && <span className="link" style={{ fontSize: 12, color: "#e8639b", display: "inline-block", marginTop: 8 }} onClick={() => up("photo", null)}>Quitar foto</span>}
-        </div>
-
-        <Field label="Nombre *"><input className="input" value={f.name} onChange={e => up("name", e.target.value)} placeholder="Ej: Álgebra" autoFocus /></Field>
-
-        <Field label="Profesores"><ProfsEditor profs={f.profs} onChange={v => up("profs", v)} /></Field>
-
-        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <Field label="Próximo evento"><input className="input" value={f.next} onChange={e => up("next", e.target.value)} placeholder="Parcial · lun 18hs" /></Field>
-          <Field label="Color de acento"><div className="swatches">{SWATCH_COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
-        </div>
-
-        <Field label="Link del aula virtual" hint="Classroom, campus, Moodle…">
-          <div className="row" style={{ gap: 0, position: "relative" }}>
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--tx-3)" }}><Icon name="link" size={16} /></span>
-            <input className="input" style={{ paddingLeft: 38 }} value={f.link} onChange={e => up("link", e.target.value)} placeholder="https://classroom.google.com/…" />
+            <div>
+              <div className="mono" style={{ marginBottom: 8, fontSize: 10 }}>COLOR DE LA MATERIA</div>
+              <div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div>
+            </div>
           </div>
-        </Field>
+        </div>
 
         <div>
-          <div className="row between" style={{ marginBottom: 9 }}><div className="mono">Material de la materia</div>{f.files.length > 0 && <span className="mono mono-accent" style={{ fontSize: 10 }}>{f.files.length} archivo{f.files.length !== 1 ? "s" : ""}</span>}</div>
+          <SectionHead icon="clock" label="Horarios" />
+          <ScheduleEditor rows={f.schedule} onChange={v => up("schedule", v)} />
+        </div>
+
+        <div>
+          <SectionHead icon="layers" label="Comisión y aula virtual" />
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <label>
+              <div className="mono" style={{ marginBottom: 6, fontSize: 10 }}>COMISIÓN</div>
+              <input style={warmField(false)} value={f.commission} onChange={e => up("commission", e.target.value)} placeholder="Ej: Comisión 4" />
+            </label>
+            <label>
+              <div className="mono" style={{ marginBottom: 6, fontSize: 10 }}>AULA VIRTUAL</div>
+              <input style={warmField(false)} value={f.link} onChange={e => up("link", e.target.value)} placeholder="https://classroom.google.com/…" />
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <SectionHead icon="list" label="Temario" />
+          <TemarioEditor items={f.lists?.temas || []} onChange={v => upList("temas", v)} />
+        </div>
+
+        <div>
+          <div className="row between" style={{ marginBottom: 9 }}><div className="mono" style={{ fontSize: 10 }}>ARCHIVOS</div>{f.files.length > 0 && <span className="mono mono-accent" style={{ fontSize: 10 }}>{f.files.length} archivo{f.files.length !== 1 ? "s" : ""}</span>}</div>
           <SubjectFiles files={f.files} onChange={v => up("files", v)} accent={f.color} />
         </div>
-
-        <Field label="Notas personales"><textarea className="input" rows={3} value={f.notes || ""} onChange={e => up("notes", e.target.value)} placeholder="Apuntes rápidos…" /></Field>
       </div>
     </Modal>
   );
@@ -158,19 +221,23 @@ const SubjectModal = ({ subject, preset, onClose }) => {
 /* ---------- Card de materia (grid, editorial) ---------- */
 const SubjectGridCard = ({ s, idx, onOpen, onEdit, onDelete }) => {
   const num = String(idx + 1).padStart(2, "0");
-  const profLine = (s.profs && s.profs.length) ? s.profs.join(" · ") : (s.prof || "");
+  const estado = deriveEstado(s);
+  const terminada = estado === "aprobada" || estado === "promocionada";
+  const promedio = terminada ? subjectPromedio(s) : null;
   return (
-    <div className="subj-ed" onClick={onOpen}>
+    <div className={`subj-ed${terminada ? " subj-ed-done" : ""}`} onClick={onOpen}>
       <div className="row between" style={{ marginBottom: 11 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--org)" }}>{num}</span>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }}></span>
         </span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--org-deep)", background: "#F7E4D3", padding: "4px 11px", borderRadius: 20 }}>cursando</span>
+        {terminada
+          ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "#2f5e10", background: "var(--green-bg)", padding: "4px 11px", borderRadius: 20, display: "flex", alignItems: "center", gap: 5 }}><Icon name="check" size={12} />{promedio != null ? `${estado === "promocionada" ? "Promocionada" : "Aprobada"} · ${promedio}` : (estado === "promocionada" ? "Promocionada" : "Aprobada")}</span>
+          : <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--org-deep)", background: "#F7E4D3", padding: "4px 11px", borderRadius: 20 }}>cursando</span>}
       </div>
       <div style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-.5px", color: "var(--ink)", lineHeight: 1.08, marginBottom: 9 }}>{s.name}</div>
       <div style={{ fontSize: 13, color: "var(--tx-2)", fontWeight: 500, minHeight: 18 }}>
-        {s.next || "Sin eventos próximos"}{profLine ? " · " + profLine : ""}
+        {s.next || "Sin eventos próximos"}
       </div>
       <div className="row between" style={{ borderTop: "1px solid var(--line)", paddingTop: 13, marginTop: 15 }}>
         <div className="row" style={{ gap: 4 }}>
@@ -183,38 +250,9 @@ const SubjectGridCard = ({ s, idx, onOpen, onEdit, onDelete }) => {
   );
 };
 
-/* ---------- Plantillas de materia ---------- */
-const SUBJECT_TEMPLATES = [
-  { id: "exactas", icon: "target", label: "Exactas", desc: "Álgebra, Análisis, Física", color: "#8b6dff",
-    lists: { temas: [{ id: "x1", t: "Unidad 1", status: "pend" }, { id: "x2", t: "Unidad 2", status: "pend" }], fechas: [{ id: "x3", t: "Primer parcial", status: "pend", prio: "alta" }] } },
-  { id: "prog", icon: "layout", label: "Programación", desc: "Algoritmos, Laboratorio", color: "#4ec5e8",
-    lists: { tps: [{ id: "p1", t: "TP 1", status: "pend" }, { id: "p2", t: "TP 2", status: "pend" }], links: [{ id: "p3", t: "Repo de la cátedra", status: "pend" }] } },
-  { id: "human", icon: "book", label: "Humanidades", desc: "Filosofía, Historia, Derecho", color: "#e8b04e",
-    lists: { temas: [{ id: "h1", t: "Lectura obligatoria", status: "pend" }], notas: [{ id: "h2", t: "Resumen de la cátedra", status: "pend" }] } },
-  { id: "ciencias", icon: "idea", label: "Ciencias", desc: "Química, Biología, Med", color: "#3ecf9a",
-    lists: { tps: [{ id: "c1", t: "Práctica de lab 1", status: "pend" }], temas: [{ id: "c2", t: "Teoría unidad 1", status: "pend" }] } },
-  { id: "blank", icon: "plus", label: "En blanco", desc: "Empezá de cero", color: COLORS[0], lists: {} },
-];
-
-const TemplatePicker = ({ onClose, onPick }) => (
-  <Modal title="¿Qué tipo de materia es?" sub="Elegí una plantilla para arrancar con widgets cargados" icon="book" onClose={onClose} wide>
-    <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px,1fr))", gap: 12 }}>
-      {SUBJECT_TEMPLATES.map(t => (
-        <div key={t.id} className="pickcard" onClick={() => onPick(t)} style={{ padding: 20 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: t.color + "22", color: t.color, display: "grid", placeItems: "center", marginBottom: 14, border: "1px solid " + t.color + "55" }}><Icon name={t.icon} size={21} /></div>
-          <div style={{ fontWeight: 700, fontSize: 15.5 }}>{t.label}</div>
-          <div className="small" style={{ marginTop: 4, fontSize: 12.5 }}>{t.desc}</div>
-        </div>
-      ))}
-    </div>
-  </Modal>
-);
-
 const Facultad = ({ onOpenSubject }) => {
   const [data, set] = useStore();
   const [modal, setModal] = React.useState(null); // 'new' | subject
-  const [preset, setPreset] = React.useState(null);
-  const [picker, setPicker] = React.useState(false);
   return (
     <div className="page page-cozy">
       <PageHead title="Mis materias" meta={`${data.subjects.length} materias · cuatrimestre en curso`} />
@@ -222,18 +260,17 @@ const Facultad = ({ onOpenSubject }) => {
         {data.subjects.map((s, i) => (
           <SubjectGridCard key={s.id} s={s} idx={i}
             onOpen={() => onOpenSubject(s.id)}
-            onEdit={() => { setPreset(null); setModal(s); }}
+            onEdit={() => setModal(s)}
             onDelete={() => { set(st => st.subjects = st.subjects.filter(x => x.id !== s.id)); toast("Materia eliminada"); }} />
         ))}
-        <div className="subj-new" onClick={() => setPicker(true)}>
+        <div className="subj-new" onClick={() => setModal("new")}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--card)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--org)", boxShadow: "0 2px 0 #e0d5c3" }}><Icon name="plus" size={20} /></span>
           <span style={{ fontWeight: 600, fontSize: 14 }}>Nueva materia</span>
         </div>
       </div>
-      {picker && <TemplatePicker onClose={() => setPicker(false)} onPick={(tpl) => { setPreset({ color: tpl.color, lists: JSON.parse(JSON.stringify(tpl.lists || {})), notes: tpl.notes || "" }); setPicker(false); setModal("new"); }} />}
-      {modal && <SubjectModal subject={modal === "new" ? null : modal} preset={modal === "new" ? preset : null} onClose={() => { setModal(null); setPreset(null); }} />}
+      {modal && <SubjectModal subject={modal === "new" ? null : modal} onClose={() => setModal(null)} />}
     </div>
   );
 };
 
-export { Facultad, SubjectModal, TemplatePicker, SubjectFiles, ProfsEditor, downloadFile, fmtBytes, fileIcon };
+export { Facultad, SubjectModal, SubjectFiles, downloadFile, fmtBytes, fileIcon };
