@@ -68,7 +68,7 @@ const SEED = {
   shopping: [],
   finance:  { budget: 200000, expenses: [] },
   home: [],
-  ocio: [],
+  ocio: { pelis: [], series: [], juegos: [] },
   pomoLog: [],           /* [{ date:"YYYY-MM-DD", mins:number }] */
   dashWidgets: ["tareas","agenda","xp","racha","completas","ring","materias","horas"],
   dashSpans: {},
@@ -159,8 +159,33 @@ function applyMigrations(data) {
   if (!data.kitchen || !data.kitchen.heladera) data.kitchen = { ...SEED.kitchen };
   if (!Array.isArray(data.shopping)) data.shopping = [];
   if (!Array.isArray(data.home))     data.home     = [];
-  if (!Array.isArray(data.ocio))     data.ocio     = [];
   if (!data.finance)                 data.finance  = { ...SEED.finance };
+
+  /* migración de Ocio: array plano viejo {title,type,status,score,note} → {pelis,series,juegos} */
+  if (Array.isArray(data.ocio)) {
+    const buckets = { pelis: [], series: [], juegos: [] };
+    const STATUS_MAP = {
+      pelis:  { pendiente: "quiero_ver", progreso: "viendo",  completado: "visto" },
+      series: { pendiente: "quiero_ver", progreso: "viendo",  completado: "visto" },
+      juegos: { pendiente: "a_jugar",    progreso: "jugando", completado: "terminado" },
+    };
+    data.ocio.forEach(o => {
+      const bucket = o.type === "Juego" ? "juegos" : o.type === "Serie" ? "series" : "pelis";
+      buckets[bucket].push({
+        id: o.id || uid(), title: o.title || "", year: o.year || "", platform: o.platform || "",
+        status: STATUS_MAP[bucket][o.status] || (bucket === "juegos" ? "a_jugar" : "quiero_ver"),
+        rating: o.rating != null ? o.rating : Math.min(10, Math.round((o.score || 0) * 2)),
+        progress: o.progress || 0, hours: o.hours || 0, cover: o.cover || null,
+        notes: Array.isArray(o.notes) ? o.notes : (o.note ? [{ date: new Date().toISOString().slice(0, 10), tag: "General", text: o.note }] : []),
+      });
+    });
+    data.ocio = buckets;
+  }
+  if (!data.ocio || typeof data.ocio !== "object") data.ocio = { pelis: [], series: [], juegos: [] };
+  ["pelis", "series", "juegos"].forEach(k => {
+    data.ocio[k] = Array.isArray(data.ocio[k]) ? data.ocio[k] : [];
+    data.ocio[k].forEach(i => { i.rating = Math.max(0, Math.min(10, i.rating || 0)); });
+  });
 
   /* layout dashboard v2 (reset si viene de versión vieja) */
   if (data.dashV !== 2) {

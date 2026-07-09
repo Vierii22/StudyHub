@@ -110,9 +110,17 @@ CSS nuevo en `index.html`: `.auth-root/.auth-orbs/.auth-orb/.auth-card/.auth-log
 
 Probado en el navegador: Landing → Comenzar → Login (con error real de credenciales inválidas mostrando el estado de error ya cálido) → login exitoso con la cuenta real → Dashboard sin romperse. Onboarding no se pudo probar en vivo sin registrar una cuenta nueva real (dispara un email de confirmación de Supabase), pero reutiliza exactamente los mismos componentes/clases ya verificados en Login. `npm run build` sin errores ni warnings.
 
-## FASE 8 — Ocio (rehacer `Ocio` de `sections3.jsx` → `ocio.jsx`)
+## FASE 8 — Ocio ✅ HECHO (rehacer `Ocio` de `sections3.jsx` → `ocio.jsx`)
 Según DESIGN.md punto 9: sección "Ocio" con pestañas **Pelis / Series / Juegos** + filtro por estado. Puntaje numérico ★N/10. Pelis/series: quiero ver · viendo (barra %) · visto. **Juegos = LO MÁS IMPORTANTE**: a jugar · jugando · terminado, horas, y detalle con **"Mis anotaciones"** (diario fechado con tag Jugando/Al terminar). Datos: revisar shape actual de `data.ocio` y migrar suave a `{pelis:[], series:[], juegos:[]}` con `{id,title,year,platform,status,rating,progress,hours,cover,notes:[{date,tag,text}]}`.
 - **Carátulas por API** (aprobado): TMDB para pelis/series, RAWG para juegos. Necesita API keys → proxy serverless en `/api/` (como api/chat.js) para no exponerlas. PEDIR al usuario crear las cuentas/keys. Hasta entonces: placeholder de color cálido.
+
+**Implementado:** `ocio.jsx` reescrito entero. Pestañas Pelis/Series/Juegos (`TABS`) + fila de filtro por estado propio de cada tipo (`STATUS_META`: pelis/series = quiero_ver/viendo/visto; juegos = a_jugar/jugando/terminado, con color gris→naranja→verde). Tarjetas en grid con `Cover` placeholder (ícono cálido — carátulas reales quedan pendientes, el usuario eligió placeholder por ahora en vez de sacar las API keys de TMDB/RAWG ya), puntaje `★N/10`, barra de progreso solo en pelis/series "viendo", horas jugadas en juegos. Botón `+` con relieve escalón e ícono naranja sobre fondo `--ink` (pedido explícito del diseño). Modal de edición común a los 3 tipos + sección exclusiva de juegos **"Mis anotaciones"** (diario con tag Jugando/Al terminar, fechado, con borrar por entrada — se agregó el borrado porque no existía y hacía falta para poder limpiar datos de prueba).
+
+**Migración de datos** (`store.jsx`): `data.ocio` pasa de array plano `{title,type,status,score 0-5,note}` a `{pelis:[],series:[],juegos:[]}` con `rating` 0-10, clasificando por `type` viejo (Película/Serie→pelis o series, Juego→juegos) y por estado (pendiente/progreso/completado → el equivalente de cada balde). Además clampa `rating` a [0,10] en cada carga (se encontró un dato viejo con `score` fuera de rango 0-5 que daba un rating migrado de 16/10 — corregido).
+
+Probado en el navegador con los datos reales de la cuenta: "dsd" (Película, vieja) migró a Pelis/Quiero ver; "Elden Ring" (Juego, viejo) migró a Juegos/Jugando con ★10/10; se agregó y luego se borró una anotación de prueba para no dejar basura en los datos del usuario. `npm run build` sin errores ni warnings.
+
+**Pendiente real (no bloquea):** carátulas reales por API (TMDB/RAWG) — el usuario decidió posponerlo hasta tener las cuentas/keys; mientras tanto queda el placeholder cálido con ícono.
 
 ## FASE 9 — Hubby + animaciones + logo
 - Usuario genera los **PNG transparentes** de Hubby (una imagen por expresión, ~512px): `hubby-saluda hubby-festejo hubby-pensando hubby-vamos hubby-duerme hubby-idea ...` en `public/assets/hubby/`. Diseño confirmado: robotito crema, cara-pantalla negra con ojos/sonrisa naranja glow, antenitas, auriculares naranja, buzo negro con S naranja (imagen de referencia ya aprobada).

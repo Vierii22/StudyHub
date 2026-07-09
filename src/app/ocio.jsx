@@ -2,177 +2,210 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast } from './store.jsx';
-import { Btn, Chip, Modal, Field, PageHead, Empty, MonoLabel } from './ui.jsx';
+import { Modal, Field, Empty } from './ui.jsx';
 
 /* ============================================================
-   OCIO — pelis / series / juegos / libros
-   NOTA: implementación heredada, sólo con colores cálidos
-   aplicados. El rediseño completo (tabs Pelis/Series/Juegos,
-   puntaje ★/10, carátulas por API, diario de juegos) es la
-   Fase 8 del plan — todavía no se hizo.
+   OCIO — Pelis · Series · Juegos (DESIGN.md punto 9)
+   Puntaje numérico ★N/10, estados propios por tipo, juegos con
+   horas jugadas + "Mis anotaciones" (diario fechado).
+   Carátulas: placeholder cálido por ahora — TMDB/RAWG quedan
+   para cuando el usuario tenga las API keys (Fase 8, pendiente).
    ============================================================ */
 
-const OCIO_TYPES  = [["Todos","✨"],["Película","🎬"],["Serie","📺"],["Juego","🎮"],["Libro","📚"]];
-const OCIO_EMOJI  = { "Película": "🎬", "Serie": "📺", "Juego": "🎮", "Libro": "📚" };
-const OCIO_STATUS = { pendiente: ["Pendiente","var(--org)"], progreso: ["En curso","var(--soft)"], completado: ["Completado","var(--green)"] };
+const TABS = [
+  { id: "pelis",  label: "Pelis",  icon: "film" },
+  { id: "series", label: "Series", icon: "tv" },
+  { id: "juegos", label: "Juegos", icon: "gamepad" },
+];
 
-/* Etiqueta de "completado" varía según tipo */
-const statusLabel = (st, type) => {
-  if (st !== "completado") return OCIO_STATUS[st]?.[0] || st;
-  if (type === "Juego") return "Jugado";
-  if (type === "Libro") return "Leído";
-  return "Visto";
+const STATUS_META = {
+  pelis:  { quiero_ver: { label: "Quiero ver", color: "var(--tx-2)", bg: "var(--off)" }, viendo: { label: "Viendo", color: "var(--org-deep)", bg: "#F7E4D3" }, visto: { label: "Visto", color: "#2f5e10", bg: "var(--green-bg)" } },
+  series: { quiero_ver: { label: "Quiero ver", color: "var(--tx-2)", bg: "var(--off)" }, viendo: { label: "Viendo", color: "var(--org-deep)", bg: "#F7E4D3" }, visto: { label: "Visto", color: "#2f5e10", bg: "var(--green-bg)" } },
+  juegos: { a_jugar: { label: "A jugar", color: "var(--tx-2)", bg: "var(--off)" }, jugando: { label: "Jugando", color: "var(--org-deep)", bg: "#F7E4D3" }, terminado: { label: "Terminado", color: "#2f5e10", bg: "var(--green-bg)" } },
 };
 
-/* Estrellas 1-5 */
-const StarRating = ({ value, onChange, size = 18 }) => (
-  <div className="row" style={{ gap: 1, flexShrink: 0 }}>
-    {[1,2,3,4,5].map(n => (
-      <span key={n}
-        style={{ fontSize: size, cursor: onChange ? "pointer" : "default", color: n <= value ? "var(--org)" : "var(--line-2)", lineHeight: 1, transition: "color .1s", userSelect: "none" }}
-        onClick={() => onChange?.(n === value ? 0 : n)}>★</span>
-    ))}
+const NOTE_TAGS = ["Jugando", "Al terminar"];
+
+/* ---------- tarjeta con carátula placeholder ---------- */
+const Cover = ({ title, icon }) => (
+  <div style={{
+    width: "100%", aspectRatio: "2/3", borderRadius: 12, background: "var(--field)",
+    display: "grid", placeItems: "center", color: "var(--soft)", overflow: "hidden",
+  }}>
+    <Icon name={icon} size={30} />
   </div>
 );
 
-const OcioModal = ({ item, onClose }) => {
-  const [, set] = useStore();
-  const [f, setF] = React.useState(() => item
-    ? { title: item.title, type: item.type || "Película", status: item.status || "pendiente", score: Math.min(5, item.score || 0), note: item.note || "" }
-    : { title: "", type: "Película", status: "pendiente", score: 0, note: "" });
+/* ---------- tarjeta de ítem (grid) ---------- */
+const ItemCard = ({ item, kind, onClick }) => {
+  const meta = STATUS_META[kind][item.status];
+  return (
+    <div onClick={onClick} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 9 }}>
+      <Cover title={item.title} icon={kind === "juegos" ? "gamepad" : kind === "series" ? "tv" : "film"} />
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25, color: "var(--tx-1)" }}>{item.title}</div>
+        {(item.year || item.platform) && <div className="small" style={{ fontSize: 11, marginTop: 2 }}>{[item.year, item.platform].filter(Boolean).join(" · ")}</div>}
+      </div>
+      <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: meta.color, background: meta.bg, padding: "3px 9px", borderRadius: 20 }}>{meta.label}</span>
+        {item.rating > 0 && <span className="mono" style={{ fontSize: 10.5, color: "var(--org-deep)" }}>★ {item.rating}/10</span>}
+      </div>
+      {kind !== "juegos" && item.status === "viendo" && (
+        <div className="bar" style={{ height: 5 }}><i style={{ width: `${item.progress || 0}%` }}></i></div>
+      )}
+      {kind === "juegos" && item.hours > 0 && (
+        <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)" }}>{item.hours}h jugadas</div>
+      )}
+    </div>
+  );
+};
+
+/* ---------- modal de edición ---------- */
+const ItemModal = ({ item, kind, onClose, onSave, onDelete }) => {
+  const [f, setF] = React.useState(item || { title: "", year: "", platform: "", status: kind === "juegos" ? "a_jugar" : "quiero_ver", rating: 0, progress: 0, hours: 0, notes: [] });
+  const [noteText, setNoteText] = React.useState("");
+  const [noteTag, setNoteTag] = React.useState(NOTE_TAGS[0]);
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
-  const emoji = OCIO_EMOJI[f.type] || "✨";
+  const statuses = Object.keys(STATUS_META[kind]);
+
+  const addNote = () => {
+    if (!noteText.trim()) return;
+    up("notes", [{ date: new Date().toISOString().slice(0, 10), tag: noteTag, text: noteText.trim() }, ...(f.notes || [])]);
+    setNoteText("");
+  };
+
   const save = () => {
     if (!f.title.trim()) return toast("Poné un título");
-    set(s => {
-      if (item) Object.assign(s.ocio.find(o => o.id === item.id), { ...f, emoji });
-      else s.ocio.push({ id: uid(), ...f, emoji });
-    });
-    toast("Guardado");
-    onClose();
+    onSave({ ...f, id: f.id || uid() });
   };
+
   return (
-    <Modal title={item ? "Editar" : "Agregar"} icon="sparkles" onClose={onClose}
-      footer={<><span className="link" style={{ color: item ? "var(--org-deep)" : "var(--tx-3)" }}
-        onClick={() => { if (item) { set(s => s.ocio = s.ocio.filter(o => o.id !== item.id)); toast("Eliminado"); } onClose(); }}>
-        {item ? "Eliminar" : "Cancelar"}</span><Btn variant="primary" onClick={save}>Guardar</Btn></>}>
+    <Modal title={item ? "Editar" : "Agregar"} icon={kind === "juegos" ? "gamepad" : kind === "series" ? "tv" : "film"} onClose={onClose} wide={kind === "juegos"}
+      footer={<><span className="link" style={{ color: item ? "var(--org-deep)" : "var(--tx-3)" }} onClick={() => { if (item) onDelete(f.id); else onClose(); }}>{item ? "Eliminar" : "Cancelar"}</span><button className="btn btn-primary" onClick={save}>Guardar</button></>}>
       <div style={{ display: "grid", gap: 14 }}>
-        <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
-          <span style={{ fontSize: 38, lineHeight: 1, flexShrink: 0, paddingBottom: 2 }}>{emoji}</span>
-          <div style={{ flex: 1 }}><Field label="Título *"><input className="input" value={f.title} onChange={e => up("title", e.target.value)} autoFocus /></Field></div>
+        <Field label="Título *"><input className="input" value={f.title} onChange={e => up("title", e.target.value)} autoFocus /></Field>
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <Field label="Año"><input className="input" value={f.year} onChange={e => up("year", e.target.value)} placeholder="2024" /></Field>
+          <Field label={kind === "juegos" ? "Plataforma" : "Dónde"}><input className="input" value={f.platform} onChange={e => up("platform", e.target.value)} placeholder={kind === "juegos" ? "PC, PS5…" : "Netflix, cine…"} /></Field>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <Field label="Tipo"><select className="input" style={{ width: "100%" }} value={f.type} onChange={e => up("type", e.target.value)}>
-            {OCIO_TYPES.slice(1).map(([t, e]) => <option key={t} value={t}>{e} {t}</option>)}
-          </select></Field>
-          <Field label="Estado"><select className="input" style={{ width: "100%" }} value={f.status} onChange={e => up("status", e.target.value)}>
-            {Object.keys(OCIO_STATUS).map(k => <option key={k} value={k}>{statusLabel(k, f.type)}</option>)}
-          </select></Field>
+        <Field label="Estado">
+          <div className="seg" style={{ display: "flex", width: "100%" }}>
+            {statuses.map(s => <button key={s} className={f.status === s ? "on" : ""} style={{ flex: 1 }} onClick={() => up("status", s)}>{STATUS_META[kind][s].label}</button>)}
+          </div>
+        </Field>
+        <div className="grid" style={{ gridTemplateColumns: kind === "juegos" ? "1fr 1fr" : "1fr 1fr" }}>
+          <Field label="Puntaje" hint="sobre 10">
+            <input className="input" type="number" min="0" max="10" step="0.5" value={f.rating} onChange={e => up("rating", Number(e.target.value))} />
+          </Field>
+          {kind === "juegos"
+            ? <Field label="Horas jugadas"><input className="input" type="number" min="0" step="0.5" value={f.hours} onChange={e => up("hours", Number(e.target.value))} /></Field>
+            : (f.status === "viendo" && <Field label="Progreso" hint="%"><input className="input" type="number" min="0" max="100" value={f.progress} onChange={e => up("progress", Number(e.target.value))} /></Field>)}
         </div>
-        <Field label="Puntuación"><div style={{ paddingTop: 6 }}><StarRating value={f.score} onChange={v => up("score", v)} size={26} /></div></Field>
-        <Field label="Nota"><input className="input" value={f.note} onChange={e => up("note", e.target.value)} placeholder="Breve comentario…" /></Field>
+
+        {kind === "juegos" && (
+          <Field label="Mis anotaciones" hint="diario mientras jugás o al terminar">
+            <div style={{ display: "grid", gap: 10 }}>
+              <div className="row" style={{ gap: 8 }}>
+                <select className="input" style={{ width: 140, flex: "0 0 auto" }} value={noteTag} onChange={e => setNoteTag(e.target.value)}>
+                  {NOTE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <input className="input" value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="¿Qué te pareció hasta ahora?" onKeyDown={e => e.key === "Enter" && addNote()} />
+                <button className="btn btn-secondary" style={{ flex: "0 0 auto" }} onClick={addNote}><Icon name="plus" size={15} /></button>
+              </div>
+              {(f.notes || []).length === 0
+                ? <div className="small" style={{ color: "var(--tx-3)" }}>Sin anotaciones todavía.</div>
+                : (
+                  <div style={{ display: "grid", gap: 8, maxHeight: 220, overflowY: "auto" }}>
+                    {f.notes.map((n, i) => (
+                      <div key={i} style={{ background: "var(--field)", borderRadius: 10, padding: "10px 12px" }}>
+                        <div className="row between" style={{ marginBottom: 4 }}>
+                          <span className="mono" style={{ fontSize: 9.5, color: "var(--org-deep)" }}>{n.tag.toUpperCase()}</span>
+                          <div className="row" style={{ gap: 8 }}>
+                            <span className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)" }}>{n.date}</span>
+                            <span style={{ cursor: "pointer", color: "var(--tx-3)" }} onClick={() => up("notes", f.notes.filter((_, j) => j !== i))}><Icon name="x" size={11} /></span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--tx-1)" }}>{n.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
+          </Field>
+        )}
       </div>
     </Modal>
   );
 };
 
+/* ---------- pantalla principal ---------- */
 const Ocio = () => {
   const [data, set] = useStore();
-  const [filter, setFilter] = React.useState("Todos");
-  const [modal,  setModal]  = React.useState(null);
-  const [view,   setView]   = React.useState("cards");
-  const items = data.ocio.filter(o => filter === "Todos" || o.type === filter);
-  const count = (st) => data.ocio.filter(o => o.status === st).length;
+  const [tab, setTab] = React.useState("pelis");
+  const [statusFilter, setStatusFilter] = React.useState("todos");
+  const [modal, setModal] = React.useState(null);
+
+  const items = data.ocio[tab] || [];
+  const statuses = Object.keys(STATUS_META[tab]);
+  const visible = statusFilter === "todos" ? items : items.filter(i => i.status === statusFilter);
+
+  const saveItem = (item) => {
+    set(s => {
+      const list = s.ocio[tab];
+      const idx = list.findIndex(x => x.id === item.id);
+      if (idx >= 0) list[idx] = item; else list.push(item);
+    });
+    toast("Guardado");
+    setModal(null);
+  };
+  const deleteItem = (id) => {
+    set(s => { s.ocio[tab] = s.ocio[tab].filter(x => x.id !== id); });
+    toast("Eliminado");
+    setModal(null);
+  };
+
   return (
     <div className="page page-wide">
-      <PageHead title="Pelis" meta={`${data.ocio.length} ${data.ocio.length === 1 ? "entrada" : "entradas"} · ${count("completado")} completados · ${count("pendiente")} pendientes`}>
-        <div className="seg">
-          <button className={view === "tabla" ? "on" : ""} onClick={() => setView("tabla")}>Tabla</button>
-          <button className={view === "cards" ? "on" : ""} onClick={() => setView("cards")}>Cards</button>
+      <div className="row between" style={{ marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div className="h2">Ocio</div>
+          <div className="small" style={{ marginTop: 4 }}>{items.length} {items.length === 1 ? "entrada" : "entradas"}</div>
         </div>
-        <Btn variant="primary" icon="plus" onClick={() => setModal("new")}>Agregar</Btn>
-      </PageHead>
+        <div className="icon-btn" style={{ width: 40, height: 40, background: "var(--ink)", color: "#fff", boxShadow: "0 3px 0 var(--ink-2)" }} title="Agregar" onClick={() => setModal("new")}>
+          <Icon name="plus" size={18} color="var(--org)" />
+        </div>
+      </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 22 }}>
-        {Object.keys(OCIO_STATUS).map(st => (
-          <div key={st} className="card" style={{ padding: "16px 20px" }}>
-            <MonoLabel>{OCIO_STATUS[st][0]}</MonoLabel>
-            <div className="stat" style={{ fontSize: 40, marginTop: 8, color: OCIO_STATUS[st][1] }}>{count(st)}</div>
-          </div>
+      <div className="row" style={{ gap: 8, marginBottom: 14 }}>
+        {TABS.map(t => (
+          <button key={t.id} className={`tab${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setStatusFilter("todos"); }}>
+            <Icon name={t.icon} size={14} /> {t.label}
+          </button>
         ))}
       </div>
 
-      {/* Filtros por tipo */}
-      <div className="tabs" style={{ marginBottom: 16 }}>
-        {OCIO_TYPES.map(([t, e]) => <button key={t} className={`tab${filter === t ? " on" : ""}`} onClick={() => setFilter(t)}>{e} {t}</button>)}
+      <div className="row" style={{ gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        <button className={`tab${statusFilter === "todos" ? " on" : ""}`} onClick={() => setStatusFilter("todos")}>Todos</button>
+        {statuses.map(s => <button key={s} className={`tab${statusFilter === s ? " on" : ""}`} onClick={() => setStatusFilter(s)}>{STATUS_META[tab][s].label}</button>)}
       </div>
 
-      {items.length === 0
-        ? <Empty icon="sparkles" title="Sin entradas" sub="Agregá algo al catálogo." />
-        : view === "tabla"
-          ? (
-            /* ── TABLA ── */
-            <div className="card card-flush">
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                    {[["", 44], ["Título", null], ["Estado", 120], ["Nota", null], ["Puntuación", 130], ["", 44]].map(([h, w], i) => (
-                      <th key={i} style={{ padding: "11px 16px", textAlign: "left", fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--tx-3)", fontWeight: 500, letterSpacing: ".08em", textTransform: "uppercase", width: w || undefined }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map(o => (
-                    <tr key={o.id} className="hoverable" style={{ borderBottom: "1px solid var(--line)", cursor: "pointer" }} onClick={() => setModal(o)}>
-                      <td style={{ padding: "12px 16px", fontSize: 22, textAlign: "center", lineHeight: 1 }}>{o.emoji || OCIO_EMOJI[o.type] || "✨"}</td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <div style={{ fontWeight: 600, fontSize: 14.5 }}>{o.title}</div>
-                        <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>{o.type}</div>
-                      </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <span className="chip" style={{ fontSize: 9.5, color: OCIO_STATUS[o.status]?.[1], borderColor: (OCIO_STATUS[o.status]?.[1] || "") + "55" }}>
-                          {statusLabel(o.status, o.type)}
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <span style={{ fontSize: 13, color: o.note ? "var(--tx-2)" : "var(--tx-3)", fontStyle: o.note ? "normal" : "italic" }}>{o.note || "—"}</span>
-                      </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <StarRating value={Math.min(5, o.score || 0)} size={14} />
-                      </td>
-                      <td style={{ padding: "12px 16px" }} onClick={e => e.stopPropagation()}>
-                        <span style={{ cursor: "pointer", color: "var(--tx-3)" }}
-                          onClick={() => { set(s => s.ocio = s.ocio.filter(x => x.id !== o.id)); toast("Eliminado"); }}>
-                          <Icon name="x" size={13} />
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* ── CARDS ── */
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))", gap: 14 }}>
-              {items.map(o => (
-                <div key={o.id} className="card hoverable" style={{ cursor: "pointer" }} onClick={() => setModal(o)}>
-                  <div className="row between" style={{ marginBottom: 14 }}>
-                    <span style={{ fontSize: 30 }}>{o.emoji || OCIO_EMOJI[o.type] || "✨"}</span>
-                    <span className="chip" style={{ fontSize: 9.5, color: OCIO_STATUS[o.status]?.[1], borderColor: (OCIO_STATUS[o.status]?.[1] || "") + "55" }}>
-                      {statusLabel(o.status, o.type)}
-                    </span>
-                  </div>
-                  <div className="h3">{o.title}</div>
-                  <div className="mono" style={{ marginTop: 6 }}>{o.type}</div>
-                  {o.note && <div className="small" style={{ marginTop: 10 }}>{o.note}</div>}
-                  {(o.score || 0) > 0 && <div style={{ marginTop: 14 }}><StarRating value={Math.min(5, o.score || 0)} size={16} /></div>}
-                </div>
-              ))}
-            </div>
-          )}
+      {visible.length === 0
+        ? <Empty icon={TABS.find(t => t.id === tab).icon} title="Sin entradas" sub="Agregá algo con el botón de arriba." />
+        : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 18 }}>
+            {visible.map(item => <ItemCard key={item.id} item={item} kind={tab} onClick={() => setModal(item)} />)}
+          </div>
+        )}
 
-      {modal && <OcioModal item={modal === "new" ? null : modal} onClose={() => setModal(null)} />}
+      {modal && (
+        <ItemModal
+          item={modal === "new" ? null : modal}
+          kind={tab}
+          onClose={() => setModal(null)}
+          onSave={saveItem}
+          onDelete={deleteItem}
+        />
+      )}
     </div>
   );
 };
