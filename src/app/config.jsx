@@ -89,7 +89,6 @@ const InstallPWA = () => {
 
 const ROLES_CONFIG = [
   { id: "uni",  label: "Universidad",  emoji: "🎓" },
-  { id: "sec",  label: "Secundaria",   emoji: "🏫" },
   { id: "work", label: "Trabajo",      emoji: "💼" },
 ];
 
@@ -265,14 +264,12 @@ const ConfigSection = ({ onLogout, initialTab }) => {
               </Field>
             ) : (
               <>
-                <Field label={p.role === "sec" ? "Escuela" : "Facultad / Universidad"}>
+                <Field label="Facultad / Universidad">
                   <input className="input" value={p.uni || ""} onChange={e => upProfile("uni", e.target.value)} />
                 </Field>
-                {p.role !== "sec" && (
-                  <Field label="Carrera">
-                    <input className="input" value={p.career || ""} onChange={e => upProfile("career", e.target.value)} />
-                  </Field>
-                )}
+                <Field label="Carrera">
+                  <input className="input" value={p.career || ""} onChange={e => upProfile("career", e.target.value)} />
+                </Field>
               </>
             )}
           </div>}

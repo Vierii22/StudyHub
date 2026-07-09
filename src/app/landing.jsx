@@ -6,14 +6,12 @@ import React from 'react';
    ============================================================ */
 
 const BLOBS = [
-  { x: 18, y: 22, size: 480, color: '#8b6dff', opacity: 0.28, depth: 0.06, delay: 0 },
-  { x: 72, y: 65, size: 420, color: '#c264e8', opacity: 0.22, depth: 0.04, delay: 1.2 },
-  { x: 50, y: 10, size: 350, color: '#4ec5e8', opacity: 0.15, depth: 0.08, delay: 0.6 },
-  { x: 80, y: 30, size: 300, color: '#8b6dff', opacity: 0.18, depth: 0.05, delay: 2 },
-  { x: 10, y: 75, size: 360, color: '#c264e8', opacity: 0.16, depth: 0.07, delay: 0.3 },
-  { x: 60, y: 85, size: 280, color: '#6d8bff', opacity: 0.12, depth: 0.03, delay: 1.8 },
-  { x: 35, y: 50, size: 200, color: '#a48cff', opacity: 0.20, depth: 0.09, delay: 0.9 },
-  { x: 88, y: 80, size: 250, color: '#8b6dff', opacity: 0.14, depth: 0.05, delay: 1.5 },
+  { x: 18, y: 22, size: 480, color: '#D9551F', opacity: 0.14, depth: 0.06, delay: 0 },
+  { x: 72, y: 65, size: 420, color: '#F4A94E', opacity: 0.16, depth: 0.04, delay: 1.2 },
+  { x: 50, y: 10, size: 350, color: '#C9B896', opacity: 0.14, depth: 0.08, delay: 0.6 },
+  { x: 80, y: 30, size: 300, color: '#D9551F', opacity: 0.10, depth: 0.05, delay: 2 },
+  { x: 10, y: 75, size: 360, color: '#F4A94E', opacity: 0.12, depth: 0.07, delay: 0.3 },
+  { x: 60, y: 85, size: 280, color: '#C9B896', opacity: 0.10, depth: 0.03, delay: 1.8 },
 ];
 
 function Landing({ onStart }) {
@@ -96,16 +94,15 @@ function Landing({ onStart }) {
       {/* contenido central */}
       <div className="landing-center">
         <div className="landing-logo-wrap">
-          <img src="assets/logo.png" alt="StudyHub" className="landing-logo" />
-          <div className="landing-glow" />
+          <div className="landing-logo"><span className="dot" /></div>
         </div>
 
         <h1 className="landing-title">
-          Study<span className="landing-accent">Hub</span>
+          study<span className="landing-accent">hub</span><span className="landing-dot">.</span>
         </h1>
         <p className="landing-sub">
-          Tu centro de estudio universitario.<br />
-          Tareas, materias, pomodoro y más — todo en un lugar.
+          Tu centro de estudio para la facultad.<br />
+          Materias, calendario, notas y tu asistente — todo en un lugar.
         </p>
 
         <button className="landing-btn" onClick={onStart} autoFocus>

@@ -96,11 +96,19 @@ Según DESIGN.md punto 7: una hoja, campos caja cálida `#F1EAD9` texto marrón 
 - **help-content.js** (APP_GUIDE del bot/chat): reescribir describiendo la app NUEVA (sin cocina/finanzas/etc.). Redeploy del edge function de Telegram lo hace el usuario a mano.
 - `landing.jsx` viejo (blobs violeta): reemplazar — ver Fase 7.
 
-## FASE 7 — Landing + Login + Onboarding (rediseño aprobado)
+## FASE 7 — Landing + Login + Onboarding ✅ HECHO
 - **Login**: mockup APROBADO — fondo piedra con **orbes cálidos con parallax al mouse** + tarjeta crema que se inclina apenas (los estilos están en el historial del chat/mockup `login_mockup`); campos cálidos, botón "Entrar" estilo C con chip naranja, link registro. Logo provisional (tile S) con comentario `/* LOGO: cambiar acá */`.
 - **Landing**: misma onda (piedra + naranja, wordmark studyhub., frase, botón Comenzar táctil, Hubby saludando cuando haya PNG).
 - **Onboarding**: re-vestir los 4 pasos (perfil, ocupación, detalles, Telegram/Hubby) con campos cálidos; evaluar simplificar (rol "secundaria" ya no se usa en Facultad).
 - **ConfirmEmail**: re-vestir.
+
+**Implementado:** `landing.jsx` reescrito — fondo piedra, blobs de parallax recoloreados a naranja/crema/tostado (antes violeta/cian/magenta), logo provisional tile marrón+punto naranja (`/* LOGO: cambiar acá */`), wordmark `studyhub.` real (study gris + hub marrón + punto naranja) en vez del "StudyHub" con gradiente violeta, botón "Comenzar" ahora es una píldora marrón oscura con relieve (escalón) e ícono naranja en vez del botón con gradiente violeta.
+
+`login.jsx` reescrito entero — `AuthOrbs` (mismo mecanismo de parallax que Landing, reutilizado para Login/Onboarding/ConfirmEmail vía `.auth-root`/`.auth-orbs`), `TiltCard` (la tarjeta se inclina levemente seteando `rotateX/rotateY` con `perspective()` según la posición del mouse relativa a la tarjeta — `onMouseMove`/`onMouseLeave`), tarjeta cálida (`.auth-card`, cream con sombra escalón, ya no `background:"#121217"`), botón "Entrar"/"Crear cuenta" = estilo C reutilizando `.btnC-crear`/`.btnC-chip` (las mismas clases del botón "Crear materia" de Facultad). Onboarding y ConfirmEmail reusan `AuthOrbs`/`.auth-card` y ya no tienen `TerminalCorners` ni fondo oscuro; `.pickcard`/`.ob-step-dot` no necesitaron cambio de color porque las vars `--violet*` que usan ya están aliasadas a naranja desde la Fase 0. **Se simplificó el rol "Secundaria"** (sacado de `ROLES` en el onboarding y de `ROLES_CONFIG` en `config.jsx`, y de los campos condicionales de Perfil) — quedan sólo Universidad/Trabajo, como sugería el plan.
+
+CSS nuevo en `index.html`: `.auth-root/.auth-orbs/.auth-orb/.auth-card/.auth-logo/.auth-wordmark`. Se reescribió también todo el bloque `.landing-*` (antes con hex violeta hardcodeados en `color`/`box-shadow`/`background`, ahora con la paleta cálida).
+
+Probado en el navegador: Landing → Comenzar → Login (con error real de credenciales inválidas mostrando el estado de error ya cálido) → login exitoso con la cuenta real → Dashboard sin romperse. Onboarding no se pudo probar en vivo sin registrar una cuenta nueva real (dispara un email de confirmación de Supabase), pero reutiliza exactamente los mismos componentes/clases ya verificados en Login. `npm run build` sin errores ni warnings.
 
 ## FASE 8 — Ocio (rehacer `Ocio` de `sections3.jsx` → `ocio.jsx`)
 Según DESIGN.md punto 9: sección "Ocio" con pestañas **Pelis / Series / Juegos** + filtro por estado. Puntaje numérico ★N/10. Pelis/series: quiero ver · viendo (barra %) · visto. **Juegos = LO MÁS IMPORTANTE**: a jugar · jugando · terminado, horas, y detalle con **"Mis anotaciones"** (diario fechado con tag Jugando/Al terminar). Datos: revisar shape actual de `data.ocio` y migrar suave a `{pelis:[], series:[], juegos:[]}` con `{id,title,year,platform,status,rating,progress,hours,cover,notes:[{date,tag,text}]}`.

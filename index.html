@@ -1206,7 +1206,7 @@ a{ color:inherit; text-decoration:none; }
    ============================================================ */
 .landing-root {
   position: fixed; inset: 0; z-index: 0;
-  background: #0d0d12;
+  background: var(--bg);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
@@ -1239,54 +1239,81 @@ a{ color:inherit; text-decoration:none; }
   to   { opacity: 1; transform: none; }
 }
 .landing-logo-wrap {
-  position: relative; width: 88px; height: 88px; margin-bottom: 28px;
+  position: relative; width: 84px; height: 84px; margin-bottom: 26px;
 }
-.landing-logo {
-  width: 88px; height: 88px; border-radius: 24px;
-  box-shadow: 0 20px 60px -18px rgba(139,109,255,.9);
+/* LOGO: cambiar acá cuando esté el ícono final */
+.landing-logo{
+  width: 84px; height: 84px; border-radius: 22px;
+  background: var(--ink); display: grid; place-items: center;
+  box-shadow: 0 5px 0 var(--ink-2), 0 24px 50px -18px rgba(58,51,43,.4);
   position: relative; z-index: 1;
 }
-.landing-glow {
-  position: absolute; inset: -20px;
-  background: radial-gradient(circle, rgba(139,109,255,.5) 0%, transparent 70%);
-  animation: glow-pulse 3s ease-in-out infinite alternate;
-}
-@keyframes glow-pulse {
-  from { opacity: .6; transform: scale(.9); }
-  to   { opacity: 1; transform: scale(1.1); }
-}
+.landing-logo .dot{ width: 16px; height: 16px; border-radius: 50%; background: var(--org); }
 .landing-title {
-  font-family: var(--font-display); font-weight: 800;
-  font-size: clamp(42px, 8vw, 72px);
-  letter-spacing: -.04em; line-height: 1;
-  color: #f3f3f7; margin: 0 0 16px;
+  font-family: var(--font-display); font-weight: 500;
+  font-size: clamp(38px, 7vw, 60px);
+  letter-spacing: -.03em; line-height: 1;
+  color: var(--soft); margin: 0 0 16px;
 }
 .landing-accent {
-  background: linear-gradient(135deg, #8b6dff 0%, #c264e8 100%);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
+  font-weight: 800; color: var(--ink);
 }
+.landing-dot{ color: var(--org); }
 .landing-sub {
-  font-family: var(--font-body); font-size: clamp(14px, 2.5vw, 17px);
-  color: rgba(243,243,247,.5); line-height: 1.65;
-  margin: 0 0 36px; max-width: 380px;
+  font-family: var(--font-body); font-size: clamp(14px, 2.5vw, 16.5px);
+  color: var(--tx-2); line-height: 1.65;
+  margin: 0 0 34px; max-width: 380px;
 }
 .landing-btn {
   display: inline-flex; align-items: center; gap: 9px;
-  background: linear-gradient(135deg, #8b6dff 0%, #c264e8 100%);
-  color: #fff; border: none; border-radius: 16px;
-  padding: 15px 30px; font-size: 16px; font-weight: 700;
+  background: var(--ink); color: #F4EDE0; border: none; border-radius: 14px;
+  padding: 15px 28px; font-size: 15.5px; font-weight: 700;
   font-family: var(--font-body); cursor: pointer;
-  box-shadow: 0 16px 44px -14px rgba(139,109,255,.8);
-  transition: transform .18s, box-shadow .18s;
-  margin-bottom: 16px;
+  box-shadow: 0 4px 0 var(--ink-2);
+  transition: transform .15s, box-shadow .15s;
+  margin-bottom: 18px;
 }
-.landing-btn:hover  { transform: translateY(-2px); box-shadow: 0 22px 50px -14px rgba(139,109,255,.9); }
-.landing-btn:active { transform: translateY(0); }
+.landing-btn svg{ color: var(--org); }
+.landing-btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 0 var(--ink-2); }
+.landing-btn:active { transform: translateY(1px); box-shadow: 0 2px 0 var(--ink-2); }
 .landing-hint {
-  font-family: var(--font-body); font-size: 12px;
-  color: rgba(243,243,247,.3); margin: 0;
+  font-family: var(--font-body); font-size: 12.5px;
+  color: var(--tx-3); margin: 0;
 }
+
+/* ===== LOGIN / ONBOARDING / CONFIRM EMAIL (Fase 7) ===== */
+.auth-root{
+  position: fixed; inset: 0; z-index: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+.auth-orbs{ position: absolute; inset: 0; pointer-events: none; }
+.auth-orb{
+  position: absolute; border-radius: 50%; filter: blur(85px);
+  will-change: transform; animation: blob-idle 9s ease-in-out infinite alternate;
+}
+.auth-card{
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: 0 3px 0 #e0d5c3, 0 40px 80px -30px rgba(58,51,43,.35);
+  transition: transform .15s ease;
+  will-change: transform;
+}
+/* LOGO: cambiar acá cuando esté el ícono final */
+.auth-logo{
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px;
+  background: var(--ink); display: grid; place-items: center;
+  box-shadow: 0 4px 0 var(--ink-2);
+}
+.auth-logo .dot{ width: 13px; height: 13px; border-radius: 50%; background: var(--org); }
+.auth-wordmark{
+  font-family: var(--font-display); font-size: 24px; line-height: 1;
+}
+.auth-wordmark .w1{ color: var(--soft); font-weight: 500; }
+.auth-wordmark .w2{ color: var(--ink); font-weight: 800; }
+.auth-wordmark .w3{ color: var(--org); font-weight: 800; }
 
 /* ── CONFIGURACIÓN NAV ───────────────────────────────────── */
 .cfg-nav { display: grid; gap: 3px; position: sticky; top: 0; }
