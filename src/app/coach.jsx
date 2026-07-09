@@ -142,7 +142,7 @@ function getNextAction(data) {
   };
 }
 
-const URGENCY_COLOR = { alta: "#e8639b", media: "var(--violet-hi)", baja: "#3ecf9a", cero: "#3ecf9a" };
+const URGENCY_COLOR = { alta: "var(--org-deep)", media: "var(--org)", baja: "var(--green)", cero: "var(--green)" };
 
 const CoachCard = ({ data, onNav }) => {
   const action = React.useMemo(() => getNextAction(data), [data]);
@@ -172,9 +172,9 @@ const PLACEHOLDERS = [
 ];
 
 const TYPE_STYLE = {
-  "create-task":     { label: "→ Tarea",    color: "#3ecf9a" },
-  "create-event":    { label: "→ Evento",   color: "#4ec5e8" },
-  "create-shopping": { label: "→ Compras",  color: "#e8b04e" },
+  "create-task":     { label: "→ Tarea",    color: "var(--green)" },
+  "create-event":    { label: "→ Evento",   color: "var(--org)" },
+  "create-shopping": { label: "→ Compras",  color: "var(--org-deep)" },
 };
 
 const CaptureBar = ({ data, set, onOpen }) => {
@@ -272,7 +272,7 @@ const TodayTimeline = ({ data, set, onNav }) => {
             {t.done && <Icon name="check" size={11} color="#fff" />}
           </div>
           <div className="tl-text" style={{ flex: 1, fontSize: 13.5, fontWeight: 500 }}>{t.t}</div>
-          <span className="mono" style={{ fontSize: 9.5, color: "#e8b04e" }}>HOY</span>
+          <span className="mono" style={{ fontSize: 9.5, color: "var(--org)" }}>HOY</span>
         </div>
       ))}
 
@@ -280,9 +280,9 @@ const TodayTimeline = ({ data, set, onNav }) => {
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
           {exams.slice(0, 3).map(e => (
             <div key={e.id} className="row" style={{ gap: 9, padding: "5px 0", cursor: "pointer" }} onClick={() => onNav("calendario")}>
-              <Icon name="fire" size={12} color={e.days <= 3 ? "#e8639b" : "#e8b04e"} />
+              <Icon name="fire" size={12} color={e.days <= 3 ? "var(--org-deep)" : "var(--org)"} />
               <span className="small" style={{ flex: 1, fontSize: 12 }}>{e.title}</span>
-              <span className="mono" style={{ fontSize: 10, color: e.days <= 3 ? "#e8639b" : "var(--tx-3)" }}>
+              <span className="mono" style={{ fontSize: 10, color: e.days <= 3 ? "var(--org-deep)" : "var(--tx-3)" }}>
                 {e.days}d
               </span>
             </div>

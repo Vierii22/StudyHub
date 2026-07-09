@@ -9,6 +9,10 @@ import { SupabaseStorage, DOMAIN_MAP } from '../storage.js';
    La sincronización con la nube es transparente.
    ============================================================ */
 const COLORS = ["#D9551F","#C68A2E","#7E8A4F","#5F7470","#9C4A2E","#A98A5C"];
+/* paleta vieja (violeta/cian/rosa/etc.) — se reemplaza siempre por la cálida, ver migración abajo */
+const OLD_COLORS = ["#8b6dff","#3ecf9a","#e8639b","#4ec5e8","#e8b04e","#f0764e","#6d8bff","#c264e8"];
+const hashColor = (str) => COLORS[[...String(str || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
+const warmColor = (color, seed) => (!color || OLD_COLORS.includes(color)) ? hashColor(seed) : color;
 const PRIO   = { alta: "#e8639b", media: "#e8b04e", baja: "#3ecf9a" };
 const STATUS = { pendiente: "Pendiente", progreso: "En progreso", lista: "Lista" };
 
@@ -196,6 +200,7 @@ function applyMigrations(data) {
   if (Array.isArray(data.subjects)) {
     data.subjects = data.subjects.map(s => ({
       ...s,
+      color: warmColor(s.color, s.id || s.name),
       photo: s.photo ?? null,
       profs: Array.isArray(s.profs) ? s.profs : (s.prof ? [s.prof] : []),
       files: Array.isArray(s.files) ? s.files : [],
@@ -216,6 +221,7 @@ function applyMigrations(data) {
       time: "",
       subjectId: null,
       ...e,
+      color: warmColor(e.color, e.id || e.title),
     }));
   }
 

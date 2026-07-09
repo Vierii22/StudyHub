@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, getAllTasks } from './store.jsx';
+import { useStore } from './store.jsx';
 import { greetingTime } from './dashboard.jsx';
 import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
 
@@ -15,7 +15,7 @@ const MENU = [
   { id: "dashboard",  label: "Hoy",       icon: "home" },
   { id: "calendario", label: "Calendario",icon: "calendar" },
   { id: "facultad",   label: "Facultad",  icon: "layers" },
-  { id: "notas",      label: "Notas",     icon: "note" },
+  { id: "notas",      label: "Progreso",  icon: "target" },
   { id: "ocio",       label: "Pelis",     icon: "film" },
 ];
 
@@ -42,8 +42,6 @@ const Dashboard = ({ onNav }) => {
   const gt = greetingTime();
   const saludo = gt === "mañana" ? "Buen día" : gt === "tarde" ? "Buenas tardes" : "Buenas noches";
   const fecha = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
-  const dayPct = Math.min(100, Math.max(0, ((now.getHours() * 60 + now.getMinutes()) - 420) / 1020 * 100));
-  const activas = getAllTasks(data).filter(t => !t.done).length;
 
   return (
     <div className="page page-cozy">
@@ -51,8 +49,6 @@ const Dashboard = ({ onNav }) => {
       <div className="hoy-hero">
         <div className="hoy-fecha">{fecha}</div>
         <h1 className="hoy-saludo">{saludo}, <em>{p.name}</em></h1>
-        <div className="hoy-sub">{activas} tareas activas · racha de {data.streak || 0} días</div>
-        <div className="hoy-dayline" title={`${Math.round(dayPct)}% del día`}><div style={{ width: `${dayPct}%` }}></div></div>
       </div>
 
       {/* ── CAPTURA UNIVERSAL ── */}

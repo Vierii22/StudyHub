@@ -277,7 +277,7 @@ const TOPNAV = [
   { id: "dashboard",  label: "Hoy" },
   { id: "calendario", label: "Calendario" },
   { id: "facultad",   label: "Facultad" },
-  { id: "notas",      label: "Notas" },
+  { id: "notas",      label: "Progreso" },
   { id: "ocio",       label: "Pelis" },
 ];
 const Header = ({ profile, onNav, section, onToggleSidebar, onOpenPalette }) => {
@@ -296,11 +296,6 @@ const Header = ({ profile, onNav, section, onToggleSidebar, onOpenPalette }) => 
         ))}
       </nav>
       <div className="tb-right">
-        <div className="tb-search" onClick={onOpenPalette} title="Buscar">
-          <Icon name="search" size={15} />
-          <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
-        </div>
-        <div className="icon-btn" onClick={() => onNav("chat")} title="Hubby"><Icon name="chat" size={17} /></div>
         <div className="tb-avatar" onClick={() => onNav("config")} title="Tu perfil">{initial}</div>
       </div>
     </header>
