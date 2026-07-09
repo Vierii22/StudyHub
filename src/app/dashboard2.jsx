@@ -2,8 +2,9 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { useStore } from './store.jsx';
-import { greetingTime } from './dashboard.jsx';
 import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
+
+const greetingTime = () => { const h = new Date().getHours(); return h < 6 ? "noche" : h < 13 ? "mañana" : h < 20 ? "tarde" : "noche"; };
 
 /* ============================================================
    DASHBOARD "HOY" — mockup confirmado (DESIGN.md pantalla 1)

@@ -3,19 +3,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Icon } from './icons.jsx';
 import { Store, useStore, toast, scaleToZoom, ToastHost } from './store.jsx';
-import { Sidebar, Header } from './ui.jsx';
+import { Header } from './ui.jsx';
 import { Login, Onboarding, ConfirmEmail } from './login.jsx';
 import { Dashboard } from './dashboard2.jsx';
 import { Facultad } from './facultad.jsx';
 import { SubjectView } from './facultad2.jsx';
 import { Tareas } from './tareas.jsx';
 import { Calendario } from './calendario.jsx';
-import { ChatIA } from './sections2.jsx';
-import { Ocio } from './sections3.jsx';
+import { ChatIA } from './chat.jsx';
+import { Ocio } from './ocio.jsx';
 import { Notas } from './notas.jsx';
 import { ConfigSection } from './config.jsx';
 import { Landing } from './landing.jsx';
-import { Tutorial, TUTORIAL_KEY } from './tutorial.jsx';
 import { FeedbackWidget } from './feedback.jsx';
 import { TabBar } from './tabbar.jsx';
 import { Palette } from './palette.jsx';
@@ -25,24 +24,13 @@ import { supabase } from '../supabase.js';
    APP ROOT — auth Supabase + router + tema + zoom + acento
    ============================================================ */
 const { useState, useEffect, useRef } = React;
-const DEFAULT_THEME = { font: "outfit-mono", accent: "gradient", variant: "editorial", namedTheme: "medianoche" };
-const load = (k, f) => { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } };
-
-const ACCENTS = {
-  violet: { v: "#8b6dff", v2: "#c264e8", hi: "#a48cff" },
-  blue:   { v: "#4ec5e8", v2: "#6d8bff", hi: "#7ed8f0" },
-  orange: { v: "#f0764e", v2: "#e8b04e", hi: "#f59b78" },
-  green:  { v: "#3ecf9a", v2: "#4ec5e8", hi: "#6fe0b6" },
-  red:    { v: "#e8639b", v2: "#c264e8", hi: "#f08bb6" },
-  indigo: { v: "#6d8bff", v2: "#8b6dff", hi: "#93a9ff" },
-};
 
 /* pantalla de carga mientras se verifica la sesión */
 function LoadingScreen() {
   return (
     <div style={{ height: "100%", display: "grid", placeItems: "center", background: "var(--bg)" }}>
       <div style={{ textAlign: "center" }}>
-        <img src="assets/logo.png" alt="StudyHub" style={{ width: 64, height: 64, borderRadius: 18, boxShadow: "0 16px 40px -14px rgba(139,109,255,.8)", marginBottom: 20 }} />
+        <img src="assets/logo.png" alt="StudyHub" style={{ width: 64, height: 64, borderRadius: 18, boxShadow: "0 16px 40px -14px rgba(217,85,31,.5)", marginBottom: 20 }} />
         <div className="mono" style={{ color: "var(--tx-3)", letterSpacing: ".2em" }}>CARGANDO…</div>
       </div>
     </div>
@@ -105,23 +93,12 @@ function App() {
   const [auth, setAuth]   = useState("loading");
   const [pendingEmail, setPendingEmail] = useState(""); // email pendiente de confirmación
   const authRef = useRef("loading"); // ref para leer auth dentro de callbacks sin stale closure
-  const [showTutorial, setShowTutorial] = useState(false);
   const [section, setSection] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return p.get("section") || "dashboard";
   });
-  const [theme, setThemeState] = useState(() => {
-    const t = load("sh_theme", DEFAULT_THEME);
-    if (!localStorage.getItem("sh_layout_v2")) { t.variant = "editorial"; localStorage.setItem("sh_layout_v2", "1"); }
-    /* migración v4: vuelta a Medianoche (el Carbón quedó como opción en Config) */
-    if (!localStorage.getItem("sh_theme_v4")) { t.namedTheme = "medianoche"; localStorage.setItem("sh_theme_v4", "1"); }
-    return t;
-  });
   const [openSubject, setOpenSubject] = useState(null);
   const [autoPlanner, setAutoPlanner] = useState(false);
-  const [morning, setMorning] = useState(false);
-  const [dashEditSignal, setDashEditSignal] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [data] = useStore();
 
@@ -195,88 +172,26 @@ function App() {
     };
   }, []);
 
-  /* ── tema ──────────────────────────────────────────── */
+  /* ── zoom de la interfaz (Configuración → Apariencia) ── */
   useEffect(() => {
-    const r = document.documentElement;
-    r.setAttribute("data-font",       theme.font);
-    r.setAttribute("data-accent",     theme.accent);
-    r.setAttribute("data-variant",    theme.variant);
-    r.setAttribute("data-theme",      theme.namedTheme || "medianoche");
-    localStorage.setItem("sh_theme", JSON.stringify(theme));
-  }, [theme]);
-
-  /* ── zoom + acento desde settings ─────────────────── */
-  useEffect(() => {
-    const r = document.documentElement.style;
-    r.setProperty("--ui-zoom", scaleToZoom(data.settings.uiScale));
-    const ACCENT_VARS = ["--violet", "--violet-2", "--violet-hi", "--grad", "--violet-soft", "--violet-line"];
-    /* Con el acento default ("violet") no pisamos nada: manda el tema con nombre.
-       Solo si el usuario eligió un swatch distinto, ese acento gana sobre el tema. */
-    if (!data.settings.accent || data.settings.accent === "violet") {
-      ACCENT_VARS.forEach(p => r.removeProperty(p));
-    } else {
-      const a = ACCENTS[data.settings.accent] || ACCENTS.violet;
-      r.setProperty("--violet",      a.v);
-      r.setProperty("--violet-2",    a.v2);
-      r.setProperty("--violet-hi",   a.hi);
-      r.setProperty("--grad",        `linear-gradient(135deg, ${a.v} 0%, ${a.v2} 100%)`);
-      r.setProperty("--violet-soft", a.v + "22");
-      r.setProperty("--violet-line", a.v + "66");
-    }
-  }, [data.settings.uiScale, data.settings.accent]);
+    document.documentElement.style.setProperty("--ui-zoom", scaleToZoom(data.settings.uiScale));
+  }, [data.settings.uiScale]);
 
   /* sección NO persistida — siempre arranca en dashboard al abrir la app */
 
-  /* ── tutorial (primera vez) ────────────────────────── */
-  useEffect(() => {
-    if (auth === "app" && !localStorage.getItem(TUTORIAL_KEY)) {
-      const t = setTimeout(() => setShowTutorial(true), 600);
-      return () => clearTimeout(t);
-    }
-  }, [auth]);
-
-  /* ── morning modal ─────────────────────────────────── */
-  /* No aparece el primer día de uso — solo desde el segundo día en adelante */
-  useEffect(() => {
-    if (auth === "app") {
-      const today    = new Date().toDateString();
-      const firstKey = "sh_app_first_date";
-      const firstDate = localStorage.getItem(firstKey);
-      if (!firstDate) {
-        // Primer login ever: registrar fecha, no mostrar modal hoy
-        localStorage.setItem(firstKey, today);
-        return;
-      }
-      if (firstDate === today) return; // todavía es el primer día
-      const key = "sh_morning_" + today;
-      if (new Date().getHours() >= 5 && !localStorage.getItem(key)) {
-        const t = setTimeout(() => {
-          setMorning(true);
-          localStorage.setItem(key, "1");
-        }, 800);
-        return () => clearTimeout(t);
-      }
-    }
-  }, [auth]);
-
-  const [configInitTab, setConfigInitTab] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   useEffect(() => {
     const upd = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", upd);
     return () => window.removeEventListener("resize", upd);
   }, []);
-  const setTheme  = (k, v) => setThemeState(t => ({ ...t, [k]: v }));
   const nav = (s) => {
     if (document.startViewTransition) {
-      document.startViewTransition(() => {
-        setOpenSubject(null); setSection(s); setSidebarOpen(false);
-      });
+      document.startViewTransition(() => { setOpenSubject(null); setSection(s); });
     } else {
-      setOpenSubject(null); setSection(s); setSidebarOpen(false);
+      setOpenSubject(null); setSection(s);
     }
   };
-  const navConfig = (tab)  => { setConfigInitTab(tab); nav("config"); };
   const openSubjectPlanner = (id) => { setSection("facultad"); setOpenSubject(id); setAutoPlanner(true); };
   const logout    = ()     => {
     const sb = supabase;
@@ -325,67 +240,35 @@ function App() {
     if (section === "facultad" && openSubject)
       return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} autoOpenPlanner={autoPlanner} onPlannerConsumed={() => setAutoPlanner(false)} />;
     switch (section) {
-      case "dashboard":  return <Dashboard key={dashEditSignal} variant={theme.variant} onNav={nav} onConnect={() => navConfig("integr")} />;
+      case "dashboard":  return <Dashboard onNav={nav} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
       case "calendario": return <Calendario onOpenSubjectPlanner={openSubjectPlanner} />;
       case "chat":       return <ChatIA />;
       case "ocio":       return <Ocio />;
       case "notas":      return <Notas />;
-      case "config":     return (
-        <ConfigSection
-          theme={theme}
-          setTheme={setTheme}
-          onEditDash={() => { setSection("dashboard"); setDashEditSignal(x => x + 1); toast('Tocá "Editar dashboard"'); }}
-          onLogout={logout}
-          onTutorial={() => { setShowTutorial(true); nav("dashboard"); }}
-          initialTab={configInitTab}
-          key={configInitTab || "config"}
-        />
-      );
-      default: return <Dashboard variant={theme.variant} onNav={nav} onConnect={() => nav("config")} />;
+      case "config":     return <ConfigSection onLogout={logout} />;
+      default: return <Dashboard onNav={nav} />;
     }
   };
 
   return (
-    <div className={`app${isMobile ? " app-mobile" : ""}`} data-anim="on">
-      {/* La navegación ahora es la barra de arriba (Header/topbar). Sidebar eliminado. */}
+    <div className={`app${isMobile ? " app-mobile" : ""}`}>
       <div className="main">
         <Header
           profile={data.profile}
           onNav={nav}
           section={section}
-          onToggleSidebar={() => setSidebarOpen(o => !o)}
-          onOpenPalette={() => setPaletteOpen(true)}
         />
         <div
-          className="scroll scroll-zoom"
+          className="scroll"
           key={section + (openSubject || "")}
-          style={{
-            backgroundImage: data.bgImages?.[section] ? `url(${data.bgImages[section]})` : "none",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundAttachment: "fixed",
-            paddingBottom: isMobile ? "80px" : undefined,
-          }}
+          style={{ paddingBottom: isMobile ? "80px" : undefined }}
         >
           {render()}
         </div>
       </div>
-      {showTutorial && (
-        <Tutorial
-          onDone={() => setShowTutorial(false)}
-          currentSection={section}
-          onNavigate={nav}
-        />
-      )}
-      {isMobile && (
-        <TabBar
-          active={section}
-          onNav={nav}
-          onCapture={() => nav("tareas")}
-        />
-      )}
+      {isMobile && <TabBar active={section} onNav={nav} />}
       {paletteOpen && <Palette onNav={nav} onClose={() => setPaletteOpen(false)} />}
       <FeedbackWidget section={section} />
       <ToastHost />

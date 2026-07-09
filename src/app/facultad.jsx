@@ -3,7 +3,6 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
-import { SmartList } from './widgets.jsx';
 
 /* ============================================================
    FACULTAD — grid de materias + vista interna (pizarrón / widgets)

@@ -12,7 +12,6 @@ const Icon = ({ name, size = 20, ...rest }) => {
     ...rest
   };
   const paths = {
-    home: <><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></>,
     layers: <><path d="M12 3 3 8l9 5 9-5-9-5Z" /><path d="m3 13 9 5 9-5" /></>,
     bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />,
     calendar: <><rect x="3" y="4.5" width="18" height="17" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,

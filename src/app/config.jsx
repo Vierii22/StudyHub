@@ -1,9 +1,8 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS, ALL_WIDGETS } from './store.jsx';
-import { TUTORIAL_KEY } from './tutorial.jsx';
-import { Btn, Chip, MonoLabel, PageHead, Field, Modal, Seg, Toggle, ProgressRing, TerminalCorners, BrandBanner, FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS, NAV } from './ui.jsx';
+import { Store, useStore, uid, toast } from './store.jsx';
+import { Btn, MonoLabel, PageHead, Field, Toggle } from './ui.jsx';
 import { supabase } from '../supabase.js';
 import { SupabaseStorage } from '../storage.js';
 
@@ -11,15 +10,8 @@ import { SupabaseStorage } from '../storage.js';
    CONFIGURACIÓN — sección de página completa
    Con auth Supabase real: Telegram, password, borrar datos
    ============================================================ */
-/* FONT_OPTS, ACCENT_OPTS, VARIANT_OPTS vienen de ui.jsx (carga antes en el bundle) */
 
-const ACCENT_SWATCHES = [
-  { id: "violet", c: "#8b6dff" }, { id: "blue", c: "#4ec5e8" }, { id: "orange", c: "#f0764e" },
-  { id: "green",  c: "#3ecf9a" }, { id: "red",  c: "#e8639b" }, { id: "indigo", c: "#6d8bff" },
-];
 const CONFIG_TABS = [
-  ["apariencia","Apariencia","palette"],
-  ["dashboard", "Dashboard",  "layout"],
   ["perfil",    "Perfil",     "user"  ],
   ["integr",    "Integraciones","robot"],
   ["cuenta",    "Cuenta",     "gear"  ],
@@ -58,7 +50,7 @@ const InstallPWA = () => {
 
   if (installed) return (
     <div className="card card-2" style={{ marginTop: 16, textAlign: "center", padding: "18px 22px" }}>
-      <div style={{ color: "#3ecf9a", marginBottom: 6 }}><Icon name="check" size={22} /></div>
+      <div style={{ color: "var(--green)", marginBottom: 6 }}><Icon name="check" size={22} /></div>
       <div style={{ fontWeight: 600, fontSize: 14 }}>StudyHub instalada</div>
       <div className="small" style={{ marginTop: 4 }}>Podés abrirla desde el escritorio o el dock de tu dispositivo.</div>
     </div>
@@ -101,9 +93,9 @@ const ROLES_CONFIG = [
   { id: "work", label: "Trabajo",      emoji: "💼" },
 ];
 
-const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, initialTab }) => {
+const ConfigSection = ({ onLogout, initialTab }) => {
   const [data, set] = useStore();
-  const [tab, setTab] = React.useState(initialTab || "apariencia");
+  const [tab, setTab] = React.useState(initialTab || "perfil");
 
   /* ── Cuenta ── */
   const [userEmail, setUserEmail] = React.useState(data.profile?.email || "");
@@ -117,8 +109,6 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
   const [tgLinked,  setTgLinked]  = React.useState(data.profile?.hubby || false);
 
   const p  = data.profile;
-  const st = data.settings;
-  const setSetting = (k, v) => set(s => s.settings[k] = v);
   const upProfile  = (k, v) => set(s => s.profile[k] = v);
 
   /* cargar email real de Supabase */
@@ -219,184 +209,13 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
             </div>
           ))}
           <div className="cfg-sep"></div>
-          <div className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: "#e8639b", whiteSpace: "nowrap" }} onClick={onLogout}>
+          <div className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: "var(--org-deep)", whiteSpace: "nowrap" }} onClick={onLogout}>
             <Icon name="logout" size={16} />Cerrar sesión
           </div>
         </div>
 
         {/* contenido */}
         <div className="card" style={{ minHeight: 420 }}>
-
-          {/* ── APARIENCIA ── */}
-          {tab === "apariencia" && <div className="fade-in">
-            <div className="h3" style={{ marginBottom: 6 }}>Tamaño de la interfaz</div>
-            <div className="small" style={{ marginBottom: 14 }}>Ajustá qué tan compacta o grande se ve toda la app.</div>
-            <div className="row" style={{ gap: 16, marginBottom: 8 }}>
-              <span className="mono" style={{ fontSize: 10 }}>Compacto</span>
-              <input type="range" min="1" max="100" value={st.uiScale} onChange={e => setSetting("uiScale", +e.target.value)} style={{ flex: 1, accentColor: "var(--violet)" }} />
-              <span className="mono" style={{ fontSize: 10 }}>Grande</span>
-              <span className="display" style={{ fontSize: 26, color: "var(--violet-hi)", width: 52, textAlign: "right" }}>{st.uiScale}</span>
-            </div>
-            <div className="divider" style={{ margin: "18px 0" }}></div>
-            <ConfigRow label="Color de acento" sub="Tono principal de la app">
-              <div className="swatches">{ACCENT_SWATCHES.map(s => <div key={s.id} className={`swatch${st.accent === s.id ? " sel" : ""}`} style={{ background: s.c }} title={s.id} onClick={() => setSetting("accent", s.id)} />)}</div>
-            </ConfigRow>
-            <ConfigRow label="Tema" sub="Cambia paleta, superficies y acento en conjunto">
-              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                {[
-                  { id: "medianoche", label: "Medianoche", bg: "#0d0d12", accent: "#8b6dff" },
-                  { id: "carbon",     label: "Carbón",     bg: "#0c0b09", accent: "#e8a33d" },
-                  { id: "papel",      label: "Papel",      bg: "#f5f0e8", accent: "#6c7c2f" },
-                  { id: "terminal",   label: "Terminal",   bg: "#000",    accent: "#00ff46" },
-                  { id: "sakura",     label: "Sakura",     bg: "#1a0d14", accent: "#e8639b" },
-                  { id: "oceano",     label: "Océano",     bg: "#040d1a", accent: "#29b6f6" },
-                ].map(t => (
-                  <div key={t.id}
-                    onClick={() => setTheme("namedTheme", t.id)}
-                    title={t.label}
-                    style={{
-                      width: 40, height: 40, borderRadius: 10, cursor: "pointer",
-                      background: t.bg, border: `2.5px solid ${(theme.namedTheme || "medianoche") === t.id ? t.accent : "transparent"}`,
-                      boxShadow: `inset 0 0 0 3px ${t.accent}55`,
-                      transition: "border-color .15s",
-                    }}
-                  />
-                ))}
-              </div>
-            </ConfigRow>
-            <ConfigRow label="Tipografía">
-              <Seg opts={FONT_OPTS} value={theme.font} onChange={v => setTheme("font", v)} />
-            </ConfigRow>
-            <ConfigRow label="Estilo de acento">
-              <Seg opts={ACCENT_OPTS} value={theme.accent} onChange={v => setTheme("accent", v)} />
-            </ConfigRow>
-            <ConfigRow label="Brillo de fondo" sub="Glow ambiental">
-              <Toggle on={st.glow} onChange={v => { setSetting("glow", v); const a = document.querySelector(".ambient"); if (a) a.style.opacity = v ? 1 : 0; }} />
-            </ConfigRow>
-            <ConfigRow label="Animaciones">
-              <Toggle on={st.anim} onChange={v => setSetting("anim", v)} />
-            </ConfigRow>
-            <ConfigRow label="Sonidos de interfaz">
-              <Toggle on={st.sounds} onChange={v => setSetting("sounds", v)} />
-            </ConfigRow>
-          </div>}
-
-          {/* ── DASHBOARD ── */}
-          {tab === "dashboard" && <div className="fade-in">
-            <div className="card card-2" style={{ marginBottom: 16 }}>
-              <div className="h3" style={{ marginBottom: 8 }}>Editor de widgets</div>
-              <div className="small" style={{ marginBottom: 16 }}>{data.dashWidgets.length} widgets activos de {Object.keys(ALL_WIDGETS).length} disponibles.</div>
-              <Btn variant="primary" icon="edit" onClick={onEditDash}>Abrir editor</Btn>
-            </div>
-            <ConfigRow label="Variante de dashboard" sub="Editorial · Grilla · Foco">
-              <Seg opts={VARIANT_OPTS} value={theme.variant} onChange={v => setTheme("variant", v)} />
-            </ConfigRow>
-
-            <div className="divider" style={{ margin: "18px 0" }}></div>
-            <div className="h3" style={{ marginBottom: 12 }}>Personalizar widgets</div>
-            <div className="small" style={{ marginBottom: 16 }}>Agrega color o fondo a widgets específicos.</div>
-            <div style={{ display: "grid", gap: 12 }}>
-              {Object.entries(ALL_WIDGETS).map(([key, widget]) => {
-                const config = data.widgetConfig?.dashboard?.[key] || {};
-                return (
-                  <div key={key} className="card card-2" style={{ padding: "12px 16px" }}>
-                    <div className="row between" style={{ gap: 12, alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{widget.label}</div>
-                      </div>
-                      <div className="row" style={{ gap: 8 }}>
-                        <Toggle on={config.colorOn || false} onChange={v => set(s => {
-                          if (!s.widgetConfig) s.widgetConfig = {};
-                          if (!s.widgetConfig.dashboard) s.widgetConfig.dashboard = {};
-                          s.widgetConfig.dashboard[key] = { ...config, colorOn: v };
-                        })} />
-                        <span className="small" style={{ fontSize: 12 }}>Color</span>
-                      </div>
-                    </div>
-                    {config.colorOn && (
-                      <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-                        {COLORS.map(c => (
-                          <div
-                            key={c}
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 6,
-                              background: c,
-                              cursor: "pointer",
-                              border: (config.color === c) ? "2px solid #fff" : "2px solid transparent",
-                            }}
-                            onClick={() => set(s => {
-                              if (!s.widgetConfig.dashboard[key]) s.widgetConfig.dashboard[key] = {};
-                              s.widgetConfig.dashboard[key].color = c;
-                            })}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="divider" style={{ margin: "18px 0" }}></div>
-            <div className="h3" style={{ marginBottom: 12 }}>Fondos por sección</div>
-            <div className="small" style={{ marginBottom: 16 }}>Agrega una imagen de fondo a cada sección.</div>
-            <div style={{ display: "grid", gap: 10 }}>
-              {["dashboard","facultad","tareas","calendario","misiones","diario","cocina","finanzas","casa","ocio"].map(sectionId => (
-                <div key={sectionId} style={{ display: "grid", gap: 8 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, textTransform: "capitalize" }}>{sectionId}</div>
-                  <label style={{ display: "grid", gap: 6, cursor: "pointer" }}>
-                    <div
-                      style={{
-                        width: "100%",
-                        height: 80,
-                        borderRadius: 8,
-                        border: "1.5px dashed var(--line)",
-                        backgroundImage: data.bgImages?.[sectionId] ? `url(${data.bgImages[sectionId]})` : "none",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 24,
-                        color: "var(--tx-3)",
-                      }}
-                    >
-                      {!data.bgImages?.[sectionId] && "📷"}
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = ev => {
-                            set(s => {
-                              if (!s.bgImages) s.bgImages = {};
-                              s.bgImages[sectionId] = ev.target.result;
-                            });
-                            toast("Fondo actualizado ✓");
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </label>
-                  {data.bgImages?.[sectionId] && (
-                    <Btn variant="secondary" size="sm" onClick={() => set(s => { s.bgImages[sectionId] = null; toast("Fondo removido"); })}>
-                      Quitar fondo
-                    </Btn>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <button className="addbtn" style={{ marginTop: 16, justifyContent: "center", color: "#e8639b" }} onClick={() => { set(s => { s.dashWidgets = ["tareas","agenda","xp","racha","completas","ring","materias","horas"]; s.dashSpans = {}; }); toast("Dashboard restaurado"); }}>
-              <Icon name="refresh" size={15} color="#e8639b" /> Restaurar dashboard por defecto
-            </button>
-          </div>}
 
           {/* ── PERFIL ── */}
           {tab === "perfil" && <div className="fade-in" style={{ display: "grid", gap: 14 }}>
@@ -465,7 +284,7 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
                 <div style={{ fontSize: 30 }}>🤖</div>
                 <div><div className="h3">Hubby</div><div className="mono" style={{ marginTop: 4 }}>Asistente de Telegram</div></div>
               </div>
-              <span className="chip" style={{ color: tgLinked ? "#3ecf9a" : "var(--tx-3)", borderColor: tgLinked ? "#3ecf9a55" : "var(--line-2)" }}>{tgLinked ? "Vinculado ✓" : "No vinculado"}</span>
+              <span className="chip" style={{ color: tgLinked ? "var(--green)" : "var(--tx-3)", borderColor: tgLinked ? "var(--green)55" : "var(--line-2)" }}>{tgLinked ? "Vinculado ✓" : "No vinculado"}</span>
             </div>
 
             <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
@@ -509,10 +328,10 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
             </div>
 
             <div style={{ marginTop: 20, display: "flex", gap: 18, flexWrap: "wrap" }}>
-              <span className="link" style={{ color: "var(--tx-3)", fontSize: 13 }} onClick={() => { set(s => { s.settings = { uiScale: 40, glow: true, anim: true, sounds: false, accent: "violet" }; }); toast("Preferencias restablecidas"); }}>
+              <span className="link" style={{ color: "var(--tx-3)", fontSize: 13 }} onClick={() => { set(s => { s.settings = { uiScale: 40 }; }); toast("Preferencias restablecidas"); }}>
                 Restablecer preferencias
               </span>
-              <span className="link" style={{ color: "#e8639b", fontSize: 13 }} onClick={deleteAllData}>
+              <span className="link" style={{ color: "var(--org-deep)", fontSize: 13 }} onClick={deleteAllData}>
                 🗑 Borrar todos mis datos
               </span>
             </div>
@@ -520,33 +339,25 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
 
           {/* ── ACERCA DE ── */}
           {tab === "acerca" && <div className="fade-in">
-            <BrandBanner size="lg">
-              <div style={{ fontSize: 14, color: "var(--tx-2)", marginTop: 16, maxWidth: 420, textWrap: "pretty" }}>
-                Tu facultad, tareas, finanzas, cocina, hogar y ocio — todo en un solo lugar, con tu asistente y tu pizarrón.
+            <div className="row" style={{ gap: 14, alignItems: "center" }}>
+              <span className="tb-logo"><span className="tb-dot" /></span>
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}><span style={{ color: "var(--soft)", fontWeight: 500 }}>study</span>hub<span style={{ color: "var(--org)" }}>.</span></div>
+                <div className="small" style={{ marginTop: 4, maxWidth: 420, textWrap: "pretty" }}>
+                  Tu facultad, calendario, notas y progreso — todo en un solo lugar, con tu asistente.
+                </div>
               </div>
-            </BrandBanner>
-            <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginTop: 18 }}>
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: "repeat(2,1fr)", marginTop: 18 }}>
               <div className="card card-2" style={{ textAlign: "center" }}><MonoLabel>Versión</MonoLabel><div className="h2" style={{ marginTop: 8 }}>2.0</div></div>
-              <div className="card card-2" style={{ textAlign: "center" }}><MonoLabel>Secciones</MonoLabel><div className="h2" style={{ marginTop: 8 }}>{typeof NAV !== "undefined" ? NAV.filter(n => !n.sep).length : "—"}</div></div>
               <div className="card card-2" style={{ textAlign: "center" }}><MonoLabel>Materias</MonoLabel><div className="h2" style={{ marginTop: 8 }}>{data.subjects.length}</div></div>
             </div>
 
             {/* Instalar como app */}
             <InstallPWA />
 
-            <div className="card card-2" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
-              <span style={{ width: 38, height: 38, borderRadius: 10, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}>
-                <Icon name="sparkles" size={18} />
-              </span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>Tour de la app</div>
-                <div className="small" style={{ marginTop: 3 }}>Volvé a ver el tutorial paso a paso.</div>
-              </div>
-              <Btn variant="secondary" onClick={() => { localStorage.removeItem(TUTORIAL_KEY); onTutorial?.(); }}>Ver tour</Btn>
-            </div>
-
             <div className="small" style={{ marginTop: 18, textAlign: "center", color: "var(--tx-3)" }}>
-              Hecho con 💜 para estudiantes · Tus datos se sincronizan en la nube.
+              Tus datos se sincronizan en la nube.
             </div>
           </div>}
         </div>
@@ -555,65 +366,4 @@ const ConfigSection = ({ theme, setTheme, onEditDash, onLogout, onTutorial, init
   );
 };
 
-/* ── DIARIO MATUTINO ─────────────────────────────────────── */
-const MorningModal = ({ onClose }) => {
-  const [, set]        = useStore();
-  const [energy, setEnergy] = React.useState(3);
-  const [sleep, setSleep]   = React.useState(7);
-  const [mood, setMood]     = React.useState("");
-  const moods        = ["😞","😐","🙂","😄","🤩"];
-  const energyLabels = ["Agotado","Bajo","Normal","Bien","Con pilas"];
-
-  const save = () => {
-    const isoDate = new Date().toISOString().slice(0, 10); /* YYYY-MM-DD */
-    set(s => {
-      if (!Array.isArray(s.morning)) s.morning = [];
-      /* Evitar duplicado del mismo día */
-      s.morning = s.morning.filter(m => (m.isoDate || "") !== isoDate);
-      s.morning.unshift({
-        isoDate,
-        date: new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" }),
-        energy, sleep: Number(sleep), mood: mood || "🙂",
-        wake: new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }),
-      });
-      if (s.morning.length > 30) s.morning = s.morning.slice(0, 30);
-    });
-    localStorage.setItem("sh_morning_" + new Date().toDateString(), "1");
-    toast("¡Buen día! ☀️");
-    onClose();
-  };
-
-  return (
-    <Modal title="¿Cómo empezás el día?" sub="Tu registro matutino" icon="sun" onClose={onClose} corners
-      footer={<><span className="link" style={{ color: "var(--tx-3)" }} onClick={() => { localStorage.setItem("sh_morning_" + new Date().toDateString(), "1"); onClose(); }}>Omitir</span><Btn variant="primary" onClick={save}>Guardar</Btn></>}>
-      <div style={{ display: "grid", gap: 20 }}>
-        <div>
-          <div className="mono" style={{ marginBottom: 12 }}>Energía</div>
-          <div className="row" style={{ gap: 8 }}>
-            {energyLabels.map((l, i) => (
-              <div key={i} onClick={() => setEnergy(i + 1)} style={{ flex: 1, textAlign: "center", padding: "11px 4px", borderRadius: 12, cursor: "pointer", border: "1px solid " + (energy === i + 1 ? "var(--violet)" : "var(--line)"), background: energy === i + 1 ? "var(--violet-soft)" : "var(--surface-2)" }}>
-                <div className="display" style={{ fontSize: 22, color: energy === i + 1 ? "var(--violet-hi)" : "var(--tx-2)" }}>{i + 1}</div>
-                <div style={{ fontSize: 10, color: "var(--tx-3)", marginTop: 4 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="mono" style={{ marginBottom: 12 }}>Horas de sueño</div>
-          <div className="row" style={{ gap: 14 }}>
-            <input type="range" min="0" max="12" value={sleep} onChange={e => setSleep(+e.target.value)} style={{ flex: 1, accentColor: "var(--violet)" }} />
-            <span className="display" style={{ fontSize: 26, color: "var(--violet-hi)", width: 56, textAlign: "right" }}>{sleep}h</span>
-          </div>
-        </div>
-        <div>
-          <div className="mono" style={{ marginBottom: 12 }}>Humor</div>
-          <div className="row" style={{ gap: 10 }}>
-            {moods.map(m => <div key={m} onClick={() => setMood(m)} style={{ flex: 1, textAlign: "center", fontSize: 28, padding: "9px 0", borderRadius: 12, cursor: "pointer", border: "1px solid " + (mood === m ? "var(--violet)" : "var(--line)"), background: mood === m ? "var(--violet-soft)" : "transparent" }}>{m}</div>)}
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
-export { ConfigSection, MorningModal, ConfigRow };
+export { ConfigSection, ConfigRow };

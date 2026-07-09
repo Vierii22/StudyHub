@@ -4,7 +4,82 @@ import { Icon } from './icons.jsx';
 import { useStore, uid, toast, COLORS } from './store.jsx';
 import { Btn, Modal, Field, Seg } from './ui.jsx';
 import { cleanupPastEvents, syncEventToTask } from './syncEngine.js';
-import { parseDate, todayISO, evDay, evMonth, evYear, parseICS, exportToICS, MONTHS_ES, DOW_ES } from './sections.jsx';
+
+/* helper: convierte "YYYY-MM-DD" → { year, month (0-indexed), day } */
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return { year: y, month: m - 1, day: d };
+};
+
+/* obtiene el "day" de un evento (día del mes) */
+const evDay  = (e) => e.date ? parseDate(e.date)?.day   : (e.day  || 0);
+const evMonth= (e) => e.date ? parseDate(e.date)?.month : (new Date().getMonth());
+const evYear = (e) => e.date ? parseDate(e.date)?.year  : (new Date().getFullYear());
+
+/* parser .ics */
+function parseICS(text) {
+  const events = [];
+  const lines  = text.replace(/\r\n|\r/g, "\n").split("\n");
+  let ev = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line === "BEGIN:VEVENT")  { ev = {}; continue; }
+    if (line === "END:VEVENT" && ev) {
+      const dtRaw = ev["DTSTART"] || ev["DTSTART;VALUE=DATE"] || "";
+      let date = "";
+      if (dtRaw) {
+        const d = dtRaw.replace(/T.*/, "").replace(/-/g, "");
+        if (d.length === 8) date = d.slice(0,4) + "-" + d.slice(4,6) + "-" + d.slice(6,8);
+      }
+      if (ev["SUMMARY"] && date) {
+        events.push({
+          id:      uid(),
+          title:   ev["SUMMARY"].replace(/\\,/g, ",").replace(/\\n/g, " "),
+          date,
+          day:     parseInt(date.slice(8,10)),
+          desc:    (ev["DESCRIPTION"] || "").slice(0, 100),
+          color:   COLORS[events.length % COLORS.length],
+          fromICS: true,
+        });
+      }
+      ev = null; continue;
+    }
+    if (!ev) continue;
+    const sep = line.indexOf(":");
+    if (sep === -1) continue;
+    const key = line.slice(0, sep).split(";")[0];
+    ev[key] = line.slice(sep + 1);
+  }
+  return events;
+}
+
+function exportToICS(events) {
+  const toD = (s) => (s || "").replace(/-/g, "");
+  let out = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//StudyHub//v3//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  for (const ev of events) {
+    const d = ev.date ? toD(ev.date) : "";
+    if (!d) continue;
+    out.push("BEGIN:VEVENT");
+    out.push("UID:" + ev.id + "@studyhub");
+    out.push("DTSTART;VALUE=DATE:" + d);
+    out.push("DTEND;VALUE=DATE:"   + d);
+    out.push("SUMMARY:" + (ev.title || "").replace(/,/g, "\\,"));
+    if (ev.desc) out.push("DESCRIPTION:" + ev.desc.replace(/,/g, "\\,"));
+    out.push("END:VEVENT");
+  }
+  out.push("END:VCALENDAR");
+  return out.join("\r\n");
+}
+
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DOW_ES    = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+/* helper: retorna "YYYY-MM-DD" de hoy en hora LOCAL (no UTC) */
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 /* ============================================================
    CALENDARIO — Semana · Mes · Año (DESIGN.md punto 6)

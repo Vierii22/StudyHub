@@ -8,19 +8,13 @@ import { useStore, uid, toast, getAllTasks } from './store.jsx';
    ============================================================ */
 
 const SECTION_ITEMS = [
-  { type: "section", id: "dashboard",  label: "Hoy — Dashboard",       icon: "layout" },
-  { type: "section", id: "facultad",   label: "Facultad — Materias",    icon: "book" },
-  { type: "section", id: "tareas",     label: "Tareas",                 icon: "check" },
-  { type: "section", id: "misiones",   label: "Misiones — XP",          icon: "star" },
+  { type: "section", id: "dashboard",  label: "Hoy",                    icon: "home" },
   { type: "section", id: "calendario", label: "Calendario",             icon: "calendar" },
-  { type: "section", id: "pomodoro",   label: "Pomodoro — Enfoque",     icon: "timer" },
+  { type: "section", id: "facultad",   label: "Facultad — Materias",    icon: "layers" },
+  { type: "section", id: "tareas",     label: "Tareas",                 icon: "check" },
+  { type: "section", id: "notas",      label: "Progreso — Notas del cuatrimestre", icon: "target" },
+  { type: "section", id: "ocio",       label: "Pelis, series y juegos", icon: "film" },
   { type: "section", id: "chat",       label: "Hubby — Chat IA",        icon: "chat" },
-  { type: "section", id: "diario",     label: "Diario",                 icon: "edit" },
-  { type: "section", id: "espacio",    label: "Mi Espacio",             icon: "space" },
-  { type: "section", id: "historial",  label: "Historial",              icon: "clock" },
-  { type: "section", id: "cocina",     label: "Cocina — Recetas",       icon: "chef" },
-  { type: "section", id: "finanzas",   label: "Finanzas",               icon: "cash" },
-  { type: "section", id: "casa",       label: "Casa",                   icon: "home" },
   { type: "section", id: "config",     label: "Configuración",          icon: "gear" },
 ];
 
@@ -62,16 +56,6 @@ function parseCapture(text, subjects) {
       label: `Crear tarea: "${title}"`,
       icon: "check",
       payload: { t: title, prio, status: "pendiente", done: false },
-    };
-  }
-
-  /* Compra/cocina: contiene "comprar" */
-  if (/comprar|lista de compras/i.test(t)) {
-    return {
-      type: "create-shopping",
-      label: `Agregar a compras: "${t.replace(/comprar\s*/i, "")}"`,
-      icon: "chef",
-      payload: { item: t.replace(/comprar\s*/i, "").trim() },
     };
   }
 
@@ -139,14 +123,6 @@ const Palette = ({ onNav, onClose }) => {
       toast("Evento: abrí el Calendario para completar el detalle.");
       onNav("calendario");
       onClose();
-    } else if (item.type === "create-shopping") {
-      set(s => {
-        if (!s.kitchen) s.kitchen = {};
-        if (!Array.isArray(s.kitchen.shopping)) s.kitchen.shopping = [];
-        s.kitchen.shopping.push({ id: uid(), name: item.payload.item, done: false });
-      });
-      toast(`Agregado a compras: ${item.payload.item}`);
-      onClose();
     }
   };
 
@@ -157,8 +133,8 @@ const Palette = ({ onNav, onClose }) => {
     if (e.key === "Escape")    { onClose(); }
   };
 
-  const typeLabel = { section: "Sección", task: "Tarea", "create-task": "Crear", "create-event": "Crear", "create-shopping": "Crear" };
-  const typeColor = { section: "var(--violet-hi)", task: "var(--tx-3)", "create-task": "#3ecf9a", "create-event": "#4ec5e8", "create-shopping": "#e8b04e" };
+  const typeLabel = { section: "Sección", task: "Tarea", "create-task": "Crear", "create-event": "Crear" };
+  const typeColor = { section: "var(--org)", task: "var(--tx-3)", "create-task": "var(--green)", "create-event": "var(--org)" };
 
   return (
     <div style={{

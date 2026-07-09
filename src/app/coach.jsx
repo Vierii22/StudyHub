@@ -166,15 +166,13 @@ const CoachCard = ({ data, onNav }) => {
    ============================================================ */
 const PLACEHOLDERS = [
   'Probá: "tarea: terminar TP de redes para el viernes"',
-  'Probá: "comprar yerba y pan"',
   'Probá: "parcial de álgebra el 24"',
   "Escribí cualquier cosa y se organiza sola…",
 ];
 
 const TYPE_STYLE = {
-  "create-task":     { label: "→ Tarea",    color: "var(--green)" },
-  "create-event":    { label: "→ Evento",   color: "var(--org)" },
-  "create-shopping": { label: "→ Compras",  color: "var(--org-deep)" },
+  "create-task":  { label: "→ Tarea",  color: "var(--green)" },
+  "create-event": { label: "→ Evento", color: "var(--org)" },
 };
 
 const CaptureBar = ({ data, set, onOpen }) => {
@@ -195,13 +193,6 @@ const CaptureBar = ({ data, set, onOpen }) => {
     if (parsed.type === "create-task") {
       set(s => s.tasks.push({ id: uid(), desc: "", subject: null, due: "—", xp: 20, ...parsed.payload }));
       toast(`Tarea creada: ${parsed.payload.t}`);
-    } else if (parsed.type === "create-shopping") {
-      set(s => {
-        if (!s.kitchen) s.kitchen = {};
-        if (!Array.isArray(s.kitchen.shopping)) s.kitchen.shopping = [];
-        s.kitchen.shopping.push({ id: uid(), name: parsed.payload.item, done: false });
-      });
-      toast(`Agregado a compras: ${parsed.payload.item}`);
     } else if (parsed.type === "create-event") {
       toast("Abrí el calendario para completar el evento");
       onOpen && onOpen("calendario");
