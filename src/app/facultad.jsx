@@ -155,37 +155,31 @@ const SubjectModal = ({ subject, preset, onClose }) => {
   );
 };
 
-/* ---------- Card de materia (grid) ---------- */
-const SubjectGridCard = ({ s, onOpen, onEdit, onDelete }) => {
+/* ---------- Card de materia (grid, editorial) ---------- */
+const SubjectGridCard = ({ s, idx, onOpen, onEdit, onDelete }) => {
+  const num = String(idx + 1).padStart(2, "0");
   const profLine = (s.profs && s.profs.length) ? s.profs.join(" · ") : (s.prof || "");
   return (
-  <div className="card hoverable subj-card" onClick={onOpen}>
-    <div className="subj-accent" style={{ background: s.color }}></div>
-    <div className="subj-body">
-      <div className="row" style={{ gap: 13, alignItems: "flex-start", marginBottom: 16 }}>
-        <div className="subj-mono" style={s.photo
-          ? { backgroundImage: `url(${s.photo})`, borderColor: "var(--line-2)" }
-          : { background: s.color + "22", color: s.color, borderColor: s.color + "55" }}>
-          {!s.photo && s.name[0]}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="h3" style={{ fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-          {profLine && <div className="small" style={{ fontSize: 12.5, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profLine}</div>}
-        </div>
-        {s.files && s.files.length > 0 && <span className="chip" style={{ fontSize: 9.5, flex: "0 0 auto" }}><Icon name="paperclip" size={11} />{s.files.length}</span>}
+    <div className="subj-ed" onClick={onOpen}>
+      <div className="row between" style={{ marginBottom: 11 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--org)" }}>{num}</span>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }}></span>
+        </span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--org-deep)", background: "#F7E4D3", padding: "4px 11px", borderRadius: 20 }}>cursando</span>
       </div>
-      <div style={{ marginBottom: 14 }}><Chip dot>{s.next || "Sin eventos"}</Chip></div>
-      <div className="row between" style={{ marginBottom: 8 }}><span className="mono" style={{ fontSize: 11 }}>Progreso</span><span className="mono mono-accent" style={{ fontSize: 11 }}>{s.pct}%</span></div>
-      <div className="bar"><i style={{ width: s.pct + "%", background: s.color }}></i></div>
-      <div className="row between" style={{ borderTop: "1px solid var(--line)", paddingTop: 15, marginTop: 16 }}>
+      <div style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-.5px", color: "var(--ink)", lineHeight: 1.08, marginBottom: 9 }}>{s.name}</div>
+      <div style={{ fontSize: 13, color: "var(--tx-2)", fontWeight: 500, minHeight: 18 }}>
+        {s.next || "Sin eventos próximos"}{profLine ? " · " + profLine : ""}
+      </div>
+      <div className="row between" style={{ borderTop: "1px solid var(--line)", paddingTop: 13, marginTop: 15 }}>
         <div className="row" style={{ gap: 4 }}>
-          <div className="icon-btn" style={{ width: 34, height: 34 }} onClick={e => { e.stopPropagation(); onEdit(); }}><Icon name="edit" size={15} /></div>
-          <div className="icon-btn" style={{ width: 34, height: 34 }} onClick={e => { e.stopPropagation(); onDelete(); }}><Icon name="trash" size={15} /></div>
+          <div className="icon-btn" style={{ width: 32, height: 32 }} onClick={e => { e.stopPropagation(); onEdit(); }}><Icon name="edit" size={14} /></div>
+          <div className="icon-btn" style={{ width: 32, height: 32 }} onClick={e => { e.stopPropagation(); onDelete(); }}><Icon name="trash" size={14} /></div>
         </div>
-        <span className="link" style={{ fontSize: 13 }}>Abrir →</span>
+        <span className="link" style={{ fontSize: 13, color: "var(--org-deep)", fontWeight: 600 }}>Abrir →</span>
       </div>
     </div>
-  </div>
   );
 };
 
@@ -221,19 +215,20 @@ const Facultad = ({ onOpenSubject }) => {
   const [modal, setModal] = React.useState(null); // 'new' | subject
   const [preset, setPreset] = React.useState(null);
   const [picker, setPicker] = React.useState(false);
-  const role = data.profile.role;
   return (
     <div className="page page-cozy">
-      <PageHead title={role === "sec" ? "Secundaria" : "Facultad"} meta={`${data.subjects.length} materias · cuatrimestre en curso`}>
-        <Btn variant="primary" icon="plus" onClick={() => setPicker(true)}>Nueva materia</Btn>
-      </PageHead>
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px,1fr))" }}>
-        {data.subjects.map(s => (
-          <SubjectGridCard key={s.id} s={s}
+      <PageHead title="Mis materias" meta={`${data.subjects.length} materias · cuatrimestre en curso`} />
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px,1fr))", gap: 16 }}>
+        {data.subjects.map((s, i) => (
+          <SubjectGridCard key={s.id} s={s} idx={i}
             onOpen={() => onOpenSubject(s.id)}
             onEdit={() => { setPreset(null); setModal(s); }}
             onDelete={() => { set(st => st.subjects = st.subjects.filter(x => x.id !== s.id)); toast("Materia eliminada"); }} />
         ))}
+        <div className="subj-new" onClick={() => setPicker(true)}>
+          <span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--card)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--org)", boxShadow: "0 2px 0 #e0d5c3" }}><Icon name="plus" size={20} /></span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Nueva materia</span>
+        </div>
       </div>
       {picker && <TemplatePicker onClose={() => setPicker(false)} onPick={(tpl) => { setPreset({ color: tpl.color, lists: JSON.parse(JSON.stringify(tpl.lists || {})), notes: tpl.notes || "" }); setPicker(false); setModal("new"); }} />}
       {modal && <SubjectModal subject={modal === "new" ? null : modal} preset={modal === "new" ? preset : null} onClose={() => { setModal(null); setPreset(null); }} />}

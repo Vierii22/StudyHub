@@ -1,293 +1,180 @@
 import React from 'react';
 
-import ReactDOM from 'react-dom';
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Toggle, ProgressRing, SubjectDot } from './ui.jsx';
-import { SmartList } from './widgets.jsx';
-import { CanvaBoard, defaultBoardItem } from './board.jsx';
+import { useStore, uid, toast } from './store.jsx';
 import { SubjectModal, SubjectFiles } from './facultad.jsx';
-import { syncTaskToCalendar } from './syncEngine.js';
-
-const SPAN_OPTS = [["¼", 3], ["⅓", 4], ["½", 6], ["⅔", 8], ["1", 12]];
 
 /* ============================================================
-   VISTA INTERNA DE MATERIA — pizarrón Canva ⇄ widgets fijos
+   INTERIOR DE UNA MATERIA — rediseño cálido (mockup v5)
+   Qué hacer · Anotaciones · Temario con estados · Parciales/TPs · Archivos
    ============================================================ */
 
-/* lista genérica editable (widgets fijos) */
-const ListWidget = ({ title, items, onChange, placeholder, accent }) => {
-  const [draft, setDraft] = React.useState("");
-  const arr = items || [];
-  return (
-    <div className="card card-flush" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div className="row between" style={{ padding: "20px 22px 12px" }}><div className="h3">{title}</div>{accent && <span style={{ color: "var(--violet-hi)" }}><Icon name={accent} size={17} /></span>}</div>
-      <div style={{ flex: 1, padding: "0 22px", overflow: "auto" }}>
-        {arr.length === 0 && <div className="small" style={{ color: "var(--tx-3)", padding: "14px 0" }}>Sin ítems. Agregá uno abajo.</div>}
-        {arr.map((it, i) => (
-          <div key={i} className="check-row">
-            <div className={`cbox${it.done ? " on" : ""}`} onClick={() => onChange(arr.map((x, j) => j === i ? { ...x, done: !x.done } : x))}>{it.done && <Icon name="check" size={13} color="#fff" />}</div>
-            <span style={{ flex: 1, fontSize: 14, textDecoration: it.done ? "line-through" : "none", opacity: it.done ? .55 : 1 }}>{it.t}</span>
-            <span style={{ cursor: "pointer", color: "var(--tx-3)" }} onClick={() => onChange(arr.filter((_, j) => j !== i))}><Icon name="x" size={14} /></span>
-          </div>
-        ))}
-      </div>
-      <form className="row" style={{ gap: 9, padding: "14px 22px" }} onSubmit={e => { e.preventDefault(); if (draft.trim()) { onChange([...arr, { t: draft.trim(), done: false }]); setDraft(""); } }}>
-        <input className="input" value={draft} onChange={e => setDraft(e.target.value)} placeholder={placeholder} style={{ padding: "10px 13px", fontSize: 13.5 }} />
-        <Btn variant="primary" icon="plus" style={{ flex: "0 0 auto" }}></Btn>
-      </form>
+/* color del puntito según el estado más avanzado del tema */
+const stateColor = (it) => (it.repasos > 0) ? "#639922" : it.estudiado ? "var(--ink)" : it.resumido ? "var(--org)" : "#cfc3ae";
+
+const Card = ({ children, style }) => (
+  <div style={{ background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 16, padding: "16px 18px", boxShadow: "0 2px 0 #e0d5c3, 0 6px 14px rgba(58,51,43,.05)", ...style }}>{children}</div>
+);
+
+const CardTitle = ({ icon, children, right }) => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>
+      {icon && <span style={{ color: "var(--org)", display: "flex" }}><Icon name={icon} size={16} /></span>}{children}
     </div>
-  );
-};
-
-/* BoardDrawer movido a board.jsx como BoardAddPanel (portaleado — funciona en fullscreen) */
-
-const QUICK_SECTIONS = [
-  { k: "temas", label: "Temas del parcial" },
-  { k: "tps", label: "Trabajos Prácticos" },
-  { k: "notas", label: "Anotaciones" },
-  { k: "fechas", label: "Fechas importantes" },
-  { k: "links", label: "Links útiles" },
-];
-
-/* ---- panel de widgets editable (igual que el dashboard) ---- */
-const SUBJ_WIDGETS = {
-  temas:  { label: "Temas del parcial",   icon: "target",   accent: "#8b6dff", ph: "Agregar tema…" },
-  tareas: { label: "Tareas",              icon: "check",    accent: "#4ec5e8", ph: "Agregar tarea…" },
-  tps:    { label: "Trabajos Prácticos",  icon: "layers",   accent: "#e8b04e", ph: "Agregar TP…" },
-  notas:  { label: "Anotaciones",         icon: "pen",      accent: "#e8639b", ph: "Agregar anotación…" },
-  fechas: { label: "Fechas importantes",  icon: "calendar", accent: "#3ecf9a", ph: "Agregar fecha…" },
-  links:  { label: "Links útiles",        icon: "link",     accent: "#6d8bff", ph: "Agregar link…" },
-};
-const SUBJ_META = { ...SUBJ_WIDGETS, resumen: { label: "Resumen", icon: "layers" } };
-const SUBJ_DEFAULT = ["temas", "tareas", "tps", "notas", "fechas", "links", "resumen"];
-const SUBJ_SPANS = { temas: 6, tareas: 6, tps: 7, notas: 5, fechas: 5, links: 4, resumen: 3 };
-
-const ResumenCard = ({ pct, color, doneCount, total }) => (
-  <div className="card" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", gap: 13 }}>
-    <MonoLabel>Resumen</MonoLabel>
-    <div className="stat" style={{ fontSize: 40 }}>{pct}%</div>
-    <div style={{ width: "100%" }}><div className="bar"><i style={{ width: pct + "%", background: color }}></i></div></div>
-    <div className="small">{doneCount} / {total} hecho</div>
+    {right}
   </div>
 );
 
-const SubjectPanelDrawer = ({ active, onAdd, onRemove, onClose, onReset }) => {
-  const pos = React.useRef({ x: window.innerWidth - 340, y: 130 });
-  const [, force] = React.useReducer(x => x + 1, 0);
-  const dragStart = (e) => {
-    const sx = e.clientX, sy = e.clientY, ox = pos.current.x, oy = pos.current.y;
-    const mv = ev => { pos.current = { x: ox + ev.clientX - sx, y: oy + ev.clientY - sy }; force(); };
-    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
-    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-  };
-  const available = Object.keys(SUBJ_META).filter(k => !active.includes(k));
+const AddInput = ({ placeholder, onAdd }) => {
+  const [v, setV] = React.useState("");
+  const submit = (e) => { e.preventDefault(); const t = v.trim(); if (t) { onAdd(t); setV(""); } };
   return (
-    <div className="drawer" style={{ left: pos.current.x, top: pos.current.y }}>
-      <div className="drawer-head" onMouseDown={dragStart}>
-        <Icon name="dots" size={15} color="var(--tx-3)" />
-        <span style={{ fontWeight: 600, fontSize: 14 }}>Organizar widgets</span>
-        <span style={{ marginLeft: "auto", cursor: "pointer", color: "var(--tx-3)" }} onClick={onClose}><Icon name="x" size={16} /></span>
-      </div>
-      <div className="drawer-body">
-        <div className="mono" style={{ marginBottom: 10 }}>Disponibles</div>
-        <div style={{ display: "grid", gap: 8, marginBottom: 18 }}>
-          {available.length === 0 && <div className="small" style={{ color: "var(--tx-3)" }}>Todos los widgets están activos.</div>}
-          {available.map(k => <button key={k} className="addbtn" onClick={() => onAdd(k)}><Icon name="plus" size={15} />{SUBJ_META[k].label}</button>)}
-        </div>
-        <div className="mono" style={{ marginBottom: 10 }}>Activos · {active.length}</div>
-        <div style={{ display: "grid", gap: 8 }}>
-          {active.map(k => (
-            <div key={k} className="row between" style={{ padding: "10px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-              <span className="row" style={{ gap: 9, fontSize: 13.5 }}><Icon name="dots" size={14} color="var(--tx-3)" />{SUBJ_META[k] ? SUBJ_META[k].label : k}</span>
-              <span style={{ cursor: "pointer", color: "var(--tx-3)" }} onClick={() => onRemove(k)}><Icon name="x" size={15} /></span>
-            </div>
-          ))}
-        </div>
-        <button className="addbtn" style={{ marginTop: 16, justifyContent: "center", color: "#e8639b" }} onClick={onReset}><Icon name="refresh" size={15} color="#e8639b" /> Restaurar por defecto</button>
-      </div>
-    </div>
+    <form onSubmit={submit} style={{ display: "flex", gap: 8, marginTop: 11 }}>
+      <input value={v} onChange={e => setV(e.target.value)} placeholder={placeholder}
+        style={{ flex: 1, background: "var(--field)", border: "1px solid var(--line)", borderRadius: 10, padding: "9px 12px", fontSize: 13.5, color: "var(--tx-1)", fontFamily: "var(--font-body)" }} />
+      <button type="submit" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: "0 13px", color: "var(--org)", cursor: "pointer", boxShadow: "0 2px 0 #e0d5c3" }}><Icon name="plus" size={16} /></button>
+    </form>
   );
 };
+
+const FOLDERS = [
+  { k: "material",  label: "Material",  icon: "book" },
+  { k: "resumenes", label: "Resúmenes", icon: "fileText" },
+  { k: "clases",    label: "Clases",    icon: "layers" },
+];
 
 const SubjectView = ({ subjectId, onBack }) => {
   const [data, set] = useStore();
   const s = data.subjects.find(x => x.id === subjectId);
-  const [editName, setEditName] = React.useState(false);
-  const [customize, setCustomize] = React.useState(false);
-  const [panelEdit, setPanelEdit] = React.useState(false);
   const [editModal, setEditModal] = React.useState(false);
-  const [showFiles, setShowFiles] = React.useState(false);
+  const [folder, setFolder] = React.useState("material");
   if (!s) return null;
 
   const lists = s.lists || {};
-  const setList = (k, v) => {
-    set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.lists = { ...(sub.lists || {}), [k]: v }; });
-    // Si es el widget de tareas, sincronizar con data.tasks global
-    if (k === "tareas" && Array.isArray(v)) {
-      v.forEach(item => {
-        if (item.t && !data.tasks?.find(t => t.id === item.id && t.subject === subjectId)) {
-          const newTask = {
-            id: item.id || uid(),
-            t: item.t,
-            desc: item.desc || "",
-            subject: subjectId,
-            due: item.due || "—",
-            prio: item.prio || "media",
-            xp: item.xp || 20,
-            status: item.status || "pendiente",
-            done: item.done || false,
-          };
-          set(st => {
-            if (!st.tasks) st.tasks = [];
-            if (!st.tasks.find(t => t.id === newTask.id)) {
-              st.tasks.push(newTask);
-            }
-          });
-        }
-      });
-    }
-  };
-  const setFiles = (v) => set(st => st.subjects.find(x => x.id === subjectId).files = v);
-  const profLine = (s.profs && s.profs.length) ? s.profs.join(" · ") : (s.prof || "Sin profesor");
-  const board = s.board || [];
-  const setBoard = (items) => set(st => st.subjects.find(x => x.id === subjectId).board = items);
-  const toggle = (k) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub[k] = !sub[k]; });
+  const temas = lists.temas || [];
+  const tareas = lists.tareas || [];
+  const notas = lists.notas || [];
+  const fechas = lists.fechas || [];
+  const tps = lists.tps || [];
+  const files = s.files || [];
+  const idx = data.subjects.indexOf(s);
+  const num = String(idx + 1).padStart(2, "0");
 
-  // panel de widgets editable (mismo modelo que el dashboard)
-  const panel = s.panel || SUBJ_DEFAULT;
-  const panelSpans = s.panelSpans || {};
-  const dragK = React.useRef(null);
-  const spanFor = (k) => `span ${(panelSpans && panelSpans[k]) || SUBJ_SPANS[k] || 6}`;
-  const reorder = (k) => { if (dragK.current && dragK.current !== k) set(st => { const sub = st.subjects.find(x => x.id === subjectId); const a = sub.panel || (sub.panel = SUBJ_DEFAULT.slice()); const from = a.indexOf(dragK.current), to = a.indexOf(k); if (from < 0 || to < 0) return; a.splice(to, 0, a.splice(from, 1)[0]); }); };
-  const setPanelSpan = (k, v) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.panelSpans = { ...(sub.panelSpans || {}), [k]: v }; });
-  const removePanel = (k) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.panel = (sub.panel || SUBJ_DEFAULT).filter(x => x !== k); });
-  const addPanel = (k) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.panel = [...(sub.panel || SUBJ_DEFAULT), k]; });
-  const resetPanel = () => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.panel = SUBJ_DEFAULT.slice(); sub.panelSpans = {}; });
+  const setList = (k, v) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.lists = { ...(sub.lists || {}), [k]: v }; });
+  const setFiles = (v) => set(st => { st.subjects.find(x => x.id === subjectId).files = v; });
+  const upTema = (i, patch) => setList("temas", temas.map((x, j) => j === i ? { ...x, ...patch } : x));
 
-  // resumen progreso
-  const allItems = Object.values(lists).flat();
-  const doneCount = allItems.filter(i => i.status === "listo" || i.done).length;
-  const pct = allItems.length ? Math.round(doneCount / allItems.length * 100) : s.pct;
-
-  const addBoardItem = (kind) => {
-    const item = defaultBoardItem(kind, board.length);
-    /* frames van al inicio del array → se renderizan detrás de todo */
-    if (kind === "frame") setBoard([item, ...board]);
-    else setBoard([...board, item]);
-    if (!customize) setCustomize(true);
-    toast("Agregado al pizarrón");
-  };
-  const addSectionToBoard = (sec) => {
-    const item = { ...defaultBoardItem("list", board.length), title: sec.label };
-    setBoard([...board, item]);
-    toast(`"${sec.label}" agregada`);
-  };
-
-  const renderPanelWidget = (k) => {
-    if (k === "resumen") return <ResumenCard pct={pct} color={s.color} doneCount={doneCount} total={allItems.length} />;
-    const w = SUBJ_WIDGETS[k];
-    if (!w) return null;
-    return <SmartList title={w.label} icon={w.icon} accent={w.accent} crumb={s.name} viewKey={`v_${s.id}_${k}`} items={lists[k]} onChange={v => setList(k, v)} placeholder={w.ph} />;
-  };
+  const link = s.link && (s.link.startsWith("http") ? s.link : "https://" + s.link);
+  const folderFiles = files.filter(f => (f.folder || "material") === folder);
+  const onFolderChange = (v) => setFiles([
+    ...files.filter(f => (f.folder || "material") !== folder),
+    ...v.map(f => ({ ...f, folder: f.folder || folder })),
+  ]);
 
   return (
     <div className="page page-cozy">
-      {/* header materia */}
-      <div className="page-head" style={{ marginBottom: 24 }}>
-        <div className="row" style={{ gap: 16 }}>
-          {s.photo
-            ? <div style={{ width: 54, height: 54, borderRadius: 14, flex: "0 0 auto", background: `url(${s.photo}) center/cover`, boxShadow: `0 6px 18px -8px ${s.color}` }}></div>
-            : <SubjectDot s={s} size={54} />}
-          <div>
-            {editName
-              ? <input className="input" defaultValue={s.name} autoFocus onBlur={e => { set(st => st.subjects.find(x => x.id === subjectId).name = e.target.value); setEditName(false); }} style={{ fontSize: 22, fontWeight: 700 }} />
-              : <h1 className="h1" onClick={() => setEditName(true)} style={{ cursor: "text" }}>{s.name}</h1>}
-            <div className="mono" style={{ marginTop: 8 }}>
-              {profLine} · {s.next || "Sin eventos"}{s.link && <> · <a className="link" href={s.link.startsWith("http") ? s.link : "https://" + s.link} target="_blank" style={{ fontSize: 11.5 }}>Aula virtual ↗</a></>}
+      {/* ── header ── */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 22 }}>
+        <div>
+          <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span onClick={onBack} style={{ cursor: "pointer", color: "var(--org)", fontWeight: 600 }}>← Mis materias</span>
+            <span>·</span>
+            <span style={{ fontFamily: "var(--font-mono)", color: "var(--org)" }}>{num}</span>
+            <span>cursando</span>
+            {s.next && <><span>·</span><span>{s.next}</span></>}
+          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-1px", color: "var(--ink)", margin: 0, lineHeight: 1 }}>{s.name}</h1>
+        </div>
+        <div style={{ display: "flex", gap: 9, flex: "0 0 auto" }}>
+          {link && <a href={link} target="_blank" rel="noreferrer" className="btnB-aula"><Icon name="link" size={15} /> Aula virtual</a>}
+          <button className="btn-soft" onClick={() => setEditModal(true)}><Icon name="edit" size={14} /> Editar</button>
+        </div>
+      </div>
+
+      {/* ── fila 1: qué hacer + anotaciones ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+        <Card>
+          <CardTitle icon="check">Qué tengo que hacer</CardTitle>
+          {tareas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Nada pendiente todavía.</div>}
+          {tareas.map((it, i) => (
+            <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid #eee4d4" }}>
+              <span onClick={() => setList("tareas", tareas.map((x, j) => j === i ? { ...x, done: !x.done } : x))} style={{ width: 18, height: 18, borderRadius: 6, border: "2px solid " + (it.done ? "#639922" : "#c3b7a3"), background: it.done ? "#639922" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" }}>{it.done && <Icon name="check" size={11} color="#fff" />}</span>
+              <span style={{ flex: 1, fontSize: 14, textDecoration: it.done ? "line-through" : "none", color: it.done ? "var(--tx-3)" : "var(--tx-1)" }}>{it.t}</span>
+              <span onClick={() => setList("tareas", tareas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={13} /></span>
             </div>
-          </div>
-        </div>
-        <div className="wrap-gap">
-          <Btn variant="secondary" icon="edit" onClick={() => setEditModal(true)}>Editar</Btn>
-          {s.boardMode
-            ? <Btn variant={customize ? "primary" : "secondary"} icon={customize ? "check" : "sparkles"} onClick={() => { setCustomize(c => !c); if (customize) toast("Pizarrón guardado"); }}>{customize ? "Listo" : "Personalizar"}</Btn>
-            : <Btn variant={panelEdit ? "primary" : "secondary"} icon={panelEdit ? "check" : "layout"} onClick={() => { const wasEditing = panelEdit; setPanelEdit(e => !e); if (wasEditing) toast("Widgets guardados"); }}>{panelEdit ? "Listo" : "Organizar"}</Btn>}
-          <Btn variant="ghost" icon="chevL" onClick={onBack}>Volver</Btn>
-        </div>
+          ))}
+          <AddInput placeholder="Agregar tarea…" onAdd={t => setList("tareas", [...tareas, { id: uid(), t, done: false }])} />
+        </Card>
+
+        <Card>
+          <CardTitle icon="pen">Anotaciones</CardTitle>
+          {notas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin anotaciones.</div>}
+          {notas.map((it, i) => (
+            <div key={it.id || i} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 0", fontSize: 13.5, color: "var(--soft)", lineHeight: 1.5 }}>
+              <span style={{ color: "var(--org)", fontWeight: 700 }}>·</span>
+              <span style={{ flex: 1 }}>{it.t}</span>
+              <span onClick={() => setList("notas", notas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={13} /></span>
+            </div>
+          ))}
+          <AddInput placeholder="Agregar anotación…" onAdd={t => setList("notas", [...notas, { id: uid(), t }])} />
+        </Card>
       </div>
 
-      {/* MATERIAL DE LA MATERIA */}
-      <div className="card" style={{ marginBottom: 22 }}>
-        <div className="row between" style={{ cursor: "pointer" }} onClick={() => setShowFiles(v => !v)}>
-          <div className="row" style={{ gap: 12 }}>
-            <span style={{ width: 38, height: 38, borderRadius: 11, background: s.color + "22", color: s.color, display: "grid", placeItems: "center" }}><Icon name="paperclip" size={18} /></span>
-            <div><div className="h3">Material de la materia</div><div className="small" style={{ fontSize: 12 }}>{(s.files || []).length} archivo{(s.files || []).length !== 1 ? "s" : ""} · PDFs, presentaciones, resúmenes, TPs</div></div>
+      {/* ── fila 2: temario ── */}
+      <Card style={{ marginBottom: 14 }}>
+        <CardTitle icon="target" right={<button className="btn-soft" onClick={() => toast("Planificador de la semana — próximamente")}><Icon name="calendar" size={14} /> Planificar la semana</button>}>Temario del parcial</CardTitle>
+        <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 4 }}>Marcá <span style={{ color: "var(--org-deep)" }}>resumido / estudiado</span> o el <span style={{ color: "#3B6D11" }}>↻ repaso</span> de cada tema.</div>
+        {temas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)", padding: "6px 0" }}>Cargá los temas del parcial acá abajo.</div>}
+        {temas.map((it, i) => (
+          <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4" }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
+            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)" }}>{it.t}</span>
+            <span className="ms" style={it.resumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => upTema(i, { resumido: !it.resumido })}>resumido</span>
+            <span className="ms" style={it.estudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => upTema(i, { estudiado: !it.estudiado })}>estudiado</span>
+            <span className="rep" style={(it.repasos > 0) ? { background: "#E4EEDB", color: "#3B6D11" } : undefined}>
+              <b onClick={() => upTema(i, { repasos: Math.max(0, (it.repasos || 0) - 1) })}>−</b>
+              <Icon name="refresh" size={12} /> {it.repasos || 0}
+              <b onClick={() => upTema(i, { repasos: (it.repasos || 0) + 1, estudiado: true })}>+</b>
+            </span>
+            <span onClick={() => setList("temas", temas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={14} /></span>
           </div>
-          <div className="icon-btn" style={{ width: 34, height: 34 }}><Icon name={showFiles ? "chevL" : "chevR"} size={15} style={{ transform: showFiles ? "rotate(90deg)" : "none" }} /></div>
-        </div>
-        {showFiles && <div style={{ marginTop: 18 }}><SubjectFiles files={s.files || []} onChange={setFiles} accent={s.color} /></div>}
+        ))}
+        <AddInput placeholder="Agregar tema…" onAdd={t => setList("temas", [...temas, { id: uid(), t, resumido: false, estudiado: false, repasos: 0 }])} />
+      </Card>
+
+      {/* ── fila 3: parciales/tps + archivos ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 14 }}>
+        <Card>
+          <CardTitle icon="calendar">Parciales y TPs</CardTitle>
+          {(fechas.length + tps.length) === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin fechas cargadas.</div>}
+          {fechas.map((it, i) => (
+            <div key={"f" + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 13.5, borderBottom: "1px solid #eee4d4" }}><span>{it.t}</span><span onClick={() => setList("fechas", fechas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={12} /></span></div>
+          ))}
+          {tps.map((it, i) => (
+            <div key={"t" + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 13.5, color: "var(--soft)", borderBottom: "1px solid #eee4d4" }}><span>TP · {it.t}</span><span onClick={() => setList("tps", tps.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={12} /></span></div>
+          ))}
+          <AddInput placeholder="Agregar parcial o fecha…" onAdd={t => setList("fechas", [...fechas, { id: uid(), t }])} />
+        </Card>
+
+        <Card>
+          <CardTitle icon="paperclip">Archivos</CardTitle>
+          <div style={{ display: "flex", gap: 9, marginBottom: 12 }}>
+            {FOLDERS.map(fd => {
+              const count = files.filter(f => (f.folder || "material") === fd.k).length;
+              const on = folder === fd.k;
+              return (
+                <div key={fd.k} onClick={() => setFolder(fd.k)} style={{ flex: 1, background: on ? "var(--field)" : "var(--card)", border: "1px solid " + (on ? "var(--org)" : "var(--line)"), borderRadius: 11, padding: "10px 8px", textAlign: "center", cursor: "pointer", boxShadow: on ? "none" : "0 1.5px 0 #e0d5c3" }}>
+                  <span style={{ color: "var(--ink)", display: "flex", justifyContent: "center" }}><Icon name={fd.icon} size={18} /></span>
+                  <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--ink)", marginTop: 5 }}>{fd.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--tx-3)" }}>{count}</div>
+                </div>
+              );
+            })}
+          </div>
+          <SubjectFiles files={folderFiles} onChange={onFolderChange} accent={s.color} />
+        </Card>
       </div>
 
-      {/* barra de controles: modo pizarrón + puntos */}
-      <div className="card" style={{ padding: "14px 20px", marginBottom: 22, display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
-        <div className="row" style={{ gap: 11 }}>
-          <Toggle on={s.boardMode} onChange={() => { toggle("boardMode"); toast(s.boardMode ? "Modo widgets fijos" : "Modo pizarrón activado"); }} />
-          <div><div style={{ fontSize: 14, fontWeight: 600 }}>Modo pizarrón</div><div className="small" style={{ fontSize: 12 }}>Arrastrá y redimensioná libremente, estilo Canva</div></div>
-        </div>
-        {s.boardMode && <>
-          <div style={{ width: 1, height: 32, background: "var(--line)" }}></div>
-          <div className="row" style={{ gap: 11 }}>
-            <Toggle on={s.showDots} onChange={() => toggle("showDots")} />
-            <div><div style={{ fontSize: 14, fontWeight: 600 }}>Grilla de puntos</div><div className="small" style={{ fontSize: 12 }}>Mostrar el fondo punteado</div></div>
-          </div>
-        </>}
-        <div style={{ flex: 1 }}></div>
-        <div className="row" style={{ gap: 18 }}>
-          <div style={{ textAlign: "right" }}><div className="mono" style={{ fontSize: 10 }}>Progreso</div><div className="h3" style={{ color: "var(--violet-hi)" }}>{pct}%</div></div>
-          <ProgressRing value={pct} size={52} stroke={5} />
-        </div>
-      </div>
-
-      {/* CONTENIDO */}
-      {s.boardMode ? (
-        <CanvaBoard
-          items={board}
-          onChange={setBoard}
-          editing={customize}
-          showDots={s.showDots}
-          boardTitle={s.name}
-          onAddItem={addBoardItem}
-          quickSections={QUICK_SECTIONS}
-          onAddSection={addSectionToBoard}
-          autoExpand={true}
-        />
-      ) : (
-        <>
-          {panelEdit && <div className="mono" style={{ marginBottom: 12, color: "var(--violet-hi)", display: "flex", alignItems: "center", gap: 7 }}><Icon name="move" size={13} /> Arrastrá los widgets para reordenar · cambiá el tamaño de cada uno · agregá o quitá desde el panel</div>}
-          <div className="grid" style={{ gridTemplateColumns: "repeat(12,1fr)", alignItems: "stretch" }}>
-            {panel.map(k => (
-              <div key={k}
-                draggable={panelEdit}
-                onDragStart={() => { dragK.current = k; }}
-                onDragOver={e => { if (panelEdit) { e.preventDefault(); reorder(k); } }}
-                onDragEnd={() => { dragK.current = null; }}
-                style={{ gridColumn: spanFor(k), position: "relative", minHeight: k === "resumen" ? undefined : 320, outline: panelEdit ? "1.5px dashed var(--violet-line)" : "none", outlineOffset: 4, borderRadius: "var(--r-lg)", cursor: panelEdit ? "grab" : "default" }}>
-                {renderPanelWidget(k)}
-                {panelEdit && <>
-                  <div onClick={() => removePanel(k)} style={{ position: "absolute", top: -10, right: -10, width: 26, height: 26, borderRadius: "50%", background: "#e8639b", color: "#fff", display: "grid", placeItems: "center", cursor: "pointer", zIndex: 6 }}><Icon name="x" size={14} /></div>
-                  <div className="dash-resize" onMouseDown={e => e.stopPropagation()}>
-                    {SPAN_OPTS.map(([lbl, v]) => { const cur = (panelSpans && panelSpans[k]) || SUBJ_SPANS[k] || 6; return <button key={v} className={cur === v ? "on" : ""} onClick={() => setPanelSpan(k, v)} title={`Ancho ${lbl}`}>{lbl}</button>; })}
-                  </div>
-                </>}
-              </div>
-            ))}
-          </div>
-          {panelEdit && <SubjectPanelDrawer active={panel} onAdd={addPanel} onRemove={removePanel} onClose={() => setPanelEdit(false)} onReset={resetPanel} />}
-        </>
-      )}
-
-      {/* BoardDrawer movido a board.jsx como BoardAddPanel (portaleado, funciona en fullscreen) */}
       {editModal && <SubjectModal subject={s} onClose={() => setEditModal(false)} />}
     </div>
   );

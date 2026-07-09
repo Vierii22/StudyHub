@@ -272,41 +272,37 @@ const SyncChip = () => {
   );
 };
 
-/* ---------- HEADER ---------- */
+/* ---------- TOP NAV (barra de arriba — reemplaza el sidebar viejo) ---------- */
+const TOPNAV = [
+  { id: "dashboard",  label: "Hoy" },
+  { id: "calendario", label: "Calendario" },
+  { id: "facultad",   label: "Facultad" },
+  { id: "notas",      label: "Notas" },
+  { id: "ocio",       label: "Pelis" },
+];
 const Header = ({ profile, onNav, section, onToggleSidebar, onOpenPalette }) => {
-  const [data] = useStore();
-  const incomplete = !profile.uni || !profile.career;
-  const streak = data.streak || 0;
-  /* detectar plataforma para el shortcut del buscador */
   const isMac = navigator.platform?.toUpperCase().includes("MAC");
+  const initial = profile.initial || (profile.name ? profile.name[0] : "?");
   return (
-    <header className="header">
-      {/* Hamburger — visible solo en móvil via CSS */}
-      <div className="header-hamburger" onClick={onToggleSidebar} title="Menú">
-        <Icon name="menu" size={22} />
+    <header className="topbar">
+      <div className="tb-brand" onClick={() => onNav("dashboard")}>
+        {/* LOGO: cambiar acá cuando esté el ícono final */}
+        <span className="tb-logo"><span className="tb-dot" /></span>
+        <span className="tb-word"><span className="w1">study</span><span className="w2">hub</span><span className="w3">.</span></span>
       </div>
-      <div className="row" style={{ gap: 10, flex: "0 0 auto", cursor: "pointer" }} onClick={() => onNav("config")}>
-        <div className="avatar">{profile.initial || profile.name[0]}</div>
-        <div style={{ lineHeight: 1.2 }}>
-          <div style={{ fontWeight: 700, fontSize: 13.5 }}>{profile.name}</div>
-          <div style={{ fontSize: 10.5, color: incomplete ? "var(--violet-hi)" : "var(--tx-3)" }}>{incomplete ? "+ Completar perfil" : profile.career}</div>
+      <nav className="tb-nav">
+        {TOPNAV.map(it => (
+          <span key={it.id} className={`tb-item${section === it.id ? " active" : ""}`} onClick={() => onNav(it.id)}>{it.label}</span>
+        ))}
+      </nav>
+      <div className="tb-right">
+        <div className="tb-search" onClick={onOpenPalette} title="Buscar">
+          <Icon name="search" size={15} />
+          <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
         </div>
+        <div className="icon-btn" onClick={() => onNav("chat")} title="Hubby"><Icon name="chat" size={17} /></div>
+        <div className="tb-avatar" onClick={() => onNav("config")} title="Tu perfil">{initial}</div>
       </div>
-      <div style={{ flex: 1 }}></div>
-      <div className="searchbar" style={{ cursor: "pointer" }} onClick={onOpenPalette}>
-        <Icon name="search" size={16} />
-        <span style={{ flex: 1, fontSize: 14, color: "var(--tx-3)" }}>Buscar…</span>
-        <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
-      </div>
-      <div style={{ flex: 1 }}></div>
-      <SyncChip />
-      {streak > 0 && (
-        <Chip accent dot>
-          <Icon name="fire" size={11} /> racha {streak}
-        </Chip>
-      )}
-      <div className="icon-btn" onClick={() => onNav("chat")} title="Chat IA"><Icon name="chat" size={17} /></div>
-      <div className="icon-btn" title="Notificaciones"><Icon name="bell" size={17} /></div>
     </header>
   );
 };
