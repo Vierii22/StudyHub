@@ -53,6 +53,41 @@ function deriveEstado(s) {
   return "cursando";
 }
 
+/* ── Mapa de correlatividades (Fase 10, BETA) ──────────────
+   Estado base de cada materia del plan: aprobada | regularizada
+   (falta final) | cursando | no_cursada. El estado que se ve en
+   el mapa para las "no_cursada" se deriva: disponible o bloqueada
+   con el motivo (qué correlativa falta y por qué).
+   ────────────────────────────────────────────────────────── */
+function planSubjectMeets(subj, req) {
+  if (!subj) return false;
+  if (req === "final") return subj.base === "aprobada";
+  return subj.base === "aprobada" || subj.base === "regularizada"; /* "regular" */
+}
+
+function deriveCourseStatus(subject, allSubjects) {
+  if (subject.base && subject.base !== "no_cursada") return { status: subject.base, reason: null };
+
+  const byId = (id) => allSubjects.find(s => s.id === id);
+  const cursar = subject.correlativas?.cursar || [];
+  const missing = cursar
+    .filter(c => !planSubjectMeets(byId(c.id), c.req))
+    .map(c => {
+      const other = byId(c.id);
+      const name = other ? other.name : "(materia eliminada)";
+      const reqLabel = c.req === "final" ? "con final aprobado" : "regularizada o aprobada";
+      const tipoLabel = c.tipo === "debil" ? " (débil)" : "";
+      return `${name} ${reqLabel}${tipoLabel}`;
+    });
+
+  /* las débiles no bloquean, sólo se avisan */
+  const blockingMissing = cursar
+    .filter(c => c.tipo !== "debil" && !planSubjectMeets(byId(c.id), c.req));
+
+  if (blockingMissing.length === 0) return { status: "disponible", reason: missing.length ? `Podés cursarla, pero te falta (débil): ${missing.join(", ")}` : null };
+  return { status: "bloqueada", reason: `Te falta: ${missing.join(", ")}` };
+}
+
 /* SEED vacío — sólo estructura, sin datos de demo */
 const SEED = {
   profile: { name: "", initial: "", role: "uni", uni: "", career: "", year: "1", email: "", photo: null, hubby: false },
@@ -69,6 +104,7 @@ const SEED = {
   finance:  { budget: 200000, expenses: [] },
   home: [],
   ocio: { pelis: [], series: [], juegos: [] },
+  plan: { subjects: [] }, /* mapa de correlatividades — BETA (Fase 10) */
   pomoLog: [],           /* [{ date:"YYYY-MM-DD", mins:number }] */
   dashWidgets: ["tareas","agenda","xp","racha","completas","ring","materias","horas"],
   dashSpans: {},
@@ -186,6 +222,10 @@ function applyMigrations(data) {
     data.ocio[k] = Array.isArray(data.ocio[k]) ? data.ocio[k] : [];
     data.ocio[k].forEach(i => { i.rating = Math.max(0, Math.min(10, i.rating || 0)); });
   });
+
+  /* backfill plan de correlatividades (Fase 10, BETA) */
+  if (!data.plan || typeof data.plan !== "object") data.plan = { subjects: [] };
+  if (!Array.isArray(data.plan.subjects)) data.plan.subjects = [];
 
   /* layout dashboard v2 (reset si viene de versión vieja) */
   if (data.dashV !== 2) {
@@ -573,7 +613,7 @@ export {
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
   getStreak, getAllTasks,
-  DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado,
+  DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, deriveCourseStatus,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,
 };

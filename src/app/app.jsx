@@ -13,6 +13,7 @@ import { Calendario } from './calendario.jsx';
 import { ChatIA } from './chat.jsx';
 import { Ocio } from './ocio.jsx';
 import { Notas } from './notas.jsx';
+import { Correlatividades } from './correlatividades.jsx';
 import { ConfigSection } from './config.jsx';
 import { Landing } from './landing.jsx';
 import { FeedbackWidget } from './feedback.jsx';
@@ -241,7 +242,8 @@ function App() {
       return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} autoOpenPlanner={autoPlanner} onPlannerConsumed={() => setAutoPlanner(false)} />;
     switch (section) {
       case "dashboard":  return <Dashboard onNav={nav} />;
-      case "facultad":   return <Facultad onOpenSubject={setOpenSubject} />;
+      case "facultad":   return <Facultad onOpenSubject={setOpenSubject} onNav={nav} />;
+      case "correlatividades": return <Correlatividades />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
       case "calendario": return <Calendario onOpenSubjectPlanner={openSubjectPlanner} />;
       case "chat":       return <ChatIA />;
