@@ -205,6 +205,7 @@ function applyMigrations(data) {
       schedule: Array.isArray(s.schedule) ? s.schedule : [],
       commission: s.commission ?? "",
       year: s.year ?? "",
+      studyPlan: Array.isArray(s.studyPlan) ? s.studyPlan : [],
     }));
   }
 

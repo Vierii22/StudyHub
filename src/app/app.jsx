@@ -118,6 +118,7 @@ function App() {
     return t;
   });
   const [openSubject, setOpenSubject] = useState(null);
+  const [autoPlanner, setAutoPlanner] = useState(false);
   const [morning, setMorning] = useState(false);
   const [dashEditSignal, setDashEditSignal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -276,6 +277,7 @@ function App() {
     }
   };
   const navConfig = (tab)  => { setConfigInitTab(tab); nav("config"); };
+  const openSubjectPlanner = (id) => { setSection("facultad"); setOpenSubject(id); setAutoPlanner(true); };
   const logout    = ()     => {
     const sb = supabase;
     if (sb) sb.auth.signOut();
@@ -321,12 +323,12 @@ function App() {
   /* ── renderizado de sección ────────────────────────── */
   const render = () => {
     if (section === "facultad" && openSubject)
-      return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} />;
+      return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} autoOpenPlanner={autoPlanner} onPlannerConsumed={() => setAutoPlanner(false)} />;
     switch (section) {
       case "dashboard":  return <Dashboard key={dashEditSignal} variant={theme.variant} onNav={nav} onConnect={() => navConfig("integr")} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
-      case "calendario": return <Calendario />;
+      case "calendario": return <Calendario onOpenSubjectPlanner={openSubjectPlanner} />;
       case "chat":       return <ChatIA />;
       case "ocio":       return <Ocio />;
       case "notas":      return <Notas />;

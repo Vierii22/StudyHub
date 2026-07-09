@@ -8,9 +8,11 @@ import { parseDate, todayISO, evDay, evMonth, evYear, parseICS, exportToICS, MON
 
 /* ============================================================
    CALENDARIO — Semana · Mes · Año (DESIGN.md punto 6)
-   Fuentes de eventos: data.events (manuales + import .ics).
-   Clases (subject.schedule) y bloques "Estudiar" (planificador)
-   se suman acá cuando existan esos datos — Fases 4 y 5.
+   Fuentes de eventos: data.events (manuales + import .ics) +
+   bloques "Estudiar · materia" derivados de subject.studyPlan
+   (Fase 5, ver deriveStudyEvents más abajo).
+   Pendiente: clases derivadas de subject.schedule (Fase 4 sólo
+   guarda el horario; falta generarlas como eventos acá).
    ============================================================ */
 
 const KIND_META = {
@@ -247,8 +249,22 @@ const YearView = ({ year, events, onOpenMonth }) => (
   </div>
 );
 
+/* ---------- bloques "Estudiar · materia" derivados del planificador (Fase 5) ---------- */
+const FRANJA_TIME = { m: "09:00", t: "15:00", n: "20:00" };
+function deriveStudyEvents(subjects) {
+  const out = [];
+  (subjects || []).forEach(s => {
+    (s.studyPlan || []).forEach(p => {
+      const tema = (s.lists?.temas || []).find(t => t.id === p.temaId);
+      if (!tema) return;
+      out.push({ id: `study-${p.id}`, title: `Estudiar · ${tema.t}`, date: p.date, time: FRANJA_TIME[p.franja] || "", kind: "estudio", color: s.color, subjectId: s.id, studyPlanSubjectId: s.id });
+    });
+  });
+  return out;
+}
+
 /* ---------- pantalla principal ---------- */
-const Calendario = () => {
+const Calendario = ({ onOpenSubjectPlanner }) => {
   const [data, set] = useStore();
   const [modal, setModal] = React.useState(null);
   const [vista, setVista] = React.useState("mes");
@@ -261,7 +277,8 @@ const Calendario = () => {
     return () => clearInterval(iv);
   }, [set]);
 
-  const events = data.events || [];
+  const events = [...(data.events || []), ...deriveStudyEvents(data.subjects)];
+  const onEventClick = (ev) => { if (ev.studyPlanSubjectId) onOpenSubjectPlanner && onOpenSubjectPlanner(ev.studyPlanSubjectId); else setModal({ event: ev }); };
   const today = new Date();
   const todayISOStr = todayISO();
 
@@ -324,8 +341,8 @@ const Calendario = () => {
         <div className="card"><MonoLabel>Esta semana</MonoLabel><div className="stat" style={{ fontSize: 44, marginTop: 10, color: "var(--org)" }}>{events.filter(e => { const s = startOfWeek(new Date()), en = addDays(s, 7); return e.date >= isoOf(s) && e.date < isoOf(en); }).length}</div><div className="small" style={{ marginTop: 6 }}>próximos 7 días</div></div>
       </div>
 
-      {vista === "semana" && <WeekView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(iso) => setModal({ day: parseInt(iso.slice(8, 10)), month: parseInt(iso.slice(5, 7)) - 1, year: parseInt(iso.slice(0, 4)) })} onEvent={(ev) => setModal({ event: ev })} />}
-      {vista === "mes" && <MonthView viewDate={viewDate} events={events} onDay={(d) => setModal({ day: d, month: viewDate.getMonth(), year: viewDate.getFullYear() })} onEvent={(ev) => setModal({ event: ev })} />}
+      {vista === "semana" && <WeekView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(iso) => setModal({ day: parseInt(iso.slice(8, 10)), month: parseInt(iso.slice(5, 7)) - 1, year: parseInt(iso.slice(0, 4)) })} onEvent={onEventClick} />}
+      {vista === "mes" && <MonthView viewDate={viewDate} events={events} onDay={(d) => setModal({ day: d, month: viewDate.getMonth(), year: viewDate.getFullYear() })} onEvent={onEventClick} />}
       {vista === "año" && <YearView year={viewDate.getFullYear()} events={events} onOpenMonth={(m) => { setView(new Date(viewDate.getFullYear(), m, 1)); setVista("mes"); }} />}
 
       {vista !== "año" && (
@@ -336,7 +353,7 @@ const Calendario = () => {
             : (
               <div style={{ display: "grid", gap: 4 }}>
                 {upcoming.map(e => (
-                  <div key={e.id} onClick={() => setModal({ event: e })} className="row" style={{ gap: 14, padding: "13px 10px", borderRadius: 10, cursor: "pointer" }}>
+                  <div key={e.id} onClick={() => onEventClick(e)} className="row" style={{ gap: 14, padding: "13px 10px", borderRadius: 10, cursor: "pointer" }}>
                     <div style={{ textAlign: "center", flex: "0 0 auto", width: 44 }}>
                       <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: e.color, lineHeight: 1 }}>{String(evDay(e)).padStart(2, "0")}</div>
                       <div className="mono" style={{ fontSize: 9, marginTop: 2 }}>{MONTHS_ES[evMonth(e)].slice(0, 3).toLowerCase()}</div>
