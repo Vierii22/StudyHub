@@ -205,6 +205,16 @@ function applyMigrations(data) {
     }));
   }
 
+  /* backfill eventos: kind (evento|clase|estudio|parcial|entrega), hora, materia vinculada */
+  if (Array.isArray(data.events)) {
+    data.events = data.events.map(e => ({
+      kind: /parcial|final|examen/i.test(e.title || "") ? "parcial" : /entrega|\btp\b/i.test(e.title || "") ? "entrega" : "evento",
+      time: "",
+      subjectId: null,
+      ...e,
+    }));
+  }
+
   /* backfill widget config, bg images, sync map */
   if (!data.widgetConfig) data.widgetConfig = {};
   if (!data.bgImages) data.bgImages = {};

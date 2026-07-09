@@ -9,7 +9,7 @@ import { Dashboard } from './dashboard2.jsx';
 import { Facultad } from './facultad.jsx';
 import { SubjectView } from './facultad2.jsx';
 import { Tareas } from './tareas.jsx';
-import { Calendario } from './sections.jsx';
+import { Calendario } from './calendario.jsx';
 import { ChatIA } from './sections2.jsx';
 import { Ocio } from './sections3.jsx';
 import { Notas } from './notas.jsx';
