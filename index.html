@@ -277,6 +277,14 @@ input,select,textarea{ font-size:16px; }
 .btnC-chip{ width:26px; height:26px; border-radius:8px; background:var(--org); color:#fff; display:grid; place-items:center; flex:0 0 auto; }
 
 /* ===== CALENDARIO (Semana/Mes/Año) ===== */
+.cal-scroll{ overflow-x:auto; }
+.cal-year-grid{ grid-template-columns:repeat(4,1fr); }
+@media(max-width:768px){
+  .cal-scroll{ margin:0 -14px; padding:0 14px; }
+  .cal-week-grid{ min-width:640px; }
+  .cal-month-grid{ min-width:520px; }
+  .cal-year-grid{ grid-template-columns:repeat(2,1fr); }
+}
 .cal-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
 .cal-title{ position:relative; display:inline-block; font-family:var(--font-display); font-weight:800; font-size:26px; color:var(--ink); letter-spacing:-.02em; }
 .cal-title-bar{ display:block; width:34px; height:4px; border-radius:99px; background:var(--org); margin-top:7px; }
@@ -892,8 +900,12 @@ a{ color:inherit; text-decoration:none; }
   .page { padding: 14px 14px 90px; }
   .page-cozy { padding: 14px 14px 90px; }
 
-  /* — Grids: 1 columna en móvil — */
-  .grid { grid-template-columns: 1fr !important; }
+  /* — Grids: 1 columna en móvil — EXCEPTO las que arman su propio
+     responsive (calendario con scroll horizontal, año de correlatividades) — */
+  .grid:not(.cal-week-grid):not(.cal-month-grid):not(.cal-year-grid):not(.planner-grid) { grid-template-columns: 1fr !important; }
+  .subj-row { grid-template-columns: 1fr !important; }
+  .tema-row { flex-wrap: wrap; }
+  .tema-row > span:nth-child(3) { flex: 1 1 100% !important; order: -1; margin-bottom: 4px; }
 
   /* — Dashboard grid — */
   .dash-grid { grid-template-columns: 1fr !important; }

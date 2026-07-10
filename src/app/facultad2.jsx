@@ -161,7 +161,7 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
           </Card>
 
           <Card style={{ overflowX: "auto" }}>
-            <div className="grid" style={{ gridTemplateColumns: "70px repeat(7,1fr)", gap: 8, minWidth: 720 }}>
+            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,1fr)", gap: 8, minWidth: 720 }}>
               <div></div>
               {DIAS_PLAN.map((d, i) => <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>{d} <span style={{ color: "var(--ink)", fontWeight: 700 }}>{weekDays[i].getDate()}</span></div>)}
               {FRANJAS.map(([fk, flabel]) => (
@@ -263,7 +263,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       </div>
 
       {/* ── fila 1: qué hacer + anotaciones ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="subj-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
         <Card>
           <CardTitle icon="check">Qué tengo que hacer</CardTitle>
           {tareas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Nada pendiente todavía.</div>}
@@ -297,7 +297,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
         <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 4 }}>Marcá <span style={{ color: "var(--org-deep)" }}>resumido / estudiado</span> o el <span style={{ color: "#3B6D11" }}>↻ repaso</span> de cada tema. Entrá a un tema para ver su detalle.</div>
         {temas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)", padding: "6px 0" }}>Cargá los temas del parcial acá abajo.</div>}
         {temas.map((it, i) => (
-          <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4" }}>
+          <div key={it.id || i} className="tema-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4" }}>
             <span onClick={() => setPlannerOpen(true)} title="Planificar" style={{ cursor: "grab", color: "var(--tx-3)", display: "flex", flex: "0 0 auto" }}><Icon name="dots" size={13} /></span>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
             <span onClick={() => setOpenTemaId(it.id)} style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)", cursor: "pointer" }}>{it.t}</span>
@@ -315,7 +315,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       </Card>
 
       {/* ── fila 3: parciales/tps + archivos ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 14 }}>
+      <div className="subj-row" style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 14 }}>
         <Card>
           <CardTitle icon="calendar">Parciales y TPs</CardTitle>
           {(fechas.length + tps.length) === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin fechas cargadas.</div>}

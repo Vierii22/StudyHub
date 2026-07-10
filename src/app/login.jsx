@@ -124,7 +124,7 @@ const Login = ({ onEnter, onRegister }) => {
     <div className="auth-root">
       <AuthOrbs />
       <div style={{ position: "relative", zIndex: 1, height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
-        <TiltCard style={{ width: 420, padding: "40px 38px", textAlign: "center" }}>
+        <TiltCard style={{ width: "min(420px, calc(100vw - 48px))", padding: "40px 38px", textAlign: "center" }}>
           <AuthLogo />
           <div className="auth-wordmark"><span className="w1">study</span><span className="w2">hub</span><span className="w3">.</span></div>
           <div className="mono" style={{ marginTop: 12, marginBottom: 28 }}>
@@ -272,7 +272,7 @@ const Onboarding = ({ onDone }) => {
     <div className="auth-root">
       <AuthOrbs />
       <div style={{ position: "relative", zIndex: 1, minHeight: "100%", display: "grid", placeItems: "center", padding: 24 }}>
-        <div className="auth-card fade-in" style={{ width: 560, maxWidth: "100%", padding: 36 }}>
+        <div className="auth-card fade-in" style={{ width: "min(560px, calc(100vw - 48px))", padding: 36 }}>
           {/* progress dots */}
           <div className="row" style={{ gap: 0, marginBottom: 28, justifyContent: "center" }}>
             {steps.map((s, i) => (
@@ -410,7 +410,7 @@ const ConfirmEmail = ({ email }) => {
     <div className="auth-root">
       <AuthOrbs />
       <div style={{ position: "relative", zIndex: 1, height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
-        <div className="auth-card fade-in" style={{ width: 460, padding: "40px 38px", textAlign: "center" }}>
+        <div className="auth-card fade-in" style={{ width: "min(460px, calc(100vw - 48px))", padding: "40px 38px", textAlign: "center" }}>
           <div style={{ width: 68, height: 68, borderRadius: 18, background: "var(--field)", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
             <Icon name="send" size={30} color="var(--org)" />
           </div>

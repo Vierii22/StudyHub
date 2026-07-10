@@ -200,30 +200,32 @@ const WeekView = ({ viewDate, events, subjects, onDay, onEvent }) => {
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 14 }}>
-      {days.map(d => {
-        const iso = isoOf(d);
-        const isToday = iso === today;
-        const dayEvents = events.filter(e => e.date === iso).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
-        return (
-          <div key={iso} style={{ minHeight: 160 }}>
-            <div style={{ marginBottom: 12 }}>
-              <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)", letterSpacing: ".08em" }}>{DOW_ES[(d.getDay() + 6) % 7]}</div>
-              <span
-                onClick={() => onDay(iso)}
-                style={{
-                  fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, cursor: "pointer",
-                  color: isToday ? "#fff" : "var(--ink)",
-                  background: isToday ? "var(--org)" : "transparent",
-                  width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", marginTop: 3,
-                }}>{d.getDate()}</span>
+    <div className="cal-scroll">
+      <div className="grid cal-week-grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 14 }}>
+        {days.map(d => {
+          const iso = isoOf(d);
+          const isToday = iso === today;
+          const dayEvents = events.filter(e => e.date === iso).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+          return (
+            <div key={iso} style={{ minHeight: 160 }}>
+              <div style={{ marginBottom: 12 }}>
+                <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)", letterSpacing: ".08em" }}>{DOW_ES[(d.getDay() + 6) % 7]}</div>
+                <span
+                  onClick={() => onDay(iso)}
+                  style={{
+                    fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, cursor: "pointer",
+                    color: isToday ? "#fff" : "var(--ink)",
+                    background: isToday ? "var(--org)" : "transparent",
+                    width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", marginTop: 3,
+                  }}>{d.getDate()}</span>
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {dayEvents.map(e => <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />)}
+              </div>
             </div>
-            <div style={{ display: "grid", gap: 8 }}>
-              {dayEvents.map(e => <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />)}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -239,34 +241,36 @@ const MonthView = ({ viewDate, events, subjects, onDay, onEvent }) => {
   const evByDay = (d) => events.filter(e => evMonth(e) === vMonth && evYear(e) === vYear && evDay(e) === d);
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 10 }}>
-      {DOW_ES.map(d => <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10, color: "var(--tx-3)", paddingBottom: 4 }}>{d}</div>)}
-      {Array.from({ length: offset }).map((_, i) => <div key={"b" + i} />)}
-      {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
-        const evs = evByDay(d);
-        const isToday = d === todayDay;
-        const featured = evs.find(e => e.kind === "entrega") || evs.find(e => e.kind === "parcial");
-        const rest = evs.filter(e => e !== featured);
-        return (
-          <div key={d} onClick={() => onDay(d)} className="cal-month-cell">
-            {featured && (
-              <div className={`cal-month-chip ${featured.kind}`}>
-                <Icon name={featured.kind === "entrega" ? "flag" : "fire"} size={10} /> {featured.title}
-              </div>
-            )}
-            <div className="cal-month-daynum" style={isToday ? { background: "var(--org)", color: "#fff" } : undefined}>{d}</div>
-            <div style={{ display: "grid", gap: 3, marginTop: 4 }}>
-              {rest.slice(0, 2).map(e => (
-                <div key={e.id} onClick={ev => { ev.stopPropagation(); onEvent(e); }} className="row" style={{ gap: 4, alignItems: "center", fontSize: 10, overflow: "hidden" }}>
-                  <span style={{ width: 5, height: 5, borderRadius: 99, flex: "0 0 auto", background: e.kind === "estudio" ? "var(--org)" : e.kind === "clase" ? "var(--soft)" : e.color }} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--tx-2)" }}>{e.title}</span>
+    <div className="cal-scroll">
+      <div className="grid cal-month-grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 10 }}>
+        {DOW_ES.map(d => <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10, color: "var(--tx-3)", paddingBottom: 4 }}>{d}</div>)}
+        {Array.from({ length: offset }).map((_, i) => <div key={"b" + i} />)}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+          const evs = evByDay(d);
+          const isToday = d === todayDay;
+          const featured = evs.find(e => e.kind === "entrega") || evs.find(e => e.kind === "parcial");
+          const rest = evs.filter(e => e !== featured);
+          return (
+            <div key={d} onClick={() => onDay(d)} className="cal-month-cell">
+              {featured && (
+                <div className={`cal-month-chip ${featured.kind}`}>
+                  <Icon name={featured.kind === "entrega" ? "flag" : "fire"} size={10} /> {featured.title}
                 </div>
-              ))}
-              {rest.length > 2 && <div className="mono" style={{ fontSize: 9, color: "var(--tx-3)" }}>+{rest.length - 2} más</div>}
+              )}
+              <div className="cal-month-daynum" style={isToday ? { background: "var(--org)", color: "#fff" } : undefined}>{d}</div>
+              <div style={{ display: "grid", gap: 3, marginTop: 4 }}>
+                {rest.slice(0, 2).map(e => (
+                  <div key={e.id} onClick={ev => { ev.stopPropagation(); onEvent(e); }} className="row" style={{ gap: 4, alignItems: "center", fontSize: 10, overflow: "hidden" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: 99, flex: "0 0 auto", background: e.kind === "estudio" ? "var(--org)" : e.kind === "clase" ? "var(--soft)" : e.color }} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--tx-2)" }}>{e.title}</span>
+                  </div>
+                ))}
+                {rest.length > 2 && <div className="mono" style={{ fontSize: 9, color: "var(--tx-3)" }}>+{rest.length - 2} más</div>}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -308,7 +312,7 @@ const MiniMonth = ({ year, month, events, onOpen }) => {
 };
 
 const YearView = ({ year, events, onOpenMonth }) => (
-  <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
+  <div className="grid cal-year-grid" style={{ gap: 14 }}>
     {Array.from({ length: 12 }, (_, m) => <MiniMonth key={m} year={year} month={m} events={events} onOpen={onOpenMonth} />)}
   </div>
 );
@@ -381,7 +385,7 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
           <div className="cal-title">Calendario<span className="cal-title-bar" /></div>
           <div className="cal-period">{label}</div>
         </div>
-        <div className="row" style={{ gap: 10 }}>
+        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <Seg opts={[{ id: "semana", label: "Semana" }, { id: "mes", label: "Mes" }, { id: "año", label: "Año" }]} value={vista} onChange={setVista} />
           {vista !== "año" && (
             <div className="seg" style={{ padding: 3 }}>

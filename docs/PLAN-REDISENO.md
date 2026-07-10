@@ -139,11 +139,21 @@ DESIGN.md punto en "Pendientes": lienzo único **zoomeable** (sin ventanas por a
 
 Probado en el navegador de punta a punta: cargué "Álgebra I" (aprobada) y "Álgebra II" (correlativa fuerte = Álgebra I regularizada), confirmé "Podés cursarla"; cambié "Álgebra I" a "No cursada" y "Álgebra II" pasó a "Bloqueada" con el motivo exacto ("Te falta: Álgebra I regularizada o aprobada"); borré ambas materias de prueba al terminar. `npm run build` sin errores ni warnings.
 
-## FASE FINAL — QA + deploy
+## FASE FINAL — QA + deploy ✅ HECHO (pasada de responsive; deploy sigue pendiente del OK del usuario)
 1. Pasada responsive completa (mobile ≤768: tabbar, grids a 1 columna, topbar compacta).
 2. Probar TODO logueado: crear materia con horarios, temario, notas+animación, planificador→calendario, ocio, chat IA, bot Telegram (sigue escribiendo en sh_data — verificar que lo que escribe cae en secciones vivas).
 3. `npm run build` sin errores. Lighthouse rápido.
 4. Commit prolijo en la rama → mostrar al usuario → SOLO con su OK explícito: merge/push a main (Vercel deploya).
+
+**Hecho (punto 1, responsive):** se probaron en mobile (375px) las 5 secciones vivas + Config + Correlatividades + Login/Landing/Onboarding y se encontraron y corrigieron **bugs reales** (no cosméticos):
+
+- **Causa raíz de la mayoría:** una regla CSS heredada de la era del sidebar viejo, `.grid { grid-template-columns: 1fr !important; }` dentro del media query mobile, forzaba **TODOS** los `.grid` del sitio a una columna — rompiendo específicamente el Calendario (semana/mes con 7 columnas) y el año de Correlatividades, que necesitan su propia estructura. Se corrigió excluyendo esas grillas puntuales (`:not(.cal-week-grid):not(.cal-month-grid):not(.cal-year-grid):not(.planner-grid)`) y agregando scroll horizontal contenido (`.cal-scroll`, min-width en las grillas de semana/mes) en vez de intentar apretar 7 columnas en 375px.
+- **Facultad → interior de materia:** dos filas ("Qué tengo que hacer"+"Anotaciones", "Parciales y TPs"+"Archivos") usaban `display:grid` inline sin la clase `.grid`, así que la regla de arriba no las alcanzaba y quedaban cortadas a la mitad en mobile — se les agregó `className="subj-row"` con su propia regla de colapso a 1 columna.
+- **Temario del parcial:** la fila de cada tema (título + chips resumido/estudiado + contador de repasos + borrar) no entraba en 375px — se le dio wrap propio (`.tema-row`) que manda el título a su propia línea y el resto de los controles debajo.
+- **Login/Onboarding/ConfirmEmail:** las tarjetas tenían ancho fijo (420/560/460px) con `maxWidth:"100%"`, que en teoría debería limitarlas pero no achicaba nada en la práctica — el contenedor (`display:grid; placeItems:center`) sizea su columna a max-content cuando los items están centrados (no `stretch`), así que el porcentaje de `max-width:100%` no tenía una base real contra la cual calcularse y la tarjeta se recortaba en mobile. Se cambió a `width:"min(420px, calc(100vw - 48px))"` (evita el problema del todo, sin depender de porcentajes).
+- Dashboard, Progreso (Notas), Ocio, Planificador semanal y Config ya andaban bien en mobile sin cambios — se verificaron igual para descartar sorpresas.
+
+Los puntos 2-4 (prueba end-to-end del flujo completo, Lighthouse, y el commit/push a main) quedan para cuando el usuario dé el visto bueno explícito de mergear — no se hizo push, todo el trabajo de esta sesión sigue en la rama `rediseno-calido`.
 
 ## Reglas de oro (violarlas = "mal" del usuario)
 - NADA violeta, NADA negro frío, NADA serif itálica, NADA gradientes exagerados, NADA apretado. El oscuro siempre es marrón cálido (#3A332B / #201B16).
