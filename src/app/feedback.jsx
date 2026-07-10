@@ -9,9 +9,9 @@ import { supabase } from '../supabase.js';
    FEEDBACK — botón flotante + panel "Ideas y comentarios"
    ============================================================ */
 const FB_TYPES = [
-  { id: "bug", label: "Bug", icon: "bug", color: "#e8639b", ph: "¿Qué dejó de funcionar? Contanos los pasos para reproducirlo." },
-  { id: "sugerencia", label: "Sugerencia", icon: "idea", color: "#e8b04e", ph: "¿Qué mejorarías de la app?" },
-  { id: "idea", label: "Idea", icon: "sparkles", color: "#3ecf9a", ph: "Tirá esa idea nueva que se te ocurrió ✨" },
+  { id: "bug", label: "Bug", icon: "bug", color: "#B8461A", ph: "¿Qué dejó de funcionar? Contanos los pasos para reproducirlo." },
+  { id: "sugerencia", label: "Sugerencia", icon: "idea", color: "#C68A2E", ph: "¿Qué mejorarías de la app?" },
+  { id: "idea", label: "Idea", icon: "sparkles", color: "#3B6D11", ph: "Tirá esa idea nueva que se te ocurrió ✨" },
 ];
 
 const FeedbackWidget = ({ section }) => {

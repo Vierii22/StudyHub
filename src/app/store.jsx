@@ -13,7 +13,7 @@ const COLORS = ["#D9551F","#C68A2E","#7E8A4F","#5F7470","#9C4A2E","#A98A5C"];
 const OLD_COLORS = ["#8b6dff","#3ecf9a","#e8639b","#4ec5e8","#e8b04e","#f0764e","#6d8bff","#c264e8"];
 const hashColor = (str) => COLORS[[...String(str || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
 const warmColor = (color, seed) => (!color || OLD_COLORS.includes(color)) ? hashColor(seed) : color;
-const PRIO   = { alta: "#e8639b", media: "#e8b04e", baja: "#3ecf9a" };
+const PRIO   = { alta: "#B8461A", media: "#C68A2E", baja: "#7E8A4F" };
 const STATUS = { pendiente: "Pendiente", progreso: "En progreso", lista: "Lista" };
 
 /* ── esquema de evaluación / notas del cuatrimestre ──────── */

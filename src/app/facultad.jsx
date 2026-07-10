@@ -26,7 +26,7 @@ const downloadFile = (f) => {
 };
 
 /* ---------- gestor de archivos de la materia ---------- */
-const SubjectFiles = ({ files = [], onChange, accent = "#8b6dff" }) => {
+const SubjectFiles = ({ files = [], onChange, accent = "#D9551F" }) => {
   const [over, setOver] = React.useState(false);
   const add = (fileList) => {
     const arr = Array.from(fileList || []);

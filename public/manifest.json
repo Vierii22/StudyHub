@@ -8,8 +8,8 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
-  "background_color": "#0d0d12",
-  "theme_color": "#8b6dff",
+  "background_color": "#E6DFD3",
+  "theme_color": "#E6DFD3",
   "shortcuts": [
     {
       "name": "Nueva tarea",
@@ -19,10 +19,10 @@
       "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Pomodoro",
-      "short_name": "Pomodoro",
-      "description": "Iniciar sesión de foco",
-      "url": "/?section=pomodoro",
+      "name": "Calendario",
+      "short_name": "Calendario",
+      "description": "Ver la semana y el mes",
+      "url": "/?section=calendario",
       "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
     },
     {

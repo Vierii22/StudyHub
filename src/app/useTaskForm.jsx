@@ -111,7 +111,7 @@ export function TaskFormModal({ hook }) {
         <>
           <span
             className="link"
-            style={{ color: isEdit ? "#e8639b" : "var(--tx-3)", cursor: "pointer" }}
+            style={{ color: isEdit ? "var(--org-deep)" : "var(--tx-3)", cursor: "pointer" }}
             onClick={isEdit ? remove : close}
           >
             {isEdit ? "Eliminar" : "Cancelar"}

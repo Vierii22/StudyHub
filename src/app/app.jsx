@@ -65,7 +65,7 @@ class AppErrorBoundary extends React.Component {
           </div>
           <details style={{ marginBottom: 22, textAlign: "left", background: "var(--surface-2)", borderRadius: 10, padding: "10px 14px", cursor: "pointer" }}>
             <summary style={{ fontSize: 12, color: "var(--tx-3)", fontFamily: "var(--font-mono)" }}>Ver detalle del error</summary>
-            <pre style={{ fontSize: 11, color: "#e8639b", marginTop: 8, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+            <pre style={{ fontSize: 11, color: "var(--org-deep)", marginTop: 8, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
               {this.state.error?.message || String(this.state.error)}
             </pre>
           </details>

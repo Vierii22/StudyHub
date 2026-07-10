@@ -1,4 +1,4 @@
-const CACHE = 'studyhub-v3-redesign';
+const CACHE = 'studyhub-v4-calido';
 
 const PRECACHE = [
   '/',

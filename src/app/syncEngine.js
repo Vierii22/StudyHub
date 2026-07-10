@@ -92,7 +92,7 @@ export function syncTaskToCalendar(task, data, set) {
     id: dup?.id || uid(),
     title: task.t,
     date: eventDate,
-    color: task.prio === "alta" ? "#e8639b" : task.prio === "baja" ? "#3ecf9a" : "#e8b04e",
+    color: task.prio === "alta" ? "#B8461A" : task.prio === "baja" ? "#7E8A4F" : "#C68A2E",
     taskId: task.id,
   };
 

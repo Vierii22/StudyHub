@@ -10,7 +10,7 @@ import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
    ============================================================ */
 const PrioBadge  = ({ p })  => <span className="prio" style={{ color: PRIO[p], background: PRIO[p] + "22" }}>{p}</span>;
 const StatusBadge = ({ st }) => {
-  const c = st === "lista" ? "#3ecf9a" : st === "progreso" ? "#e8b04e" : "var(--tx-2)";
+  const c = st === "lista" ? "#3B6D11" : st === "progreso" ? "#C68A2E" : "var(--tx-2)";
   return <span className="chip" style={{ color: c, borderColor: c + "55", background: c + "15", fontSize: 10 }}>{STATUS[st]}</span>;
 };
 const DueBadge = ({ due }) => {
