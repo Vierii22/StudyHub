@@ -61,8 +61,7 @@ const Header = ({ profile, onNav, section }) => {
   return (
     <header className="topbar">
       <div className="tb-brand" onClick={() => onNav("dashboard")}>
-        {/* LOGO: cambiar acá cuando esté el ícono final */}
-        <span className="tb-logo"><span className="tb-dot" /></span>
+        <img src="/assets/icon.png" alt="" className="tb-logo" />
         <span className="tb-word"><span className="w1">study</span><span className="w2">hub</span><span className="w3">.</span></span>
       </div>
       <nav className="tb-nav">

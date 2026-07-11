@@ -94,7 +94,7 @@ function Landing({ onStart }) {
       {/* contenido central */}
       <div className="landing-center">
         <div className="landing-logo-wrap">
-          <div className="landing-logo"><span className="dot" /></div>
+          <img src="/assets/icon.png" alt="studyhub." className="landing-logo" />
         </div>
 
         <h1 className="landing-title">

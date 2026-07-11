@@ -83,7 +83,7 @@ const TiltCard = ({ children, style }) => {
 };
 
 const AuthLogo = () => (
-  <div className="auth-logo"><span className="dot" /></div>
+  <img src="/assets/icon.png" alt="studyhub." className="auth-logo" />
 );
 
 const Login = ({ onEnter, onRegister }) => {

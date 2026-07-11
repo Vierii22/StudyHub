@@ -337,7 +337,7 @@ const ConfigSection = ({ onLogout, initialTab }) => {
           {/* ── ACERCA DE ── */}
           {tab === "acerca" && <div className="fade-in">
             <div className="row" style={{ gap: 14, alignItems: "center" }}>
-              <span className="tb-logo"><span className="tb-dot" /></span>
+              <img src="/assets/icon.png" alt="" className="tb-logo" style={{ width: 40, height: 40, borderRadius: 11 }} />
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}><span style={{ color: "var(--soft)", fontWeight: 500 }}>study</span>hub<span style={{ color: "var(--org)" }}>.</span></div>
                 <div className="small" style={{ marginTop: 4, maxWidth: 420, textWrap: "pretty" }}>

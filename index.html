@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#E6DFD3" />
 <title>StudyHub</title>
 <link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/png" href="/assets/icon.png" />
 <link rel="apple-touch-icon" href="/assets/logo-circle.png" />
 <script>
   /* SW solo en producción. En localhost/127.0.0.1: desregistrar cualquier
@@ -239,8 +240,7 @@ input,select,textarea{ font-size:16px; }
 .topbar{ display:flex; align-items:center; gap:16px; padding:13px 26px; background:var(--stone);
   border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
 .tb-brand{ display:flex; align-items:center; gap:9px; cursor:pointer; flex:0 0 auto; }
-.tb-logo{ width:28px; height:28px; border-radius:9px; background:var(--ink); display:flex; align-items:center; justify-content:center; }
-.tb-dot{ width:8px; height:8px; border-radius:50%; background:var(--org); }
+.tb-logo{ width:28px; height:28px; border-radius:9px; display:block; }
 .tb-word{ font-family:var(--font-display); font-size:18px; letter-spacing:-.4px; font-weight:800; }
 .tb-word .w1{ color:#8a7f6d; font-weight:500; } .tb-word .w2{ color:var(--ink); } .tb-word .w3{ color:var(--org); }
 .tb-nav{ display:flex; align-items:center; gap:3px; }
@@ -1315,14 +1315,11 @@ a{ color:inherit; text-decoration:none; }
 .landing-logo-wrap {
   position: relative; width: 84px; height: 84px; margin-bottom: 26px;
 }
-/* LOGO: cambiar acá cuando esté el ícono final */
 .landing-logo{
-  width: 84px; height: 84px; border-radius: 22px;
-  background: var(--ink); display: grid; place-items: center;
-  box-shadow: 0 5px 0 var(--ink-2), 0 24px 50px -18px rgba(58,51,43,.4);
+  width: 84px; height: 84px; display: block;
+  filter: drop-shadow(0 5px 0 var(--ink-2)) drop-shadow(0 20px 40px rgba(58,51,43,.35));
   position: relative; z-index: 1;
 }
-.landing-logo .dot{ width: 16px; height: 16px; border-radius: 50%; background: var(--org); }
 .landing-title {
   font-family: var(--font-display); font-weight: 500;
   font-size: clamp(38px, 7vw, 60px);
@@ -1375,13 +1372,10 @@ a{ color:inherit; text-decoration:none; }
   transition: transform .15s ease;
   will-change: transform;
 }
-/* LOGO: cambiar acá cuando esté el ícono final */
 .auth-logo{
-  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px;
-  background: var(--ink); display: grid; place-items: center;
-  box-shadow: 0 4px 0 var(--ink-2);
+  width: 64px; height: 64px; display: block; margin: 0 auto 18px;
+  filter: drop-shadow(0 4px 0 var(--ink-2));
 }
-.auth-logo .dot{ width: 13px; height: 13px; border-radius: 50%; background: var(--org); }
 .auth-wordmark{
   font-family: var(--font-display); font-size: 24px; line-height: 1;
 }
