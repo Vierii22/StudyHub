@@ -102,7 +102,7 @@ const ChatIA = () => {
         <div ref={endRef} style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
           {msgs.length === 0 && (
             <div style={{ margin: "auto", textAlign: "center" }}>
-              <Hubby pose="saluda" size={110} className="hubby-float" />
+              <Hubby pose="saluda" size={110} className="hubby-float" style={{ margin: "0 auto" }} />
               <div className="h3" style={{ marginTop: 8 }}>¡Hola! Soy Hubby</div>
               <div className="small" style={{ marginTop: 6 }}>Preguntame lo que necesites o usá un atajo arriba.</div>
             </div>

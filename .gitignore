@@ -22,3 +22,5 @@ Thumbs.db
 
 # Bundle generado (se regenera en build)
 public/app.bundle.js
+.vercel
+.env*
