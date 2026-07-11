@@ -71,7 +71,6 @@ const Header = ({ profile, onNav, section }) => {
         ))}
       </nav>
       <div className="tb-right">
-        <div className="icon-btn" onClick={() => onNav("chat")} title="Hubby"><Icon name="chat" size={17} /></div>
         <div className="tb-avatar" onClick={() => onNav("config")} title="Tu perfil">{initial}</div>
       </div>
     </header>
@@ -139,9 +138,18 @@ const SubjectDot = ({ s, size = 46 }) => (
   <div className="subject-icon" style={{ background: s.color, width: size, height: size, fontSize: size * 0.42, borderRadius: size * 0.26 }}>{s.name[0]}</div>
 );
 
+/* ---------- HUBBY CHAT FAB — entrada al chat, abajo a la izquierda ---------- */
+const HubbyChatFab = ({ section, onNav }) => {
+  if (section === "chat") return null; /* ya estás en el chat */
+  return (
+    <button className="hubby-fab" onClick={() => onNav("chat")} title="Hablar con Hubby" aria-label="Abrir chat con Hubby">
+      <Hubby pose="chat" size={44} />
+    </button>
+  );
+};
 
 export {
-  TerminalCorners, Btn, Chip, MonoLabel, Hubby,
+  TerminalCorners, Btn, Chip, MonoLabel, Hubby, HubbyChatFab,
   Header, PageHead, Seg, Field,
   Modal, Toggle, Empty, SubjectDot,
 };

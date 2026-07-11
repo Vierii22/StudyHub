@@ -12,11 +12,21 @@
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/assets/logo-circle.png" />
 <script>
-  /* SW solo en producción — en dev servía código viejo cacheado */
-  if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
+  /* SW solo en producción. En localhost/127.0.0.1: desregistrar cualquier
+     SW viejo que haya quedado instalado de sesiones anteriores (servía
+     CSS/JS cacheado y tapaba los cambios reales del archivo). */
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if ('serviceWorker' in navigator) {
+    if (isLocal) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+      if (window.caches) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    } else {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
   }
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -741,21 +751,39 @@ a{ color:inherit; text-decoration:none; }
 .toast .ok{ color:var(--org-2); }
 @keyframes toastIn{ from{ opacity:0; transform:translateX(30px); } to{ opacity:1; transform:none; } }
 
+/* ===== HUBBY CHAT FAB (abajo a la izquierda) ===== */
+.hubby-fab{
+  position:fixed; left:22px; bottom:26px; z-index:200;
+  width:60px; height:60px; border-radius:50%; border:1px solid var(--line);
+  background:var(--card); cursor:pointer; padding:0;
+  display:grid; place-items:center;
+  box-shadow:0 3px 0 #e0d5c3, 0 14px 34px -12px rgba(58,51,43,.5);
+  transition:transform .18s cubic-bezier(.2,.9,.2,1.2), box-shadow .18s ease;
+}
+.hubby-fab:hover{ transform:translateY(-2px); box-shadow:0 5px 0 #e0d5c3, 0 16px 36px -12px rgba(58,51,43,.55); }
+.hubby-fab:active{ transform:translateY(1px); box-shadow:0 1px 0 #e0d5c3; }
+.hubby-fab img{ width:44px; height:44px; }
+@media(max-width:768px){
+  .hubby-fab{ bottom:calc(64px + env(safe-area-inset-bottom) + 14px); left:16px; width:52px; height:52px; }
+  .hubby-fab img{ width:38px; height:38px; }
+}
+
 /* ===== FEEDBACK WIDGET ===== */
 .fb-fab{
   position:fixed; right:26px; bottom:26px; z-index:200;
   width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
-  background:var(--grad); color:#fff; display:grid; place-items:center;
-  box-shadow:0 14px 34px -10px rgba(139,109,255,.75), 0 4px 12px rgba(0,0,0,.35);
+  background:var(--ink); color:#F4EDE0; display:grid; place-items:center;
+  box-shadow:0 3px 0 var(--ink-2), 0 14px 34px -10px rgba(58,51,43,.5);
   transition:transform .18s cubic-bezier(.2,.9,.2,1.2), filter .18s ease;
 }
-.fb-fab:hover{ transform:scale(1.07) translateY(-1px); filter:brightness(1.08); }
-.fb-fab:active{ transform:scale(.96); }
-.fb-scrim{ position:fixed; inset:0; z-index:201; background:rgba(7,7,10,.5); backdrop-filter:blur(3px); animation:fade .2s ease; display:flex; justify-content:flex-end; }
+.fb-fab svg{ color:var(--org); }
+.fb-fab:hover{ transform:translateY(-2px); }
+.fb-fab:active{ transform:translateY(1px); }
+.fb-scrim{ position:fixed; inset:0; z-index:201; background:rgba(58,51,43,.42); backdrop-filter:blur(3px); animation:fade .2s ease; display:flex; justify-content:flex-end; }
 .fb-panel{
   width:min(420px,100%); height:100%; padding:30px 30px 26px;
-  background:#121217; border-left:1px solid var(--line-2);
-  box-shadow:-30px 0 60px -25px rgba(0,0,0,.7);
+  background:var(--card); border-left:1px solid var(--line);
+  box-shadow:-30px 0 60px -25px rgba(58,51,43,.4);
   overflow-y:auto; animation:fbSlide .3s cubic-bezier(.4,.1,.2,1);
 }
 @keyframes fbSlide{ from{ transform:translateX(100%); } to{ transform:none; } }

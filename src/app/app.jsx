@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Icon } from './icons.jsx';
 import { Store, useStore, toast, scaleToZoom, ToastHost } from './store.jsx';
-import { Header } from './ui.jsx';
+import { Header, HubbyChatFab } from './ui.jsx';
 import { Login, Onboarding, ConfirmEmail } from './login.jsx';
 import { Dashboard } from './dashboard2.jsx';
 import { Facultad } from './facultad.jsx';
@@ -272,6 +272,7 @@ function App() {
       </div>
       {isMobile && <TabBar active={section} onNav={nav} />}
       {paletteOpen && <Palette onNav={nav} onClose={() => setPaletteOpen(false)} />}
+      <HubbyChatFab section={section} onNav={nav} />
       <FeedbackWidget section={section} />
       <ToastHost />
     </div>
