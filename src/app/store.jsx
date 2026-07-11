@@ -277,6 +277,24 @@ function applyMigrations(data) {
       year: s.year ?? "",
       studyPlan: Array.isArray(s.studyPlan) ? s.studyPlan : [],
     }));
+
+    /* migración: temario plano → UNIDADES (cada tema pertenece a una unidad).
+       Los temas ya cargados caen en una "Unidad 1" automática; después el
+       usuario los reorganiza a mano. Idempotente: corre en cada carga. */
+    data.subjects.forEach(s => {
+      if (!s.lists || typeof s.lists !== "object") return;
+      const temas = Array.isArray(s.lists.temas) ? s.lists.temas : [];
+      let unidades = Array.isArray(s.lists.unidades) ? s.lists.unidades : [];
+      if (unidades.length === 0 && temas.length > 0) {
+        unidades = [{ id: uid(), name: "Unidad 1", collapsed: false }];
+      }
+      if (unidades.length > 0) {
+        const validIds = new Set(unidades.map(u => u.id));
+        temas.forEach(t => { if (!t.unidadId || !validIds.has(t.unidadId)) t.unidadId = unidades[0].id; });
+      }
+      s.lists.unidades = unidades;
+      s.lists.temas = temas;
+    });
   }
 
   /* backfill eventos: kind (evento|clase|estudio|parcial|entrega), hora, materia vinculada */

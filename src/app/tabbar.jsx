@@ -10,6 +10,7 @@ const TABS = [
   { id: "dashboard",  icon: "home",     label: "Hoy" },
   { id: "calendario", icon: "calendar", label: "Calendario" },
   { id: "facultad",   icon: "layers",   label: "Facultad" },
+  { id: "tareas",     icon: "check",    label: "Tareas" },
   { id: "notas",      icon: "target",   label: "Progreso" },
   { id: "ocio",       icon: "film",     label: "Ocio" },
 ];

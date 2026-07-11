@@ -53,6 +53,7 @@ const TOPNAV = [
   { id: "dashboard",  label: "Hoy" },
   { id: "calendario", label: "Calendario" },
   { id: "facultad",   label: "Facultad" },
+  { id: "tareas",     label: "Tareas" },
   { id: "notas",      label: "Progreso" },
   { id: "ocio",       label: "Ocio" },
 ];

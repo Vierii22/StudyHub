@@ -1,208 +1,135 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, COLORS, PRIO, STATUS, getAllTasks } from './store.jsx';
-import { Btn, Chip, PageHead, Empty, MonoLabel } from './ui.jsx';
+import { useStore, uid, toast, PRIO, getAllTasks } from './store.jsx';
+import { Btn, PageHead, Empty, MonoLabel } from './ui.jsx';
 import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
 
 /* ============================================================
-   TAREAS — vistas tabla / cards / materias + modal
+   TAREAS — vista general: por materia → por prioridad
+   (toggle a "por fecha"). Junta las tareas globales + las de
+   cada materia (getAllTasks). Reusa el modal de useTaskForm.
    ============================================================ */
+const PRIO_RANK = { alta: 0, media: 1, baja: 2 };
+const sortTasks = (arr) => [...arr].sort((a, b) => (Number(a.done) - Number(b.done)) || (PRIO_RANK[a.prio] - PRIO_RANK[b.prio]));
+
 const PrioBadge  = ({ p })  => <span className="prio" style={{ color: PRIO[p], background: PRIO[p] + "22" }}>{p}</span>;
 const StatusBadge = ({ st }) => {
   const c = st === "lista" ? "#3B6D11" : st === "progreso" ? "#C68A2E" : "var(--tx-2)";
-  return <span className="chip" style={{ color: c, borderColor: c + "55", background: c + "15", fontSize: 10 }}>{STATUS[st]}</span>;
+  return <span className="chip" style={{ color: c, borderColor: c + "55", background: c + "15", fontSize: 10 }}>{st === "lista" ? "Lista" : st === "progreso" ? "En progreso" : "Pendiente"}</span>;
 };
 const DueBadge = ({ due }) => {
   const isToday = due === "Hoy";
-  return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: isToday ? "#e8b04e" : "var(--tx-3)" }}>{isToday ? "¡HOY!" : due}</span>;
+  if (!due || due === "—") return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--tx-3)", minWidth: 36, textAlign: "right" }}>—</span>;
+  return <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--org-deep)" : "var(--tx-3)", minWidth: 36, textAlign: "right" }}>{isToday ? "HOY" : due}</span>;
 };
+
+/* fila de tarea reutilizable */
+const TaskLine = ({ t, onToggle, onEdit, onDelete, last }) => (
+  <div className="tsk-line" style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderBottom: last ? "none" : "1px solid #eee4d4", opacity: t.done ? 0.5 : 1 }}>
+    <div className={`cbox${t.done ? " on" : ""}`} onClick={() => onToggle(t)}>{t.done && <Icon name="check" size={13} color="#fff" />}</div>
+    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onEdit(t)}>
+      <div style={{ fontSize: 14, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.t}</div>
+    </div>
+    <PrioBadge p={t.prio} />
+    <DueBadge due={t.due} />
+    <span className="tsk-del" onClick={() => onDelete(t)} title="Eliminar" style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto", display: "flex" }}><Icon name="x" size={14} /></span>
+  </div>
+);
 
 const Tareas = ({ onOpenSubject, autoNew }) => {
   const [data, set] = useStore();
-  const [view, setView]           = React.useState(() => window.innerWidth < 768 ? "cards" : "tabla");
-  const [sort, setSort]           = React.useState("creacion");
-  const [hideListed, setHideListed] = React.useState(false);
-
-  /* hook unificado — crea Y edita tareas con el mismo modal */
+  const [group, setGroup] = React.useState("materia"); /* materia | fecha */
   const tf = useTaskForm();
 
-  /* PWA shortcut: abrir modal de nueva tarea al montar si viene de shortcut */
   React.useEffect(() => { if (autoNew) tf.open(); }, []);
 
   const allTasks = getAllTasks(data);
-  let tasks = [...allTasks];
-  if (hideListed) tasks = tasks.filter(t => !t.done);
-  const order = { alta: 0, media: 1, baja: 2 };
-  if (sort === "prioridad") tasks.sort((a, b) => order[a.prio] - order[b.prio]);
-  if (sort === "nombre")    tasks.sort((a, b) => a.t.localeCompare(b.t));
+  const subjects = data.subjects || [];
 
-  const subjOf    = (id) => data.subjects.find(s => s.id === id);
-  const toggleDone = (id) => set(s => {
-    const t = s.tasks.find(x => x.id === id);
-    t.done = !t.done;
-    t.status = t.done ? "lista" : "pendiente";
+  /* toggle done y delete — robustos: sirven para tareas globales y de materia */
+  const toggleDone = (task) => set(s => {
+    const g = s.tasks.find(x => x.id === task.id);
+    if (g) { g.done = !g.done; g.status = g.done ? "lista" : "pendiente"; return; }
+    const sub = s.subjects.find(x => x.id === task.subject);
+    const it = sub?.lists?.tareas?.find(x => x.id === task.id);
+    if (it) it.done = !it.done;
   });
-  const del = (id) => { set(s => s.tasks = s.tasks.filter(t => t.id !== id)); toast("Tarea eliminada"); };
+  const del = (task) => set(s => {
+    if (s.tasks.some(x => x.id === task.id)) { s.tasks = s.tasks.filter(t => t.id !== task.id); toast("Tarea eliminada"); return; }
+    const sub = s.subjects.find(x => x.id === task.subject);
+    if (sub?.lists?.tareas) { sub.lists.tareas = sub.lists.tareas.filter(x => x.id !== task.id); toast("Tarea eliminada"); }
+  });
 
-  /* Quick-add: solo título, sin abrir modal */
-  const QuickAdd = () => {
-    const [draft, setDraft] = React.useState("");
-    return (
-      <form className="row" style={{ gap: 10, padding: "14px 22px" }} onSubmit={e => {
-        e.preventDefault();
-        if (draft.trim()) {
-          set(s => s.tasks.push({ id: uid(), t: draft.trim(), desc: "", subject: null, due: "—", prio: "media", xp: 20, status: "pendiente", done: false }));
-          setDraft("");
-          toast("Tarea agregada");
-        }
-      }}>
-        <input className="input" placeholder="Agregar tarea rápida y enter…" value={draft} onChange={e => setDraft(e.target.value)} />
-        <Btn variant="secondary" icon="plus" style={{ flex: "0 0 auto" }} title="Agregar rápida"></Btn>
-        <Btn variant="primary" icon="settings" type="button" style={{ flex: "0 0 auto" }} onClick={() => tf.open()} title="Agregar con opciones">Completa</Btn>
-      </form>
-    );
+  /* ── agrupaciones ── */
+  const bySubject = () => {
+    const groups = subjects
+      .map(sub => ({ sub, tasks: sortTasks(allTasks.filter(t => t.subject === sub.id)) }))
+      .filter(g => g.tasks.length > 0);
+    const general = sortTasks(allTasks.filter(t => !t.subject || !subjects.some(s => s.id === t.subject)));
+    if (general.length) groups.push({ sub: { id: null, name: "General", color: "#8a7f6d" }, tasks: general });
+    return groups;
   };
+  const byDate = () => ([
+    { key: "hoy", label: "Hoy", dot: "var(--org)", tasks: sortTasks(allTasks.filter(t => t.due === "Hoy")) },
+    { key: "fecha", label: "Con fecha", dot: "#8a7a3f", tasks: sortTasks(allTasks.filter(t => t.due && t.due !== "—" && t.due !== "Hoy")) },
+    { key: "sin", label: "Sin fecha", dot: "#cbbfa8", tasks: sortTasks(allTasks.filter(t => !t.due || t.due === "—")) },
+  ].filter(g => g.tasks.length > 0));
+
+  const groups = group === "materia" ? bySubject() : byDate();
+
+  const pendientes = allTasks.filter(t => !t.done).length;
+  const paraHoy    = allTasks.filter(t => t.due === "Hoy").length;
+  const completas  = allTasks.filter(t => t.done).length;
 
   return (
     <div className="page page-wide">
-      <PageHead title="Tareas" meta={`${allTasks.length} en total · ${allTasks.filter(t => t.done).length} completas`}>
-        <select className="sel-input" value={sort} onChange={e => setSort(e.target.value)}>
-          <option value="creacion">Creación</option>
-          <option value="prioridad">Prioridad</option>
-          <option value="nombre">Nombre</option>
-        </select>
-        <Btn variant={hideListed ? "primary" : "secondary"} icon="check" onClick={() => setHideListed(h => !h)}>
-          Ocultar listas
-        </Btn>
+      <PageHead title="Tareas" meta={`${allTasks.length} en total · ${paraHoy} para hoy`}>
         <div className="seg">
-          <button className={view === "tabla"    ? "on" : ""} onClick={() => setView("tabla")}><Icon name="list" size={14} /> Tabla</button>
-          <button className={view === "cards"    ? "on" : ""} onClick={() => setView("cards")}><Icon name="grid" size={14} /> Cards</button>
-          <button className={view === "materias" ? "on" : ""} onClick={() => setView("materias")}><Icon name="book" size={14} /> Materias</button>
+          <button className={group === "materia" ? "on" : ""} onClick={() => setGroup("materia")}><Icon name="layers" size={14} /> Por materia</button>
+          <button className={group === "fecha" ? "on" : ""} onClick={() => setGroup("fecha")}><Icon name="calendar" size={14} /> Por fecha</button>
         </div>
-        {/* + abre el modal completo */}
         <Btn variant="primary" icon="plus" onClick={() => tf.open()}>Nueva tarea</Btn>
       </PageHead>
 
       {/* stats */}
-      <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 24 }}>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 24, gap: 12 }}>
         {[
-          ["Pendientes",  allTasks.filter(t => !t.done).length,                allTasks.filter(t => t.prio === "alta" && !t.done).length + " de alta prioridad"],
-          ["Para hoy",    allTasks.filter(t => t.due === "Hoy").length,         "Vencen hoy"],
-          ["Completadas", allTasks.filter(t => t.done).length,                  "Esta semana"],
-        ].map(([l, v, sub]) => (
+          ["Pendientes", pendientes, "var(--ink)"],
+          ["Para hoy",   paraHoy,    "var(--org-deep)"],
+          ["Completadas",completas,  "#3B6D11"],
+        ].map(([l, v, c]) => (
           <div key={l} className="card">
             <MonoLabel>{l}</MonoLabel>
-            <div className="stat" style={{ fontSize: 48, marginTop: 12 }}>{v}</div>
-            <div className="small" style={{ marginTop: 8 }}>{sub}</div>
+            <div className="stat" style={{ fontSize: 40, marginTop: 8, color: c }}>{v}</div>
           </div>
         ))}
       </div>
 
-      {/* ── TABLA ── */}
-      {view === "tabla" && (
-        <div className="card card-flush">
-          {tasks.length === 0 && <Empty hubby="idle" title="Sin tareas pendientes" sub='Usá "Nueva tarea" arriba o escribí rápido abajo.' />}
-          {tasks.map(t => (
-            <div key={t.id} className="task-row" style={{ opacity: t.done ? .5 : 1 }}>
-              <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>
-                {t.done && <Icon name="check" size={13} color="#fff" />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => tf.open(t)}>
-                <div style={{ fontSize: 14.5, fontWeight: 500, textDecoration: t.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.t}</div>
-                <div className="row" style={{ gap: 7, marginTop: 5, flexWrap: "wrap" }}>
-                  {subjOf(t.subject) && <span className="mono" style={{ fontSize: 10, color: subjOf(t.subject).color }}>{subjOf(t.subject).name}</span>}
-                  <PrioBadge p={t.prio} />
-                  {t.due && t.due !== "—" && <DueBadge due={t.due} />}
-                </div>
-              </div>
-              <div className="row" style={{ gap: 4, flex: "0 0 auto" }}>
-                <StatusBadge st={t.status} />
-                <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => tf.open(t)}><Icon name="edit" size={14} /></div>
-                <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => del(t.id)}><Icon name="trash" size={14} /></div>
-              </div>
-            </div>
-          ))}
-          <QuickAdd />
-        </div>
+      {groups.length === 0 && (
+        <Empty hubby="idle" title="Sin tareas todavía" sub='Creá una con "Nueva tarea" arriba.' />
       )}
 
-      {/* ── CARDS ── */}
-      {view === "cards" && (
-        <>
-          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px,1fr))", marginBottom: 16 }}>
-            {tasks.map(t => (
-              <div key={t.id} className="card hoverable" style={{ opacity: t.done ? .55 : 1 }}>
-                <div className="row between" style={{ marginBottom: 14 }}>
-                  <div className="row" style={{ gap: 11 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--surface-2)", display: "grid", placeItems: "center", fontWeight: 700, color: "var(--violet-hi)", fontFamily: "var(--font-display)" }}>
-                      {t.t[0]}
-                    </div>
-                    <span style={{ width: 9, height: 9, borderRadius: 99, background: PRIO[t.prio] }}></span>
-                  </div>
-                  <StatusBadge st={t.status} />
-                </div>
-                <div style={{ fontSize: 15.5, fontWeight: 600, cursor: "pointer" }} onClick={() => tf.open(t)}>{t.t}</div>
-                {t.desc && <div className="small" style={{ marginTop: 6 }}>{t.desc}</div>}
-                <div className="row between" style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
-                  <DueBadge due={t.due} />
-                  <div className="row" style={{ gap: 4 }}>
-                    <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>
-                      {t.done && <Icon name="check" size={13} color="#fff" />}
-                    </div>
-                    <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => tf.open(t)}><Icon name="edit" size={14} /></div>
-                    <div className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => del(t.id)}><Icon name="trash" size={14} /></div>
-                  </div>
-                </div>
-              </div>
+      {groups.map((g, gi) => (
+        <div key={g.sub ? (g.sub.id || "gen") : g.key} className="tsk-group" style={{ marginBottom: 18, animationDelay: `${gi * 60}ms` }}>
+          <div className="row" style={{ gap: 10, margin: "0 0 8px 4px", alignItems: "center" }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: g.sub ? g.sub.color : g.dot, display: "inline-block", flex: "0 0 auto" }} />
+            <span className="mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--ink)" }}>
+              {(g.sub ? g.sub.name : g.label).toUpperCase()}
+            </span>
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--tx-3)" }}>· {g.tasks.filter(t => !t.done).length} pendientes</span>
+            {g.sub && g.sub.id && (
+              <span className="link" style={{ fontSize: 12, marginLeft: "auto" }} onClick={() => onOpenSubject(g.sub.id)}>Abrir materia →</span>
+            )}
+          </div>
+          <div className="card card-flush">
+            {g.tasks.map((t, i) => (
+              <TaskLine key={t.id} t={t} last={i === g.tasks.length - 1}
+                onToggle={toggleDone} onEdit={tf.open} onDelete={del} />
             ))}
           </div>
-          <div className="card card-flush"><QuickAdd /></div>
-        </>
-      )}
-
-      {/* ── MATERIAS ── */}
-      {view === "materias" && (
-        <div style={{ display: "grid", gap: 22 }}>
-          {[...data.subjects, { id: null, name: "General", color: "#5d5d68" }].map(sub => {
-            const ts = tasks.filter(t => t.subject === sub.id);
-            if (ts.length === 0 && sub.id !== null) return null;
-            return (
-              <div key={sub.id || "gen"} className="card card-flush">
-                <div className="row between" style={{ padding: "16px 22px", borderBottom: "1px solid var(--line)" }}>
-                  <div className="row" style={{ gap: 12 }}>
-                    <span style={{ width: 4, height: 22, borderRadius: 99, background: sub.color }}></span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>{sub.name}</span>
-                    <Chip>{ts.length}</Chip>
-                  </div>
-                  <div className="row" style={{ gap: 10 }}>
-                    {sub.id && <span className="link" style={{ fontSize: 13 }} onClick={() => onOpenSubject(sub.id)}>Abrir materia →</span>}
-                    {/* + abre modal con la materia pre-cargada */}
-                    <div className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => tf.open({ ...tf.form, subject: sub.id })} title="Nueva tarea en esta materia">
-                      <Icon name="plus" size={13} />
-                    </div>
-                  </div>
-                </div>
-                {ts.length === 0 && <div className="empty" style={{ padding: 24 }}><span className="small">Sin tareas</span></div>}
-                {ts.map(t => (
-                  <div key={t.id} className="row" style={{ padding: "13px 22px", borderBottom: "1px solid var(--line)", gap: 14, opacity: t.done ? .5 : 1 }}>
-                    <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>
-                      {t.done && <Icon name="check" size={13} color="#fff" />}
-                    </div>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, textDecoration: t.done ? "line-through" : "none", cursor: "pointer" }} onClick={() => tf.open(t)}>
-                      {t.t}
-                    </span>
-                    <PrioBadge p={t.prio} />
-                    <DueBadge due={t.due} />
-                    <div className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => tf.open(t)}><Icon name="edit" size={13} /></div>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          <div className="card card-flush"><QuickAdd /></div>
         </div>
-      )}
+      ))}
 
       <TaskFormModal hook={tf} />
     </div>

@@ -16,6 +16,7 @@ const MENU = [
   { id: "dashboard",  label: "Hoy",       icon: "home" },
   { id: "calendario", label: "Calendario",icon: "calendar" },
   { id: "facultad",   label: "Facultad",  icon: "layers" },
+  { id: "tareas",     label: "Tareas",    icon: "check" },
   { id: "notas",      label: "Progreso",  icon: "target" },
   { id: "ocio",       label: "Ocio",      icon: "film" },
 ];

@@ -346,6 +346,28 @@ input,select,textarea{ font-size:16px; }
 .btn-soft{ background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:11px; padding:8px 13px; font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; box-shadow:0 2px 0 #e0d5c3; }
 .btn-soft:hover{ background:var(--field); }
 
+/* ===== TEMARIO · UNIDADES ===== */
+.unidad-block{ animation:uni-in .3s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes uni-in{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+.unidad-body{ display:grid; grid-template-rows:1fr; transition:grid-template-rows .26s ease, opacity .18s ease; opacity:1; }
+.unidad-body.collapsed{ grid-template-rows:0fr; opacity:0; }
+.unidad-body > div{ overflow:hidden; min-height:0; }
+.unidad-block .tema-row{ animation:tema-in .28s ease both; }
+@keyframes tema-in{ from{ opacity:0; transform:translateX(-7px); } to{ opacity:1; transform:none; } }
+.add-unidad{ transition:color .14s ease; }
+.add-unidad:hover{ color:var(--org-deep); }
+.add-unidad:active{ transform:scale(.98); }
+@media(prefers-reduced-motion:reduce){ .unidad-block, .unidad-block .tema-row{ animation:none; } .unidad-body{ transition:none; } }
+
+/* ===== TAREAS (vista general) ===== */
+.tsk-group{ animation:uni-in .32s cubic-bezier(.2,.8,.3,1) both; }
+.tsk-line{ transition:background .12s ease; }
+.tsk-line:hover{ background:var(--field); }
+.tsk-line .tsk-del{ opacity:0; transition:opacity .14s ease; }
+.tsk-line:hover .tsk-del{ opacity:1; }
+@media(pointer:coarse){ .tsk-line .tsk-del{ opacity:1; } }
+@media(prefers-reduced-motion:reduce){ .tsk-group{ animation:none; } }
+
 /* ===== SIDEBAR (rail expandible) ===== */
 .sidebar{
   flex:0 0 auto;

@@ -119,11 +119,17 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekPlan(new Date()));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const temas = subject.lists?.temas || [];
+  const unidades = subject.lists?.unidades || [];
   const plan = subject.studyPlan || [];
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
   const weekIsos = weekDays.map(isoOfPlan);
   const placedThisWeek = plan.filter(p => weekIsos.includes(p.date));
   const unlocated = temas.filter(t => !placedThisWeek.some(p => p.temaId === t.id));
+  /* temas sin ubicar agrupados por su unidad (para arrastrar cada tema por separado) */
+  const unlocatedByUnidad = unidades
+    .map(u => ({ unidad: u, temas: unlocated.filter(t => t.unidadId === u.id) }))
+    .filter(g => g.temas.length > 0);
+  const unlocatedHuerfanos = unlocated.filter(t => !unidades.some(u => u.id === t.unidadId));
 
   const onDragEnd = ({ active, over }) => {
     if (!over) return;
@@ -155,9 +161,22 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
           <Card>
             <CardTitle icon="target">Temas sin ubicar</CardTitle>
             {unlocated.length === 0 && <div className="small" style={{ color: "var(--tx-3)" }}>Todos los temas están ubicados esta semana.</div>}
-            <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
-              {unlocated.map(t => <PlanChip key={t.id} tema={t} />)}
-            </div>
+            {unlocatedByUnidad.map(({ unidad, temas: uts }) => (
+              <div key={unidad.id} style={{ marginTop: 10 }}>
+                <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>{(unidad.name || "").toUpperCase()}</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {uts.map(t => <PlanChip key={t.id} tema={t} />)}
+                </div>
+              </div>
+            ))}
+            {unlocatedHuerfanos.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>SIN UNIDAD</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {unlocatedHuerfanos.map(t => <PlanChip key={t.id} tema={t} />)}
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card style={{ overflowX: "auto" }}>
@@ -204,6 +223,28 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   React.useEffect(() => {
     if (autoOpenPlanner) { setPlannerOpen(true); onPlannerConsumed && onPlannerConsumed(); }
   }, [autoOpenPlanner]);
+
+  /* normaliza el temario a unidades: si hay temas sueltos (p.ej. cargados en el
+     modal de materia) los mete en una "Unidad 1", sin esperar a recargar */
+  React.useEffect(() => {
+    const sub = data.subjects.find(x => x.id === subjectId);
+    if (!sub) return;
+    const L = sub.lists || {};
+    const ts = Array.isArray(L.temas) ? L.temas : [];
+    const us = Array.isArray(L.unidades) ? L.unidades : [];
+    const validIds = new Set(us.map(u => u.id));
+    if (!ts.some(t => !validIds.has(t.unidadId))) return; /* sin huérfanos → nada que hacer */
+    set(st => {
+      const sb = st.subjects.find(x => x.id === subjectId);
+      const LL = sb.lists || (sb.lists = {});
+      let uu = Array.isArray(LL.unidades) ? LL.unidades : [];
+      if (uu.length === 0) uu = [{ id: uid(), name: "Unidad 1", collapsed: false }];
+      const valid = new Set(uu.map(u => u.id));
+      LL.unidades = uu;
+      LL.temas = (LL.temas || []).map(t => valid.has(t.unidadId) ? t : { ...t, unidadId: uu[0].id });
+    });
+  }, [subjectId, data.subjects]);
+
   if (!s) return null;
 
   const lists = s.lists || {};
@@ -216,10 +257,30 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const idx = data.subjects.indexOf(s);
   const num = String(idx + 1).padStart(2, "0");
 
+  const unidades = lists.unidades || [];
   const setList = (k, v) => set(st => { const sub = st.subjects.find(x => x.id === subjectId); sub.lists = { ...(sub.lists || {}), [k]: v }; });
   const setFiles = (v) => set(st => { st.subjects.find(x => x.id === subjectId).files = v; });
-  const upTema = (i, patch) => setList("temas", temas.map((x, j) => j === i ? { ...x, ...patch } : x));
+  const upTemaById = (id, patch) => setList("temas", temas.map(t => t.id === id ? { ...t, ...patch } : t));
   const setStudyPlan = (v) => set(st => { st.subjects.find(x => x.id === subjectId).studyPlan = v; });
+
+  /* ── unidades del temario ── */
+  const addUnidad = () => setList("unidades", [...unidades, { id: uid(), name: `Unidad ${unidades.length + 1}`, collapsed: false }]);
+  const upUnidad  = (id, patch) => setList("unidades", unidades.map(u => u.id === id ? { ...u, ...patch } : u));
+  const delUnidad = (id) => set(st => {
+    const sub = st.subjects.find(x => x.id === subjectId);
+    sub.lists = { ...(sub.lists || {}),
+      unidades: (sub.lists?.unidades || []).filter(u => u.id !== id),
+      temas: (sub.lists?.temas || []).filter(t => t.unidadId !== id),
+    };
+  });
+  const addTema = (unidadId, t) => setList("temas", [...temas, { id: uid(), t, unidadId, resumido: false, estudiado: false, repasos: 0 }]);
+  const delTema = (id) => setList("temas", temas.filter(t => t.id !== id));
+  /* marca/desmarca resumido|estudiado en TODA la unidad (propaga a sus temas) */
+  const toggleUnidadState = (unidadId, key) => {
+    const unitTemas = temas.filter(t => t.unidadId === unidadId);
+    const allOn = unitTemas.length > 0 && unitTemas.every(t => t[key]);
+    setList("temas", temas.map(t => t.unidadId === unidadId ? { ...t, [key]: !allOn } : t));
+  };
 
   const link = s.link && (s.link.startsWith("http") ? s.link : "https://" + s.link);
   const folderFiles = files.filter(f => (f.folder || "material") === folder);
@@ -291,27 +352,62 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
         </Card>
       </div>
 
-      {/* ── fila 2: temario ── */}
+      {/* ── fila 2: temario dividido en unidades ── */}
       <Card style={{ marginBottom: 14 }}>
         <CardTitle icon="target" right={<button className="btn-soft" onClick={() => setPlannerOpen(true)}><Icon name="calendar" size={14} /> Planificar la semana</button>}>Temario del parcial</CardTitle>
-        <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 4 }}>Marcá <span style={{ color: "var(--org-deep)" }}>resumido / estudiado</span> o el <span style={{ color: "#3B6D11" }}>↻ repaso</span> de cada tema. Entrá a un tema para ver su detalle.</div>
-        {temas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)", padding: "6px 0" }}>Cargá los temas del parcial acá abajo.</div>}
-        {temas.map((it, i) => (
-          <div key={it.id || i} className="tema-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4" }}>
-            <span onClick={() => setPlannerOpen(true)} title="Planificar" style={{ cursor: "grab", color: "var(--tx-3)", display: "flex", flex: "0 0 auto" }}><Icon name="dots" size={13} /></span>
-            <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
-            <span onClick={() => setOpenTemaId(it.id)} style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)", cursor: "pointer" }}>{it.t}</span>
-            <span className="ms" style={it.resumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => upTema(i, { resumido: !it.resumido })}>resumido</span>
-            <span className="ms" style={it.estudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => upTema(i, { estudiado: !it.estudiado })}>estudiado</span>
-            <span className="rep" style={(it.repasos > 0) ? { background: "#E4EEDB", color: "#3B6D11" } : undefined}>
-              <b onClick={() => upTema(i, { repasos: Math.max(0, (it.repasos || 0) - 1) })}>−</b>
-              <Icon name="refresh" size={12} /> {it.repasos || 0}
-              <b onClick={() => upTema(i, { repasos: (it.repasos || 0) + 1, estudiado: true })}>+</b>
-            </span>
-            <span onClick={() => setList("temas", temas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={14} /></span>
-          </div>
-        ))}
-        <AddInput placeholder="Agregar tema…" onAdd={t => setList("temas", [...temas, { id: uid(), t, resumido: false, estudiado: false, repasos: 0 }])} />
+        <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 10 }}>Dividí cada unidad en temas. Marcá <span style={{ color: "var(--org-deep)" }}>resumido / estudiado</span> por tema o de toda la unidad. Entrá a un tema para su detalle.</div>
+
+        {unidades.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)", padding: "2px 0 12px" }}>Todavía no hay unidades. Creá la primera abajo y cargale sus temas.</div>}
+
+        {unidades.map((u, ui) => {
+          const unitTemas = temas.filter(t => t.unidadId === u.id);
+          const estudiados = unitTemas.filter(t => t.estudiado).length;
+          const allResumido = unitTemas.length > 0 && unitTemas.every(t => t.resumido);
+          const allEstudiado = unitTemas.length > 0 && unitTemas.every(t => t.estudiado);
+          return (
+            <div key={u.id} className="unidad-block" style={{ borderLeft: `3px solid ${allEstudiado ? "var(--ink)" : unitTemas.length ? "var(--org)" : "#cbbfa8"}`, paddingLeft: 14, marginBottom: 16, animationDelay: `${ui * 55}ms` }}>
+              {/* encabezado de la unidad */}
+              <div className="row" style={{ gap: 8, marginBottom: 8, alignItems: "center" }}>
+                <span className="uni-caret" onClick={() => upUnidad(u.id, { collapsed: !u.collapsed })} style={{ cursor: "pointer", color: "var(--tx-3)", display: "flex", flex: "0 0 auto", transform: u.collapsed ? "rotate(-90deg)" : "none", transition: "transform .2s ease" }} title={u.collapsed ? "Desplegar" : "Plegar"}><Icon name="chevron" size={16} /></span>
+                <span className="mono" style={{ fontSize: 10.5, fontWeight: 800, color: "var(--ink)", letterSpacing: ".05em", flex: "0 0 auto" }}>U{ui + 1}</span>
+                <input value={u.name || ""} onChange={e => upUnidad(u.id, { name: e.target.value })} placeholder={`Unidad ${ui + 1}`}
+                  style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", fontSize: 14.5, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-body)", padding: "2px 0" }} />
+                <span className="mono" style={{ fontSize: 10.5, color: "var(--tx-3)", flex: "0 0 auto" }}>{unitTemas.length ? `${estudiados}/${unitTemas.length} estudiados` : "vacía"}</span>
+                {unitTemas.length > 0 && <>
+                  <span className="ms" style={allResumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => toggleUnidadState(u.id, "resumido")} title="Marcar toda la unidad">resumido</span>
+                  <span className="ms" style={allEstudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => toggleUnidadState(u.id, "estudiado")} title="Marcar toda la unidad">estudiado</span>
+                </>}
+                <span onClick={() => delUnidad(u.id)} title="Eliminar unidad" style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="trash" size={14} /></span>
+              </div>
+
+              {/* cuerpo colapsable */}
+              <div className={`unidad-body${u.collapsed ? " collapsed" : ""}`}>
+                <div>
+                  {unitTemas.map((it, ti) => (
+                    <div key={it.id} className="tema-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4", animationDelay: `${ti * 40}ms` }}>
+                      <span onClick={() => setPlannerOpen(true)} title="Planificar" style={{ cursor: "grab", color: "var(--tx-3)", display: "flex", flex: "0 0 auto" }}><Icon name="dots" size={13} /></span>
+                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
+                      <span onClick={() => setOpenTemaId(it.id)} style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)", cursor: "pointer" }}>{it.t}</span>
+                      <span className="ms" style={it.resumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => upTemaById(it.id, { resumido: !it.resumido })}>resumido</span>
+                      <span className="ms" style={it.estudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => upTemaById(it.id, { estudiado: !it.estudiado })}>estudiado</span>
+                      <span className="rep" style={(it.repasos > 0) ? { background: "#E4EEDB", color: "#3B6D11" } : undefined}>
+                        <b onClick={() => upTemaById(it.id, { repasos: Math.max(0, (it.repasos || 0) - 1) })}>−</b>
+                        <Icon name="refresh" size={12} /> {it.repasos || 0}
+                        <b onClick={() => upTemaById(it.id, { repasos: (it.repasos || 0) + 1, estudiado: true })}>+</b>
+                      </span>
+                      <span onClick={() => delTema(it.id)} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={14} /></span>
+                    </div>
+                  ))}
+                  <AddInput placeholder="Agregar tema a esta unidad…" onAdd={t => addTema(u.id, t)} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div onClick={addUnidad} className="add-unidad" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "var(--ink)", fontWeight: 700, fontSize: 13, borderTop: "1px dashed #d8cdb6", paddingTop: 14, marginTop: 2 }}>
+          <span style={{ color: "var(--org)", display: "flex" }}><Icon name="plus" size={16} /></span> Agregar unidad
+        </div>
       </Card>
 
       {/* ── fila 3: parciales/tps + archivos ── */}
