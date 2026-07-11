@@ -54,7 +54,7 @@ const TOPNAV = [
   { id: "calendario", label: "Calendario" },
   { id: "facultad",   label: "Facultad" },
   { id: "notas",      label: "Progreso" },
-  { id: "ocio",       label: "Pelis" },
+  { id: "ocio",       label: "Ocio" },
 ];
 const Header = ({ profile, onNav, section }) => {
   const initial = profile.initial || (profile.name ? profile.name[0] : "?");

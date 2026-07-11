@@ -13,7 +13,7 @@ const SECTION_ITEMS = [
   { type: "section", id: "facultad",   label: "Facultad — Materias",    icon: "layers" },
   { type: "section", id: "tareas",     label: "Tareas",                 icon: "check" },
   { type: "section", id: "notas",      label: "Progreso — Notas del cuatrimestre", icon: "target" },
-  { type: "section", id: "ocio",       label: "Pelis, series y juegos", icon: "film" },
+  { type: "section", id: "ocio",       label: "Ocio — Pelis, series y juegos", icon: "film" },
   { type: "section", id: "chat",       label: "Hubby — Chat IA",        icon: "chat" },
   { type: "section", id: "config",     label: "Configuración",          icon: "gear" },
 ];

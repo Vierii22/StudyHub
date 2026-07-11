@@ -17,7 +17,7 @@ const MENU = [
   { id: "calendario", label: "Calendario",icon: "calendar" },
   { id: "facultad",   label: "Facultad",  icon: "layers" },
   { id: "notas",      label: "Progreso",  icon: "target" },
-  { id: "ocio",       label: "Pelis",     icon: "film" },
+  { id: "ocio",       label: "Ocio",      icon: "film" },
 ];
 
 const HoyMenu = ({ active, onNav }) => (

@@ -11,7 +11,7 @@ const TABS = [
   { id: "calendario", icon: "calendar", label: "Calendario" },
   { id: "facultad",   icon: "layers",   label: "Facultad" },
   { id: "notas",      icon: "target",   label: "Progreso" },
-  { id: "ocio",       icon: "film",     label: "Pelis" },
+  { id: "ocio",       icon: "film",     label: "Ocio" },
 ];
 
 export function TabBar({ active, onNav }) {
