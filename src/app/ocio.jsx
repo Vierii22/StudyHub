@@ -26,6 +26,47 @@ const STATUS_META = {
 
 const NOTE_TAGS = ["Jugando", "Al terminar"];
 
+const PLATFORMS = ["PC", "Xbox", "PlayStation", "Nintendo"];
+const YEAR_MIN = 1970;
+const CURRENT_YEAR = new Date().getFullYear();
+
+/* ---------- selector de plataforma (chips clickeables) ---------- */
+const PlatformPicker = ({ value, onChange }) => (
+  <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+    {PLATFORMS.map(p => (
+      <button key={p} type="button" className={`tab${value === p ? " on" : ""}`} onClick={() => onChange(value === p ? "" : p)}>{p}</button>
+    ))}
+  </div>
+);
+
+/* ---------- puntaje con estrellas (0-10, medios puntos) ---------- */
+const StarRating = ({ value = 0, onChange }) => {
+  const pick = (e, i) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const half = (e.clientX - rect.left) < rect.width / 2;
+    onChange(half ? i * 2 - 1 : i * 2);
+  };
+  return (
+    <div className="star-pick">
+      {[1, 2, 3, 4, 5].map(i => {
+        const full = value >= i * 2;
+        const half = !full && value >= i * 2 - 1;
+        return (
+          <span key={i} className="star-wrap" onClick={e => pick(e, i)}>
+            <Icon name="star" size={24} color="var(--line-2)" />
+            {(full || half) && (
+              <span style={{ position: "absolute", top: 0, left: 0, overflow: "hidden", width: full ? "100%" : "50%" }}>
+                <Icon name="star" size={24} fill="var(--org)" color="var(--org)" />
+              </span>
+            )}
+          </span>
+        );
+      })}
+      <span className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginLeft: 8 }}>{value > 0 ? `${value}/10` : "Sin puntaje"}</span>
+    </div>
+  );
+};
+
 /* ---------- tarjeta con carátula placeholder ---------- */
 const Cover = ({ title, icon }) => (
   <div style={{
@@ -85,8 +126,15 @@ const ItemModal = ({ item, kind, onClose, onSave, onDelete }) => {
       <div style={{ display: "grid", gap: 14 }}>
         <Field label="Título *"><input className="input" value={f.title} onChange={e => up("title", e.target.value)} autoFocus /></Field>
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <Field label="Año"><input className="input" value={f.year} onChange={e => up("year", e.target.value)} placeholder="2024" /></Field>
-          <Field label={kind === "juegos" ? "Plataforma" : "Dónde"}><input className="input" value={f.platform} onChange={e => up("platform", e.target.value)} placeholder={kind === "juegos" ? "PC, PS5…" : "Netflix, cine…"} /></Field>
+          <Field label="Año" hint={f.year ? String(f.year) : "sin definir"}>
+            <input type="range" className="range-slider" min={YEAR_MIN} max={CURRENT_YEAR + 1}
+              value={f.year || CURRENT_YEAR} onChange={e => up("year", Number(e.target.value))} />
+          </Field>
+          <Field label={kind === "juegos" ? "Plataforma" : "Dónde"}>
+            {kind === "juegos"
+              ? <PlatformPicker value={f.platform} onChange={v => up("platform", v)} />
+              : <input className="input" value={f.platform} onChange={e => up("platform", e.target.value)} placeholder="Netflix, cine…" />}
+          </Field>
         </div>
         <Field label="Estado">
           <div className="seg" style={{ display: "flex", width: "100%" }}>
@@ -95,7 +143,7 @@ const ItemModal = ({ item, kind, onClose, onSave, onDelete }) => {
         </Field>
         <div className="grid" style={{ gridTemplateColumns: kind === "juegos" ? "1fr 1fr" : "1fr 1fr" }}>
           <Field label="Puntaje" hint="sobre 10">
-            <input className="input" type="number" min="0" max="10" step="0.5" value={f.rating} onChange={e => up("rating", Number(e.target.value))} />
+            <StarRating value={f.rating} onChange={v => up("rating", v)} />
           </Field>
           {kind === "juegos"
             ? <Field label="Horas jugadas"><input className="input" type="number" min="0" step="0.5" value={f.hours} onChange={e => up("hours", Number(e.target.value))} /></Field>
