@@ -39,33 +39,26 @@ const PlatformPicker = ({ value, onChange }) => (
   </div>
 );
 
-/* ---------- puntaje con estrellas (0-10, medios puntos) ---------- */
-const StarRating = ({ value = 0, onChange }) => {
-  const pick = (e, i) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const half = (e.clientX - rect.left) < rect.width / 2;
-    onChange(half ? i * 2 - 1 : i * 2);
-  };
-  return (
-    <div className="star-pick">
-      {[1, 2, 3, 4, 5].map(i => {
-        const full = value >= i * 2;
-        const half = !full && value >= i * 2 - 1;
-        return (
-          <span key={i} className="star-wrap" onClick={e => pick(e, i)}>
-            <Icon name="star" size={24} color="var(--line-2)" />
-            {(full || half) && (
-              <span style={{ position: "absolute", top: 0, left: 0, overflow: "hidden", width: full ? "100%" : "50%" }}>
-                <Icon name="star" size={24} fill="var(--org)" color="var(--org)" />
-              </span>
-            )}
-          </span>
-        );
-      })}
-      <span className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginLeft: 8 }}>{value > 0 ? `${value}/10` : "Sin puntaje"}</span>
-    </div>
-  );
-};
+/* ---------- puntaje con estrellas (10 estrellas, amarillas al clickear) ---------- */
+const STAR_COLOR = "#F5C518";
+const StarRating = ({ value = 0, onChange }) => (
+  <div className="star-pick">
+    {Array.from({ length: 10 }, (_, i) => i + 1).map(i => {
+      const filled = value >= i;
+      return (
+        <span key={i} className="star-wrap" onClick={() => onChange(value === i ? 0 : i)}>
+          <Icon name="star" size={19} color="var(--line-2)" />
+          {filled && (
+            <span style={{ position: "absolute", top: 0, left: 0 }}>
+              <Icon name="star" size={19} fill={STAR_COLOR} color={STAR_COLOR} />
+            </span>
+          )}
+        </span>
+      );
+    })}
+    <span className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginLeft: 8 }}>{value > 0 ? `${value}/10` : "Sin puntaje"}</span>
+  </div>
+);
 
 /* ---------- tarjeta con carátula placeholder ---------- */
 const Cover = ({ title, icon }) => (

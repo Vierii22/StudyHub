@@ -245,10 +245,10 @@ input,select,textarea{ font-size:16px; }
 .range-slider::-moz-range-track{ height:6px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); }
 
 /* ===== STAR RATING PICKER ===== */
-.star-pick{ display:inline-flex; align-items:center; gap:2px; cursor:pointer; }
-.star-pick .star-wrap{ position:relative; width:24px; height:24px; display:inline-block; }
+.star-pick{ display:flex; align-items:center; flex-wrap:wrap; row-gap:6px; gap:2px; cursor:pointer; }
+.star-pick .star-wrap{ position:relative; width:19px; height:19px; display:inline-block; transition:transform .1s ease; }
 .star-pick .star-wrap svg{ position:absolute; top:0; left:0; }
-.star-pick .star-wrap:hover{ transform:scale(1.08); }
+.star-pick .star-wrap:hover{ transform:scale(1.15); }
 
 /* ===== CHIP / BADGE ===== */
 .chip{
