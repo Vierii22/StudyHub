@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { useStore, toast, DEFAULT_EVAL, subjectPromedio, deriveEstado } from './store.jsx';
-import { Modal, Field, Seg, Toggle } from './ui.jsx';
+import { Modal, Field, Seg, Toggle, Hubby } from './ui.jsx';
 
 /* ============================================================
    NOTAS DEL CUATRIMESTRE (DESIGN.md punto 8)
@@ -144,7 +144,7 @@ const Celebration = ({ info, onClose }) => {
         }} />
       ))}
       <div className="cele-card" onClick={e => e.stopPropagation()}>
-        <img src="/assets/hubby-bot.png" alt="Hubby" className="cele-hubby" />
+        <img src={`/assets/hubby/hubby-${isPromo ? "festejo" : "contento"}.png`} alt="Hubby" className="cele-hubby" />
         {isPromo ? (
           <div className="cele-stamp">PROMOCIONADA<span>promedio {info.promedio}</span></div>
         ) : (
@@ -224,7 +224,7 @@ const Notas = () => {
       </div>
 
       {subjects.length === 0 ? (
-        <div className="empty"><div className="h3">Todavía no tenés materias</div><div className="small" style={{ marginTop: 6 }}>Creá tu primera materia desde Facultad.</div></div>
+        <div className="empty"><div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}><Hubby pose="idle" size={92} /><div className="h3" style={{ marginTop: 10 }}>Todavía no tenés materias</div><div className="small" style={{ marginTop: 6 }}>Creá tu primera materia desde Facultad.</div></div></div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
           {subjects.map(s => (

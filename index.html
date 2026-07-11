@@ -1024,13 +1024,24 @@ a{ color:inherit; text-decoration:none; }
   box-shadow:0 0 0 2px var(--ink);
 }
 
+/* — Hubby (mascota) — */
+.hubby{ user-select:none; -webkit-user-drag:none; display:block; }
+.hoy-hero-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.hoy-hubby{ flex:0 0 auto; }
+@media(max-width:600px){ .hoy-hubby{ display:none; } }
+@keyframes hubby-float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+.hubby-float{ animation:hubby-float 3.2s ease-in-out infinite; }
+@media(prefers-reduced-motion:reduce){ .hubby-float{ animation:none; } }
+
 /* — Coach "¿Y ahora qué?" — */
 .coach-card{
-  position:relative;
+  position:relative; overflow:hidden;
   border-radius:var(--r-xl); padding:22px 24px;
   background:var(--surface-1);
   border:1px solid var(--line);
 }
+.coach-hubby{ position:absolute; top:14px; right:14px; z-index:1; opacity:.96; }
+.coach-card .coach-title, .coach-card .coach-reason, .coach-card .coach-label{ position:relative; z-index:2; padding-right:64px; }
 .coach-label{
   font-family:var(--font-mono); font-size:10px; font-weight:700;
   letter-spacing:.16em; text-transform:uppercase; color:var(--org-deep);

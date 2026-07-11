@@ -115,11 +115,20 @@ const Toggle = ({ on, onChange }) => (
   </div>
 );
 
-const Empty = ({ icon, title, sub, action, onAction }) => (
+/* ---------- HUBBY (mascota) ---------- */
+/* poses: saluda · pensando · festejo · contento · vamos · idea · duerme · idle · chat */
+const Hubby = ({ pose = "idle", size = 72, className = "", style }) => (
+  <img src={`/assets/hubby/hubby-${pose}.png`} alt="Hubby" width={size} height={size}
+    className={`hubby ${className}`} style={{ objectFit: "contain", ...style }} draggable="false" />
+);
+
+const Empty = ({ icon, hubby, title, sub, action, onAction }) => (
   <div className="empty">
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-      <div style={{ color: "var(--tx-3)" }}><Icon name={icon || "layout"} size={36} /></div>
-      <div className="h3" style={{ marginTop: 16, fontSize: 16 }}>{title}</div>
+      {hubby
+        ? <Hubby pose={hubby} size={92} />
+        : <div style={{ color: "var(--tx-3)" }}><Icon name={icon || "layout"} size={36} /></div>}
+      <div className="h3" style={{ marginTop: hubby ? 10 : 16, fontSize: 16 }}>{title}</div>
       {sub && <div className="small" style={{ marginTop: 7, maxWidth: 320, textWrap: "pretty", lineHeight: 1.6 }}>{sub}</div>}
       {action && <button className="btn btn-secondary btn-sm" style={{ marginTop: 16 }} onClick={onAction}>{action}</button>}
     </div>
@@ -132,7 +141,7 @@ const SubjectDot = ({ s, size = 46 }) => (
 
 
 export {
-  TerminalCorners, Btn, Chip, MonoLabel,
+  TerminalCorners, Btn, Chip, MonoLabel, Hubby,
   Header, PageHead, Seg, Field,
   Modal, Toggle, Empty, SubjectDot,
 };

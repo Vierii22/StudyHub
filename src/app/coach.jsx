@@ -2,6 +2,9 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, getAllTasks } from './store.jsx';
 import { parseCapture } from './palette.jsx';
+import { Hubby } from './ui.jsx';
+
+const COACH_POSE = { alta: "vamos", media: "vamos", baja: "idea", cero: "contento" };
 
 /* ============================================================
    COACH — "¿Y ahora qué?"
@@ -148,6 +151,7 @@ const CoachCard = ({ data, onNav }) => {
   const action = React.useMemo(() => getNextAction(data), [data]);
   return (
     <div className="coach-card">
+      <Hubby pose={COACH_POSE[action.urgency] || "pensando"} size={78} className="coach-hubby hubby-float" />
       <div className="coach-label" style={{ color: URGENCY_COLOR[action.urgency] }}>
         <Icon name={action.icon} size={13} /> ¿Y ahora qué?
       </div>

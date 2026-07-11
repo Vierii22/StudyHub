@@ -190,7 +190,7 @@ const Ocio = () => {
       </div>
 
       {visible.length === 0
-        ? <Empty icon={TABS.find(t => t.id === tab).icon} title="Sin entradas" sub="Agregá algo con el botón de arriba." />
+        ? <Empty hubby="idle" title="Sin entradas" sub="Agregá algo con el botón de arriba." />
         : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 18 }}>
             {visible.map(item => <ItemCard key={item.id} item={item} kind={tab} onClick={() => setModal(item)} />)}

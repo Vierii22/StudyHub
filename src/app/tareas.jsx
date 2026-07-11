@@ -102,7 +102,7 @@ const Tareas = ({ onOpenSubject, autoNew }) => {
       {/* ── TABLA ── */}
       {view === "tabla" && (
         <div className="card card-flush">
-          {tasks.length === 0 && <Empty icon="check" title="Sin tareas pendientes" sub='Usá "Nueva tarea" arriba o escribí rápido abajo.' />}
+          {tasks.length === 0 && <Empty hubby="idle" title="Sin tareas pendientes" sub='Usá "Nueva tarea" arriba o escribí rápido abajo.' />}
           {tasks.map(t => (
             <div key={t.id} className="task-row" style={{ opacity: t.done ? .5 : 1 }}>
               <div className="cbox" onClick={() => toggleDone(t.id)} style={t.done ? { background: "var(--violet)", borderColor: "var(--violet)" } : {}}>

@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore } from './store.jsx';
 import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
+import { Hubby } from './ui.jsx';
 
 const greetingTime = () => { const h = new Date().getHours(); return h < 6 ? "noche" : h < 13 ? "mañana" : h < 20 ? "tarde" : "noche"; };
 
@@ -47,9 +48,12 @@ const Dashboard = ({ onNav }) => {
   return (
     <div className="page page-cozy">
       {/* ── HERO editorial ── */}
-      <div className="hoy-hero">
-        <div className="hoy-fecha">{fecha}</div>
-        <h1 className="hoy-saludo">{saludo}, <em>{p.name}</em></h1>
+      <div className="hoy-hero hoy-hero-row">
+        <div>
+          <div className="hoy-fecha">{fecha}</div>
+          <h1 className="hoy-saludo">{saludo}, <em>{p.name}</em></h1>
+        </div>
+        <Hubby pose={gt === "noche" ? "duerme" : "saluda"} size={96} className="hoy-hubby hubby-float" />
       </div>
 
       {/* ── CAPTURA UNIVERSAL ── */}

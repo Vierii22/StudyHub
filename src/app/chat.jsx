@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { useStore, getPomoWeekMins, ChatStore, useChatStore } from './store.jsx';
-import { Btn, PageHead } from './ui.jsx';
+import { Btn, PageHead, Hubby } from './ui.jsx';
 import { APP_GUIDE } from './help-content.js';
 
 /* ============================================================
@@ -102,10 +102,8 @@ const ChatIA = () => {
         <div ref={endRef} style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
           {msgs.length === 0 && (
             <div style={{ margin: "auto", textAlign: "center" }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, margin: "0 auto", background: "var(--field)", color: "var(--org)", display: "grid", placeItems: "center", border: "1px solid var(--line)" }}>
-                <Icon name="sparkles" size={26} />
-              </div>
-              <div className="h3" style={{ marginTop: 14 }}>Hubby</div>
+              <Hubby pose="saluda" size={110} className="hubby-float" />
+              <div className="h3" style={{ marginTop: 8 }}>¡Hola! Soy Hubby</div>
               <div className="small" style={{ marginTop: 6 }}>Preguntame lo que necesites o usá un atajo arriba.</div>
             </div>
           )}
