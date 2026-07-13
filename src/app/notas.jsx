@@ -24,6 +24,18 @@ const gradeKeys = (ev) => [
   ...(ev.final ? [{ k: "final", label: "Final" }] : []),
 ];
 
+/* ---------- stepper −/valor/+ (reemplaza el input numérico con flechas) ---------- */
+const Stepper = ({ value, onChange, min = 1, max = 10, step = 0.5 }) => {
+  const round = (n) => Math.round(n * 10) / 10;
+  return (
+    <div className="stepper">
+      <button type="button" aria-label="Menos" onClick={() => onChange(round(Math.max(min, value - step)))}>−</button>
+      <span className="val">{value}</span>
+      <button type="button" aria-label="Más" onClick={() => onChange(round(Math.min(max, value + step)))}>+</button>
+    </div>
+  );
+};
+
 /* ---------- modal de esquema de evaluación (⚙️) ---------- */
 const EvalConfigModal = ({ subject, onClose, onSave }) => {
   const [ev, setEv] = React.useState({ ...DEFAULT_EVAL, ...subject.eval, promo: { ...DEFAULT_EVAL.promo, ...(subject.eval?.promo || {}) } });
@@ -47,11 +59,10 @@ const EvalConfigModal = ({ subject, onClose, onSave }) => {
         {ev.promo.on && <>
           <Seg opts={[{ id: "promedio", label: "Promedio" }, { id: "parciales", label: "Todos ≥ X" }, { id: "manual", label: "Manual" }]} value={ev.promo.mode} onChange={v => upPromo("mode", v)} />
           {ev.promo.mode !== "manual" && (
-            <div className="row" style={{ gap: 10, marginTop: 12, alignItems: "center" }}>
+            <div className="row" style={{ gap: 12, marginTop: 12, alignItems: "center" }}>
               <span className="small">Umbral</span>
-              <input type="number" min="1" max="10" step="0.5" value={ev.promo.threshold}
-                onChange={e => upPromo("threshold", Number(e.target.value))}
-                style={{ width: 70, background: "var(--field)", border: "1px solid var(--line)", borderRadius: 9, padding: "7px 10px", color: "var(--soft)", fontFamily: "var(--font-body)" }} />
+              <Stepper value={ev.promo.threshold ?? 7} min={1} max={10} step={0.5} onChange={v => upPromo("threshold", v)} />
+              <span className="small" style={{ color: "var(--tx-3)" }}>{ev.promo.mode === "parciales" ? "cada parcial ≥ este valor" : "promedio ≥ este valor"}</span>
             </div>
           )}
         </>}
@@ -167,7 +178,7 @@ const Celebration = ({ info, onClose }) => {
 };
 
 /* ---------- pantalla principal ---------- */
-const Notas = () => {
+const Notas = ({ onNav }) => {
   const [data, set] = useStore();
   const subjects = data.subjects || [];
   const [configFor, setConfigFor] = React.useState(null);
@@ -221,6 +232,7 @@ const Notas = () => {
             {counts.promo} promocionadas · {counts.aprobadas} aprobadas · {counts.curso} en curso
           </div>
         </div>
+        <button className="btn-soft" onClick={() => onNav && onNav("correlatividades")}><Icon name="space" size={14} /> Plan de correlatividades</button>
       </div>
 
       {subjects.length === 0 ? (

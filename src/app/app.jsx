@@ -248,7 +248,7 @@ function App() {
       case "calendario": return <Calendario onOpenSubjectPlanner={openSubjectPlanner} />;
       case "chat":       return <ChatIA />;
       case "ocio":       return <Ocio />;
-      case "notas":      return <Notas />;
+      case "notas":      return <Notas onNav={nav} />;
       case "config":     return <ConfigSection onLogout={logout} />;
       default: return <Dashboard onNav={nav} />;
     }

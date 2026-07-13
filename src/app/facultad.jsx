@@ -289,9 +289,7 @@ const Facultad = ({ onOpenSubject, onNav }) => {
   const [modal, setModal] = React.useState(null); // 'new' | subject
   return (
     <div className="page page-cozy">
-      <PageHead title="Mis materias" meta={`${data.subjects.length} materias · cuatrimestre en curso`}>
-        <Btn variant="secondary" icon="space" onClick={() => onNav && onNav("correlatividades")}>Correlatividades</Btn>
-      </PageHead>
+      <PageHead title="Mis materias" meta={`${data.subjects.length} materias · cuatrimestre en curso`} />
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px,1fr))", gap: 16 }}>
         {data.subjects.map((s, i) => (
           <SubjectGridCard key={s.id} s={s} idx={i}

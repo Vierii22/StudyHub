@@ -185,7 +185,7 @@ const Correlatividades = () => {
 
   return (
     <div className="page page-wide" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <PageHead title="Correlatividades" meta="BETA · lienzo con zoom — arrastrá y hacé scroll para acercar">
+      <PageHead title="Plan de correlatividades" meta="BETA · lienzo con zoom — arrastrá y hacé scroll para acercar">
         <Btn variant="primary" icon="plus" onClick={() => setModal("new")}>Nueva materia</Btn>
       </PageHead>
 
