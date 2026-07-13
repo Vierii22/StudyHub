@@ -136,6 +136,13 @@ const EventModal = ({ day, month, year, event, onClose }) => {
           <Seg opts={[{ id: "evento", label: "Evento" }, { id: "clase", label: "Clase" }, { id: "estudio", label: "Estudiar" }, { id: "parcial", label: "Parcial" }, { id: "entrega", label: "Entrega" }]}
             value={f.kind || "evento"} onChange={v => up("kind", v)} />
         </Field>
+        <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 10, background: f.important ? "var(--violet-soft)" : "var(--surface-2)", cursor: "pointer", transition: "background .15s", border: "1px solid " + (f.important ? "var(--violet-line)" : "transparent") }} onClick={() => up("important", !f.important)}>
+          <div className={`cbox${f.important ? " on" : ""}`} style={{ flexShrink: 0 }}>{f.important && <Icon name="check" size={13} color="#fff" />}</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Icon name="star" size={13} color="var(--org)" /> Destacar el día</div>
+            <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>Para parciales o finales importantes — el día se resalta con borde naranja</div>
+          </div>
+        </div>
         {data.subjects?.length > 0 && (
           <Field label="Materia" hint="opcional">
             <select className="input" value={f.subjectId || ""} onChange={e => up("subjectId", e.target.value || null)}>
@@ -206,16 +213,18 @@ const WeekView = ({ viewDate, events, subjects, onDay, onEvent }) => {
           const iso = isoOf(d);
           const isToday = iso === today;
           const dayEvents = events.filter(e => e.date === iso).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+          const important = dayEvents.some(e => e.important);
           return (
-            <div key={iso} style={{ minHeight: 160 }}>
+            <div key={iso} style={{ minHeight: 160, borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
               <div style={{ marginBottom: 12 }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)", letterSpacing: ".08em" }}>{DOW_ES[(d.getDay() + 6) % 7]}</div>
+                <div className="mono" style={{ fontSize: 10, color: important ? "var(--org-deep)" : "var(--tx-3)", letterSpacing: ".08em", display: "flex", alignItems: "center", gap: 4 }}>{DOW_ES[(d.getDay() + 6) % 7]}{important && <Icon name="star" size={10} color="var(--org)" />}</div>
                 <span
                   onClick={() => onDay(iso)}
                   style={{
                     fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, cursor: "pointer",
                     color: isToday ? "#fff" : "var(--ink)",
                     background: isToday ? "var(--org)" : "transparent",
+                    border: !isToday && important ? "2px solid var(--org)" : "2px solid transparent",
                     width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", marginTop: 3,
                   }}>{d.getDate()}</span>
               </div>
@@ -248,10 +257,11 @@ const MonthView = ({ viewDate, events, subjects, onDay, onEvent }) => {
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
           const evs = evByDay(d);
           const isToday = d === todayDay;
+          const important = evs.some(e => e.important);
           const featured = evs.find(e => e.kind === "entrega") || evs.find(e => e.kind === "parcial");
           const rest = evs.filter(e => e !== featured);
           return (
-            <div key={d} onClick={() => onDay(d)} className="cal-month-cell">
+            <div key={d} onClick={() => onDay(d)} className="cal-month-cell" style={important ? { boxShadow: "inset 0 0 0 2px var(--org)", background: "rgba(217,85,31,.05)" } : undefined}>
               {featured && (
                 <div className={`cal-month-chip ${featured.kind}`}>
                   <Icon name={featured.kind === "entrega" ? "flag" : "fire"} size={10} /> {featured.title}
@@ -284,7 +294,7 @@ const MiniMonth = ({ year, month, events, onOpen }) => {
   const offset = (new Date(year, month, 1).getDay() + 6) % 7;
   const dayMeta = (d) => {
     const evs = events.filter(e => evMonth(e) === month && evYear(e) === year && evDay(e) === d);
-    return { parcial: evs.some(e => e.kind === "parcial"), entrega: evs.some(e => e.kind === "entrega") };
+    return { parcial: evs.some(e => e.kind === "parcial"), entrega: evs.some(e => e.kind === "entrega"), important: evs.some(e => e.important) };
   };
   return (
     <div className="cal-year-card" onClick={() => onOpen(month)}>
@@ -298,10 +308,10 @@ const MiniMonth = ({ year, month, events, onOpen }) => {
             <div key={d} style={{ height: 18, display: "grid", placeItems: "center" }}>
               <span style={{
                 fontSize: 9, fontFamily: "var(--font-mono)", width: 16, height: 16, borderRadius: "50%",
-                display: "grid", placeItems: "center", color: isToday ? "var(--org)" : meta.parcial ? "#fff" : meta.entrega ? "#fff" : "var(--tx-3)",
-                border: isToday ? "1.5px solid var(--org)" : "none",
+                display: "grid", placeItems: "center", color: isToday ? "var(--org)" : meta.parcial ? "#fff" : meta.entrega ? "#fff" : meta.important ? "var(--org-deep)" : "var(--tx-3)",
+                border: (isToday || (meta.important && !meta.parcial && !meta.entrega)) ? "1.5px solid var(--org)" : "none",
                 background: !isToday && meta.parcial ? "var(--org)" : !isToday && meta.entrega ? "var(--ink)" : "transparent",
-                fontWeight: (meta.parcial || meta.entrega || isToday) ? 700 : 400,
+                fontWeight: (meta.parcial || meta.entrega || isToday || meta.important) ? 700 : 400,
               }}>{d}</span>
             </div>
           );
@@ -388,10 +398,10 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
         <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <Seg opts={[{ id: "semana", label: "Semana" }, { id: "mes", label: "Mes" }, { id: "año", label: "Año" }]} value={vista} onChange={setVista} />
           {vista !== "año" && (
-            <div className="seg" style={{ padding: 3 }}>
-              <button onClick={prev} style={{ padding: "7px 9px" }}><Icon name="chevL" size={14} /></button>
-              <button onClick={next} style={{ padding: "7px 9px" }}><Icon name="chevR" size={14} /></button>
-            </div>
+            <>
+              <div className="icon-btn" title="Anterior" onClick={prev}><Icon name="chevL" size={16} /></div>
+              <div className="icon-btn" title="Siguiente" onClick={next}><Icon name="chevR" size={16} /></div>
+            </>
           )}
           <input ref={icsRef} type="file" accept=".ics,text/calendar" style={{ display: "none" }} onChange={importICS} />
           <div className="icon-btn" title="Importar .ics" onClick={() => icsRef.current?.click()}><Icon name="upload" size={16} /></div>

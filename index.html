@@ -486,16 +486,18 @@ input,select,textarea{ font-size:16px; }
 .bar{ height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
 .bar > i{ display:block; height:100%; border-radius:99px; background:var(--fill); }
 
-/* segmented control */
-.seg{ display:inline-flex; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+/* segmented control — pastillas táctiles cálidas (activo = marrón) */
+.seg{ display:inline-flex; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px; gap:3px; box-shadow:0 2px 0 #e0d5c3; }
 .seg button{
   display:inline-flex; align-items:center; gap:6px;
   font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--tx-2);
-  background:none; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; transition:all .14s ease;
+  background:none; border:none; padding:8px 15px; border-radius:9px; cursor:pointer; transition:all .14s ease;
 }
 .seg button svg{ width:14px; height:14px; opacity:.85; }
-.seg button:hover{ color:var(--tx-1); }
-.seg button.on{ background:var(--surface-3); color:var(--tx-1); box-shadow:0 1px 0 rgba(255,255,255,.04) inset; }
+.seg button:hover{ color:var(--ink); background:var(--field); }
+.seg button.on{ background:var(--ink); color:#F4EDE0; font-weight:700; box-shadow:0 2px 0 var(--ink-2); }
+.seg button.on:hover{ background:var(--ink); color:#F4EDE0; }
+.seg button.on svg{ opacity:1; }
 
 /* popover */
 .pop{
