@@ -73,10 +73,10 @@ function getNextAction(data) {
       icon: "fire", urgency: "alta",
       title: examSoon.days === 0 ? `Hoy: ${examSoon.title}` : `Mañana: ${examSoon.title}`,
       reason: subj
-        ? `Repasá los temas de ${subj.name} — abrí la materia y revisá notas y TPs. Una sesión de foco ahora vale doble.`
-        : "Último repaso. Una sesión de foco de 25 minutos ahora vale más que 2 horas dispersas.",
-      cta: { label: "Empezar foco 25m", nav: "pomodoro" },
-      alt: subj ? { label: `Abrir ${subj.name}`, nav: "facultad" } : { label: "Ver calendario", nav: "calendario" },
+        ? `Repasá los temas de ${subj.name} — abrí la materia y revisá el temario, notas y TPs.`
+        : "Es tu último repaso. Abrí el calendario y enfocate en lo que entra.",
+      cta: subj ? { label: `Repasar ${subj.name}`, nav: "facultad" } : { label: "Ver calendario", nav: "calendario" },
+      alt: { label: "Mis tareas", nav: "tareas" },
     };
   }
 
@@ -90,8 +90,8 @@ function getNextAction(data) {
       reason: subj
         ? `Todavía hay margen, pero el mejor momento para repasar ${subj.name} es ahora. Dividilo: hoy un tema, mañana otro.`
         : `Quedan ${examWeek.days} días. Planificá qué tema repasás cada día y empezá hoy con el primero.`,
-      cta: { label: "Empezar foco 25m", nav: "pomodoro" },
-      alt: { label: "Ver materias", nav: "facultad" },
+      cta: { label: "Repasar ahora", nav: "facultad" },
+      alt: { label: "Ver calendario", nav: "calendario" },
     };
   }
 
@@ -105,10 +105,10 @@ function getNextAction(data) {
       reason: [
         why.length ? `Prioridad: ${why.join(" · ")}.` : `Es tu tarea de prioridad ${t.prio}.`,
         subj ? `Materia: ${subj.name}.` : "",
-        lowEnergy ? "Dormiste poco — hacé solo 25 minutos y cortá sin culpa." : "Un bloque de foco y la sacás.",
+        lowEnergy ? "Dormiste poco — hacé solo esta y cortá sin culpa." : "Arrancá por esta y la sacás.",
       ].filter(Boolean).join(" "),
-      cta: { label: "Empezar foco 25m", nav: "pomodoro" },
-      alt: { label: "Ver tarea", nav: "tareas" },
+      cta: { label: "Ir a mis tareas", nav: "tareas" },
+      alt: subj ? { label: `Abrir ${subj.name}`, nav: "facultad" } : null,
     };
   }
 
@@ -130,8 +130,8 @@ function getNextAction(data) {
       icon: "check", urgency: "baja",
       title: `Adelantá: ${t.t}`,
       reason: "Nada vence hoy — ideal para adelantar. Lo que hagas ahora es tiempo libre que ganás después.",
-      cta: { label: "Empezar foco 25m", nav: "pomodoro" },
-      alt: { label: "Ver tareas", nav: "tareas" },
+      cta: { label: "Ir a mis tareas", nav: "tareas" },
+      alt: { label: "Ver calendario", nav: "calendario" },
     };
   }
 
@@ -140,8 +140,8 @@ function getNextAction(data) {
     icon: "star", urgency: "cero",
     title: "Todo al día ✨",
     reason: "No tenés tareas pendientes ni parciales cerca. Aprovechá: planificá la semana, o simplemente descansá — también es productivo.",
-    cta: { label: "Planear semana", nav: "calendario" },
-    alt: { label: "Modo foco libre", nav: "pomodoro" },
+    cta: { label: "Planear la semana", nav: "calendario" },
+    alt: { label: "Ver progreso", nav: "notas" },
   };
 }
 
