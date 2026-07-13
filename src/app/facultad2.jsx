@@ -220,6 +220,10 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const [folder, setFolder] = React.useState("material");
   const [openTemaId, setOpenTemaId] = React.useState(null);
   const [plannerOpen, setPlannerOpen] = React.useState(false);
+  /* alta de parcial/TP con fecha + destacado */
+  const [pTitle, setPTitle] = React.useState("");
+  const [pDate, setPDate] = React.useState("");
+  const [pImportant, setPImportant] = React.useState(false);
   React.useEffect(() => {
     if (autoOpenPlanner) { setPlannerOpen(true); onPlannerConsumed && onPlannerConsumed(); }
   }, [autoOpenPlanner]);
@@ -282,6 +286,41 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
     setList("temas", temas.map(t => t.unidadId === unidadId ? { ...t, [key]: !allOn } : t));
   };
 
+  /* ── parciales/TPs: alta con fecha → crea evento en el calendario ── */
+  const fmtFechaShort = (iso) => { if (!iso) return ""; const [, m, d] = iso.split("-"); return `${parseInt(d)}/${parseInt(m)}`; };
+  const addParcial = () => {
+    const t = pTitle.trim();
+    if (!t) return toast("Poné un nombre");
+    set(st => {
+      const sub = st.subjects.find(x => x.id === subjectId);
+      let eventId = null;
+      if (pDate) {
+        eventId = uid();
+        if (!st.events) st.events = [];
+        st.events.push({ id: eventId, title: t, date: pDate, day: parseInt(pDate.slice(8, 10)), kind: "parcial", important: pImportant, subjectId, color: sub?.color || "#D9551F" });
+      }
+      sub.lists = { ...(sub.lists || {}), fechas: [...(sub.lists?.fechas || []), { id: uid(), t, date: pDate || "", important: pImportant, eventId }] };
+    });
+    toast(pDate ? "Agregado y sincronizado al calendario ✓" : "Agregado");
+    setPTitle(""); setPDate(""); setPImportant(false);
+  };
+  const delFecha = (i) => set(st => {
+    const sub = st.subjects.find(x => x.id === subjectId);
+    const list = sub.lists?.fechas || [];
+    const item = list[i];
+    if (item?.eventId) st.events = (st.events || []).filter(e => e.id !== item.eventId);
+    sub.lists = { ...(sub.lists || {}), fechas: list.filter((_, j) => j !== i) };
+  });
+  const toggleFechaImportant = (i) => set(st => {
+    const sub = st.subjects.find(x => x.id === subjectId);
+    const list = [...(sub.lists?.fechas || [])];
+    const item = list[i];
+    if (!item) return;
+    list[i] = { ...item, important: !item.important };
+    if (item.eventId) { const ev = (st.events || []).find(e => e.id === item.eventId); if (ev) ev.important = !item.important; }
+    sub.lists = { ...(sub.lists || {}), fechas: list };
+  });
+
   const link = s.link && (s.link.startsWith("http") ? s.link : "https://" + s.link);
   const folderFiles = files.filter(f => (f.folder || "material") === folder);
   const onFolderChange = (v) => setFiles([
@@ -308,12 +347,13 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       {/* ── header ── */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 22 }}>
         <div>
-          <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span onClick={onBack} style={{ cursor: "pointer", color: "var(--org)", fontWeight: 600 }}>← Mis materias</span>
-            <span>·</span>
-            <span style={{ fontFamily: "var(--font-mono)", color: "var(--org)" }}>{num}</span>
-            <span>cursando</span>
-            {s.next && <><span>·</span><span>{s.next}</span></>}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+            <button className="btn-back" onClick={onBack} title="Volver a Mis materias"><Icon name="arrowLeft" size={15} /> Mis materias</button>
+            <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--org)" }}>{num}</span>
+              <span>cursando</span>
+              {s.next && <><span>·</span><span>{s.next}</span></>}
+            </div>
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-1px", color: "var(--ink)", margin: 0, lineHeight: 1 }}>{s.name}</h1>
         </div>
@@ -414,14 +454,25 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       <div className="subj-row" style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 14 }}>
         <Card>
           <CardTitle icon="calendar">Parciales y TPs</CardTitle>
+          <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 8 }}>Poné una fecha y se agrega solo al <span style={{ color: "var(--org-deep)" }}>Calendario</span>. La estrella lo destaca ahí.</div>
           {(fechas.length + tps.length) === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin fechas cargadas.</div>}
           {fechas.map((it, i) => (
-            <div key={"f" + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 13.5, borderBottom: "1px solid #eee4d4" }}><span>{it.t}</span><span onClick={() => setList("fechas", fechas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={12} /></span></div>
+            <div key={it.id || "f" + i} className="parcial-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", fontSize: 13.5, borderBottom: "1px solid #eee4d4" }}>
+              <span style={{ flex: 1, minWidth: 0 }}>{it.t}</span>
+              {it.date && <span className="mono" style={{ fontSize: 10.5, color: it.important ? "var(--org-deep)" : "var(--tx-3)", flex: "0 0 auto" }}>{fmtFechaShort(it.date)}</span>}
+              {it.date && <span onClick={() => toggleFechaImportant(i)} title={it.important ? "Quitar destacado" : "Destacar en el calendario"} style={{ cursor: "pointer", display: "flex", flex: "0 0 auto" }}><Icon name="star" size={14} color={it.important ? "var(--org)" : "var(--tx-3)"} /></span>}
+              <span onClick={() => delFecha(i)} style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="x" size={13} /></span>
+            </div>
           ))}
           {tps.map((it, i) => (
-            <div key={"t" + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 13.5, color: "var(--soft)", borderBottom: "1px solid #eee4d4" }}><span>TP · {it.t}</span><span onClick={() => setList("tps", tps.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={12} /></span></div>
+            <div key={"t" + i} className="parcial-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", fontSize: 13.5, color: "var(--soft)", borderBottom: "1px solid #eee4d4" }}><span>TP · {it.t}</span><span onClick={() => setList("tps", tps.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={12} /></span></div>
           ))}
-          <AddInput placeholder="Agregar parcial o fecha…" onAdd={t => setList("fechas", [...fechas, { id: uid(), t }])} />
+          <div className="parcial-add">
+            <input className="p-title" value={pTitle} placeholder="Parcial, TP o fecha…" onChange={e => setPTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && addParcial()} />
+            <input className="p-date" type="date" value={pDate} onChange={e => setPDate(e.target.value)} title="Fecha (opcional)" />
+            <div className={`p-star${pImportant ? " on" : ""}`} onClick={() => setPImportant(v => !v)} title="Destacar en el calendario"><Icon name="star" size={16} color={pImportant ? "#fff" : "var(--org)"} /></div>
+            <button className="p-add" onClick={addParcial} title="Agregar"><Icon name="plus" size={16} /></button>
+          </div>
         </Card>
 
         <Card>

@@ -32,6 +32,7 @@ const Icon = ({ name, size = 20, ...rest }) => {
     chevR: <path d="m9 6 6 6-6 6" />,
     chevL: <path d="m15 6-6 6 6 6" />,
     chevron: <path d="m6 9 6 6 6-6" />,
+    arrowLeft: <><path d="M20 12H5" /><path d="m11 6-6 6 6 6" /></>,
     arrowR: <><path d="M4 12h15" /><path d="m13 6 6 6-6 6" /></>,
     eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
     x: <path d="M6 6 18 18M18 6 6 18" />,

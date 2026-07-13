@@ -53,12 +53,12 @@ const SubjectFiles = ({ files = [], onChange, accent = "#D9551F" }) => {
       </label>
       {files.length > 0 && (
         <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-          {files.map(f => (
-            <div key={f.id} className="row" style={{ gap: 12, padding: "10px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-              <span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--surface-3)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name={fileIcon(f.type, f.name)} size={16} /></span>
+          {files.map((f, i) => (
+            <div key={f.id} className="file-row row" style={{ gap: 12, padding: "10px 13px", borderRadius: 12, background: "var(--card)", border: "1px solid var(--line)", boxShadow: "0 1.5px 0 #e0d5c3", animationDelay: `${i * 45}ms` }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, background: accent + "1e", color: accent, display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name={fileIcon(f.type, f.name)} size={17} /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
-                <div className="mono" style={{ fontSize: 10, marginTop: 2 }}>{fmtBytes(f.size)}{f.date ? " · " + f.date : ""}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>{fmtBytes(f.size)}{f.date ? " · " + f.date : ""}</div>
               </div>
               <div className="icon-btn" style={{ width: 32, height: 32 }} title="Descargar" onClick={() => downloadFile(f)}><Icon name="download" size={15} /></div>
               <div className="icon-btn" style={{ width: 32, height: 32 }} title="Eliminar" onClick={() => onChange(files.filter(x => x.id !== f.id))}><Icon name="trash" size={15} /></div>
