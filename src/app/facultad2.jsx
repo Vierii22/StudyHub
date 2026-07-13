@@ -3,7 +3,7 @@ import React from 'react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast } from './store.jsx';
+import { useStore, uid, toast, todayLocal } from './store.jsx';
 import { SubjectModal, SubjectFiles } from './facultad.jsx';
 
 /* ============================================================
@@ -370,7 +370,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
           {tareas.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Nada pendiente todavía.</div>}
           {tareas.map((it, i) => (
             <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid #eee4d4" }}>
-              <span onClick={() => setList("tareas", tareas.map((x, j) => j === i ? { ...x, done: !x.done } : x))} style={{ width: 18, height: 18, borderRadius: 6, border: "2px solid " + (it.done ? "#639922" : "#c3b7a3"), background: it.done ? "#639922" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" }}>{it.done && <Icon name="check" size={11} color="#fff" />}</span>
+              <span onClick={() => setList("tareas", tareas.map((x, j) => j === i ? { ...x, done: !x.done, completedAt: !x.done ? todayLocal() : null } : x))} style={{ width: 18, height: 18, borderRadius: 6, border: "2px solid " + (it.done ? "#639922" : "#c3b7a3"), background: it.done ? "#639922" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" }}>{it.done && <Icon name="check" size={11} color="#fff" />}</span>
               <span style={{ flex: 1, fontSize: 14, textDecoration: it.done ? "line-through" : "none", color: it.done ? "var(--tx-3)" : "var(--tx-1)" }}>{it.t}</span>
               <span onClick={() => setList("tareas", tareas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={13} /></span>
             </div>

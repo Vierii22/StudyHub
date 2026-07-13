@@ -91,7 +91,7 @@ function deriveCourseStatus(subject, allSubjects) {
 /* SEED vacío — sólo estructura, sin datos de demo */
 const SEED = {
   profile: { name: "", initial: "", role: "uni", uni: "", career: "", year: "1", email: "", photo: null, hubby: false },
-  xp: 0, level: 1, streak: 0,
+  streak: 0,
   subjects: [],
   tasks: [],
   missions: [],
@@ -106,7 +106,7 @@ const SEED = {
   ocio: { pelis: [], series: [], juegos: [] },
   plan: { subjects: [] }, /* mapa de correlatividades — BETA (Fase 10) */
   pomoLog: [],           /* [{ date:"YYYY-MM-DD", mins:number }] */
-  dashWidgets: ["tareas","agenda","xp","racha","completas","ring","materias","horas"],
+  dashWidgets: ["tareas","agenda","racha","completas","ring","materias","horas"],
   dashSpans: {},
   dashNote: "",
   widgetConfig: {},      /* { sectionId: { widgetKey: { colorOn, color, photoOn, photos[] } } } */
@@ -134,7 +134,6 @@ const SEED = {
 };
 
 const ALL_WIDGETS = {
-  xp:         { label: "Total XP",             w: 4 },
   tareas:     { label: "Tabla de tareas",       w: 8 },
   agenda:     { label: "Agenda de hoy",         w: 6 },
   materias:   { label: "Materias",              w: 6 },
@@ -156,6 +155,9 @@ const ALL_WIDGETS = {
 
 /* ── helpers ────────────────────────────────────────────── */
 const uid = () => Math.random().toString(36).slice(2, 9);
+
+/* fecha local "YYYY-MM-DD" (para contadores que se reinician a medianoche) */
+const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 /* slider 1–100 → zoom 0.72–1.22 (40 ≈ 0.92) */
 const scaleToZoom = (v) => (0.72 + (v / 100) * 0.5).toFixed(3);
@@ -179,8 +181,6 @@ function applyMigrations(data) {
   if (!Array.isArray(data.missions))  data.missions  = [];
   if (!Array.isArray(data.events))    data.events    = [];
   if (!Array.isArray(data.journal))   data.journal   = [];
-  if (data.xp    == null) data.xp    = 0;
-  if (data.level == null) data.level = 1;
   if (data.streak== null) data.streak= 0;
   if (data.journalDraft == null) data.journalDraft = "";
 
@@ -630,7 +630,7 @@ export {
   Store, useStore, uid, scaleToZoom, toast, ToastHost,
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
-  getStreak, getAllTasks,
+  getStreak, getAllTasks, todayLocal,
   DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, deriveCourseStatus,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,

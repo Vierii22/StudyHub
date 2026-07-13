@@ -3,6 +3,22 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
+import { supabase } from '../supabase.js';
+
+/* ── subida de archivos a Supabase Storage (para archivos grandes, hasta 100 MB) ── */
+const FILES_BUCKET = "materiales";
+const FILE_MAX_MB = 100;
+async function uploadToStorage(file) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) throw new Error("no-session");
+  const safe = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${userId}/${uid()}-${safe}`;
+  const { error } = await supabase.storage.from(FILES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || undefined });
+  if (error) throw error;
+  const { data } = supabase.storage.from(FILES_BUCKET).getPublicUrl(path);
+  return { path, url: data.publicUrl };
+}
 
 /* ============================================================
    FACULTAD — grid de materias + vista interna (pizarrón / widgets)
@@ -20,6 +36,7 @@ const fileIcon = (type = "", name = "") => {
   return "file";
 };
 const downloadFile = (f) => {
+  if (f.url) { window.open(f.url, "_blank", "noopener"); return; } /* archivo en Storage */
   const a = document.createElement("a");
   a.href = f.data; a.download = f.name;
   document.body.appendChild(a); a.click(); a.remove();
@@ -28,14 +45,32 @@ const downloadFile = (f) => {
 /* ---------- gestor de archivos de la materia ---------- */
 const SubjectFiles = ({ files = [], onChange, accent = "#D9551F" }) => {
   const [over, setOver] = React.useState(false);
-  const add = (fileList) => {
+  const [busy, setBusy] = React.useState(false);
+  const add = async (fileList) => {
     const arr = Array.from(fileList || []);
-    arr.forEach(file => {
-      if (file.size > 4.5 * 1048576) { toast(`"${file.name}" es muy grande (máx 4.5 MB)`); return; }
-      const r = new FileReader();
-      r.onload = () => onChange([{ id: uid(), name: file.name, type: file.type, size: file.size, data: r.result, date: new Date().toLocaleDateString("es", { day: "numeric", month: "short" }) }, ...(files || [])]);
-      r.readAsDataURL(file);
-    });
+    if (!arr.length) return;
+    setBusy(true);
+    const nuevos = [];
+    for (const file of arr) {
+      if (file.size > FILE_MAX_MB * 1048576) { toast(`"${file.name}" supera ${FILE_MAX_MB} MB`); continue; }
+      const date = new Date().toLocaleDateString("es", { day: "numeric", month: "short" });
+      try {
+        const { path, url } = await uploadToStorage(file);
+        nuevos.push({ id: uid(), name: file.name, type: file.type, size: file.size, path, url, date });
+      } catch (e) {
+        /* sin Storage disponible: guardamos en base64 solo si es chico */
+        if (file.size <= 4 * 1048576) {
+          try {
+            const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+            nuevos.push({ id: uid(), name: file.name, type: file.type, size: file.size, data: dataUrl, date });
+          } catch { toast(`No se pudo guardar "${file.name}"`); }
+        } else {
+          toast(`No se pudo subir "${file.name}" — falta el bucket "materiales" en Supabase`);
+        }
+      }
+    }
+    if (nuevos.length) onChange([...nuevos, ...(files || [])]);
+    setBusy(false);
   };
   return (
     <div>
@@ -43,13 +78,13 @@ const SubjectFiles = ({ files = [], onChange, accent = "#D9551F" }) => {
         onDragOver={e => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={e => { e.preventDefault(); setOver(false); add(e.dataTransfer.files); }}
-        style={{ display: "flex", alignItems: "center", gap: 13, padding: "16px 18px", borderRadius: "var(--r-lg)", border: "1.5px dashed " + (over ? accent : "var(--line-2)"), background: over ? accent + "12" : "var(--surface-2)", cursor: "pointer", transition: "all .15s ease" }}>
-        <span style={{ width: 40, height: 40, borderRadius: 11, background: accent + "22", color: accent, display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="upload" size={19} /></span>
+        style={{ display: "flex", alignItems: "center", gap: 13, padding: "16px 18px", borderRadius: "var(--r-lg)", border: "1.5px dashed " + (over ? accent : "var(--line-2)"), background: over ? accent + "12" : "var(--surface-2)", cursor: busy ? "wait" : "pointer", opacity: busy ? 0.7 : 1, transition: "all .15s ease" }}>
+        <span style={{ width: 40, height: 40, borderRadius: 11, background: accent + "22", color: accent, display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name={busy ? "clock" : "upload"} size={19} /></span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600 }}>Subir material</div>
-          <div className="small" style={{ fontSize: 11.5 }}>Arrastrá o hacé click — PDF, presentaciones, resúmenes, TPs…</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600 }}>{busy ? "Subiendo…" : "Subir material"}</div>
+          <div className="small" style={{ fontSize: 11.5 }}>Arrastrá o hacé click — PDF, videos, presentaciones… hasta {FILE_MAX_MB} MB</div>
         </div>
-        <input type="file" multiple style={{ display: "none" }} onChange={e => { add(e.target.files); e.target.value = ""; }} />
+        <input type="file" multiple disabled={busy} style={{ display: "none" }} onChange={e => { add(e.target.files); e.target.value = ""; }} />
       </label>
       {files.length > 0 && (
         <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
@@ -61,7 +96,7 @@ const SubjectFiles = ({ files = [], onChange, accent = "#D9551F" }) => {
                 <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>{fmtBytes(f.size)}{f.date ? " · " + f.date : ""}</div>
               </div>
               <div className="icon-btn" style={{ width: 32, height: 32 }} title="Descargar" onClick={() => downloadFile(f)}><Icon name="download" size={15} /></div>
-              <div className="icon-btn" style={{ width: 32, height: 32 }} title="Eliminar" onClick={() => onChange(files.filter(x => x.id !== f.id))}><Icon name="trash" size={15} /></div>
+              <div className="icon-btn" style={{ width: 32, height: 32 }} title="Eliminar" onClick={() => { if (f.path) supabase.storage.from(FILES_BUCKET).remove([f.path]).catch(() => {}); onChange(files.filter(x => x.id !== f.id)); }}><Icon name="trash" size={15} /></div>
             </div>
           ))}
         </div>

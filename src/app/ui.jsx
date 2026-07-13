@@ -103,7 +103,7 @@ const Modal = ({ title, sub, icon, onClose, children, footer, wide, corners }) =
         <div className="icon-btn" onClick={onClose}><Icon name="x" size={18} /></div>
       </div>
       {children}
-      {footer && <div className="row between" style={{ marginTop: 24, borderTop: "1px solid var(--line)", paddingTop: 20 }}>{footer}</div>}
+      {footer && <div className="row between modal-footer">{footer}</div>}
     </div>
   </div>
 );

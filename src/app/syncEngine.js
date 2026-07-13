@@ -135,7 +135,6 @@ export function syncEventToTask(event, data, set) {
     desc: event.desc || "",
     subject: event.subjectId || null, /* si el evento tiene materia, la tarea va a esa materia */
     prio: "media",
-    xp: 20,
     status: "pendiente",
     done: false,
   };

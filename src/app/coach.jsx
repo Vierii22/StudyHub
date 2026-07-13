@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, getAllTasks } from './store.jsx';
+import { useStore, uid, toast, getAllTasks, todayLocal } from './store.jsx';
 import { parseCapture } from './palette.jsx';
 import { Hubby } from './ui.jsx';
 
@@ -195,7 +195,7 @@ const CaptureBar = ({ data, set, onOpen }) => {
     e.preventDefault();
     if (!parsed) return;
     if (parsed.type === "create-task") {
-      set(s => s.tasks.push({ id: uid(), desc: "", subject: null, due: "—", xp: 20, ...parsed.payload }));
+      set(s => s.tasks.push({ id: uid(), desc: "", subject: null, due: "—", ...parsed.payload }));
       toast(`Tarea creada: ${parsed.payload.t}`);
     } else if (parsed.type === "create-event") {
       toast("Abrí el calendario para completar el evento");
@@ -233,7 +233,7 @@ const TodayTimeline = ({ data, set, onNav }) => {
 
   const toggleTask = (id) => set(s => {
     const t = s.tasks.find(x => x.id === id);
-    if (t) { t.done = !t.done; t.status = t.done ? "lista" : "pendiente"; }
+    if (t) { t.done = !t.done; t.status = t.done ? "lista" : "pendiente"; t.completedAt = t.done ? todayLocal() : null; }
   });
 
   const empty = events.length === 0 && tasks.length === 0;

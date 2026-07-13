@@ -21,7 +21,6 @@ const defaultTask = (subjectId = null) => ({
   desc: "",
   subject: subjectId,
   prio: "media",
-  xp: 20,
   status: "pendiente",
   done: false,
 });
@@ -156,28 +155,17 @@ export function TaskFormModal({ hook }) {
             </select>
           </Field>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <Field label="Materia">
-            <select
-              className="sel-input"
-              style={{ width: "100%" }}
-              value={form.subject || ""}
-              onChange={e => update("subject", e.target.value || null)}
-            >
-              <option value="">Sin materia</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Field>
-          <Field label="XP">
-            <input
-              className="input"
-              type="number"
-              value={form.xp}
-              onChange={e => update("xp", +e.target.value)}
-              min={0}
-            />
-          </Field>
-        </div>
+        <Field label="Materia">
+          <select
+            className="sel-input"
+            style={{ width: "100%" }}
+            value={form.subject || ""}
+            onChange={e => update("subject", e.target.value || null)}
+          >
+            <option value="">Sin materia</option>
+            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </Field>
         <Field label="Fecha límite">
           <input
             className="input"

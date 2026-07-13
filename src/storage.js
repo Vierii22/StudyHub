@@ -5,7 +5,7 @@ import { supabase } from './supabase.js';
    Solo se sube a Supabase el dominio que realmente cambió.
    ============================================================ */
 export const DOMAIN_MAP = {
-  sh_profile:  ['profile', 'xp', 'level', 'streak'],
+  sh_profile:  ['profile', 'streak'],
   sh_tasks:    ['tasks', 'taskCalendarMap', 'missions'],
   sh_subjects: ['subjects'],
   sh_calendar: ['events'],

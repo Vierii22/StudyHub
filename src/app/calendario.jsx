@@ -225,10 +225,10 @@ const DraggableEvent = ({ e, subj, onClick }) => {
   );
 };
 
-/* columna de un día = zona donde soltar */
+/* columna de un día = zona donde soltar (ocupa TODO el alto de la columna hacia abajo) */
 const DayColumn = ({ iso, children }) => {
   const { setNodeRef, isOver } = useDroppable({ id: `daydrop|${iso}` });
-  return <div ref={setNodeRef} className={`cal-day-drop${isOver ? " over" : ""}`} style={{ display: "grid", gap: 8, minHeight: 60, borderRadius: 10, padding: 2 }}>{children}</div>;
+  return <div ref={setNodeRef} className={`cal-day-drop${isOver ? " over" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, minHeight: 90, borderRadius: 10, padding: 2 }}>{children}</div>;
 };
 
 const WeekView = ({ viewDate, events, subjects, onDay, onEvent, onMoveEvent }) => {
@@ -258,7 +258,7 @@ const WeekView = ({ viewDate, events, subjects, onDay, onEvent, onMoveEvent }) =
             const dayEvents = sortDay(events.filter(e => e.date === iso));
             const important = dayEvents.some(e => e.important);
             return (
-              <div key={iso} style={{ minHeight: 160, borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
+              <div key={iso} style={{ display: "flex", flexDirection: "column", minHeight: "min(58vh, 560px)", borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
                 <div style={{ marginBottom: 12 }}>
                   <div className="mono" style={{ fontSize: 10, color: important ? "var(--org-deep)" : "var(--tx-3)", letterSpacing: ".08em", display: "flex", alignItems: "center", gap: 4 }}>{DOW_ES[(d.getDay() + 6) % 7]}{important && <Icon name="star" size={10} color="var(--org)" />}</div>
                   <span
@@ -377,6 +377,22 @@ const YearView = ({ year, events, onOpenMonth }) => (
   </div>
 );
 
+/* ---------- modal: TODOS los eventos de un día (se abre desde la vista mes) ---------- */
+const DayEventsModal = ({ iso, events, subjects, onClose, onEventClick, onNew }) => {
+  const p = parseDate(iso);
+  const dayEvents = events.filter(e => e.date === iso).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+  const label = p ? `${DOW_ES[(new Date(p.year, p.month, p.day).getDay() + 6) % 7]} ${p.day} de ${MONTHS_ES[p.month].toLowerCase()}` : "Eventos";
+  const important = dayEvents.some(e => e.important);
+  return (
+    <Modal title={label} sub={`${dayEvents.length} evento${dayEvents.length !== 1 ? "s" : ""}${important ? " · día destacado" : ""}`} icon={important ? "star" : "calendar"} onClose={onClose}
+      footer={<><span className="link" onClick={onClose} style={{ color: "var(--tx-3)", cursor: "pointer" }}>Cerrar</span><Btn variant="primary" icon="plus" onClick={onNew}>Nuevo evento</Btn></>}>
+      {dayEvents.length === 0
+        ? <div style={{ fontSize: 13.5, color: "var(--tx-3)", padding: "8px 0 4px" }}>No hay eventos este día. Agregá uno con el botón de abajo.</div>
+        : <div className="day-ev-list" style={{ display: "grid", gap: 10 }}>{dayEvents.map(e => <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEventClick(e)} />)}</div>}
+    </Modal>
+  );
+};
+
 /* ---------- bloques "Estudiar · materia" derivados del planificador (Fase 5) ---------- */
 const FRANJA_TIME = { m: "09:00", t: "15:00", n: "20:00" };
 function deriveStudyEvents(subjects) {
@@ -395,6 +411,7 @@ function deriveStudyEvents(subjects) {
 const Calendario = ({ onOpenSubjectPlanner }) => {
   const [data, set] = useStore();
   const [modal, setModal] = React.useState(null);
+  const [dayModal, setDayModal] = React.useState(null); /* iso del día para ver todos sus eventos */
   const [vista, setVista] = React.useState("mes");
   const [viewDate, setView] = React.useState(() => new Date());
   const icsRef = React.useRef();
@@ -484,8 +501,13 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
       </div>
 
       {vista === "semana" && <WeekView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(iso) => setModal({ day: parseInt(iso.slice(8, 10)), month: parseInt(iso.slice(5, 7)) - 1, year: parseInt(iso.slice(0, 4)) })} onEvent={onEventClick} onMoveEvent={moveEvent} />}
-      {vista === "mes" && <MonthView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(d) => setModal({ day: d, month: viewDate.getMonth(), year: viewDate.getFullYear() })} onEvent={onEventClick} />}
+      {vista === "mes" && <MonthView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(d) => setDayModal(`${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`)} onEvent={onEventClick} />}
       {vista === "año" && <YearView year={viewDate.getFullYear()} events={events} onOpenMonth={(m) => { setView(new Date(viewDate.getFullYear(), m, 1)); setVista("mes"); }} />}
+
+      {dayModal && <DayEventsModal iso={dayModal} events={events} subjects={data.subjects}
+        onClose={() => setDayModal(null)}
+        onEventClick={(e) => { setDayModal(null); onEventClick(e); }}
+        onNew={() => { const p = parseDate(dayModal); setDayModal(null); setModal({ day: p.day, month: p.month, year: p.year }); }} />}
 
       {modal && <EventModal day={modal.day} month={modal.month} year={modal.year} event={modal.event} onClose={() => setModal(null)} />}
     </div>

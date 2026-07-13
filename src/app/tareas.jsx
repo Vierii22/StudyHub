@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, PRIO, getAllTasks } from './store.jsx';
+import { useStore, uid, toast, PRIO, getAllTasks, todayLocal } from './store.jsx';
 import { Btn, PageHead, Empty, MonoLabel } from './ui.jsx';
 import { useTaskForm, TaskFormModal } from './useTaskForm.jsx';
 
@@ -49,11 +49,12 @@ const Tareas = ({ onOpenSubject, autoNew }) => {
 
   /* toggle done y delete — robustos: sirven para tareas globales y de materia */
   const toggleDone = (task) => set(s => {
+    const today = todayLocal();
     const g = s.tasks.find(x => x.id === task.id);
-    if (g) { g.done = !g.done; g.status = g.done ? "lista" : "pendiente"; return; }
+    if (g) { g.done = !g.done; g.status = g.done ? "lista" : "pendiente"; g.completedAt = g.done ? today : null; return; }
     const sub = s.subjects.find(x => x.id === task.subject);
     const it = sub?.lists?.tareas?.find(x => x.id === task.id);
-    if (it) it.done = !it.done;
+    if (it) { it.done = !it.done; it.completedAt = it.done ? today : null; }
   });
   const del = (task) => set(s => {
     if (s.tasks.some(x => x.id === task.id)) { s.tasks = s.tasks.filter(t => t.id !== task.id); toast("Tarea eliminada"); return; }
@@ -78,9 +79,10 @@ const Tareas = ({ onOpenSubject, autoNew }) => {
 
   const groups = group === "materia" ? bySubject() : byDate();
 
+  const hoy = todayLocal();
   const pendientes = allTasks.filter(t => !t.done).length;
   const paraHoy    = allTasks.filter(t => t.due === "Hoy").length;
-  const completas  = allTasks.filter(t => t.done).length;
+  const completas  = allTasks.filter(t => t.completedAt === hoy).length; /* se reinicia a medianoche */
 
   return (
     <div className="page page-wide">
@@ -97,7 +99,7 @@ const Tareas = ({ onOpenSubject, autoNew }) => {
         {[
           ["Pendientes", pendientes, "var(--ink)"],
           ["Para hoy",   paraHoy,    "var(--org-deep)"],
-          ["Completadas",completas,  "#3B6D11"],
+          ["Completadas hoy",completas,  "#3B6D11"],
         ].map(([l, v, c]) => (
           <div key={l} className="card">
             <MonoLabel>{l}</MonoLabel>
