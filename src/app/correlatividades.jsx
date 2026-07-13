@@ -2,8 +2,11 @@ import React from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, deriveCourseStatus } from './store.jsx';
+import { useStore, uid, toast, deriveCourseStatus, deriveEstado } from './store.jsx';
 import { Btn, Modal, Field, Seg, PageHead } from './ui.jsx';
+
+/* estado de una materia de Facultad → estado base del plan */
+const estadoToBase = (e) => (e === "aprobada" || e === "promocionada") ? "aprobada" : e === "regular" ? "regularizada" : e === "cursando" ? "cursando" : "no_cursada";
 
 /* ============================================================
    MAPA DE CORRELATIVIDADES — BETA (Fase 10, DESIGN.md "Pendientes")
@@ -44,7 +47,7 @@ function layout(subjects) {
 }
 
 /* ---------- modal de configuración de una materia del plan ---------- */
-const PlanSubjectModal = ({ subject, allSubjects, onClose, onSave, onDelete }) => {
+const PlanSubjectModal = ({ subject, allSubjects, onClose, onSave, onDelete, onLink }) => {
   const [f, setF] = React.useState(subject || { name: "", year: "1", semester: "1", base: "no_cursada", correlativas: { cursar: [], final: [] } });
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
   const others = allSubjects.filter(s => s.id !== f.id);
@@ -97,6 +100,11 @@ const PlanSubjectModal = ({ subject, allSubjects, onClose, onSave, onDelete }) =
           <Field label="Cuatrimestre"><Seg opts={SEM_OPTS} value={f.semester} onChange={v => up("semester", v)} /></Field>
         </div>
         <Field label="Estado"><Seg opts={BASE_OPTS} value={f.base} onChange={v => up("base", v)} /></Field>
+        {subject && onLink && (
+          <button className="btn-soft" style={{ width: "100%", justifyContent: "center" }} onClick={() => onLink(subject.id)}>
+            <Icon name="space" size={15} /> Elegir correlativas tocando el mapa
+          </button>
+        )}
         <CorrelList kind="cursar" label="Correlativas para CURSAR" />
         <CorrelList kind="final" label="Correlativas para RENDIR EL FINAL" />
       </div>
@@ -105,21 +113,33 @@ const PlanSubjectModal = ({ subject, allSubjects, onClose, onSave, onDelete }) =
 };
 
 /* ---------- nodo de materia ---------- */
-const SubjectNode = ({ s, computed, pos, onClick }) => {
+/* linkState: null | "source" | "fuerte" | "debil" — resalta durante el modo vincular */
+const SubjectNode = ({ s, computed, pos, onClick, linkState, linkingMode }) => {
   const meta = STATUS_META[computed.status];
+  const ring = linkState === "source" ? "0 0 0 3px var(--ink)"
+    : linkState === "fuerte" ? "0 0 0 3px var(--org)"
+    : linkState === "debil" ? "0 0 0 3px var(--org-2)"
+    : "none";
+  const dim = linkingMode && !linkState;
   return (
     <div
       onClick={onClick}
-      title={computed.reason || ""}
+      title={linkingMode ? "" : (computed.reason || "")}
+      className="plan-node"
       style={{
         position: "absolute", left: pos.x, top: pos.y, width: COL_W - 24,
         background: meta.bg, border: `1.5px solid ${meta.border}`, borderRadius: 12,
-        padding: "10px 12px", cursor: "pointer", boxShadow: "0 2px 0 rgba(58,51,43,.08)",
+        padding: "10px 12px", cursor: "pointer",
+        boxShadow: ring === "none" ? "0 2px 0 rgba(58,51,43,.08)" : `${ring}, 0 2px 0 rgba(58,51,43,.08)`,
+        opacity: dim ? 0.5 : 1, transition: "box-shadow .14s ease, opacity .14s ease",
       }}
     >
       <div className="row between" style={{ marginBottom: 4 }}>
         <span className="mono" style={{ fontSize: 9, color: "var(--tx-3)" }}>{s.semester === "anual" ? "ANUAL" : `${s.semester}º CUAT.`}</span>
-        {computed.status === "bloqueada" && <Icon name="x" size={11} color="var(--tx-3)" />}
+        {linkState === "fuerte" && <span className="mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--org)" }}>FUERTE</span>}
+        {linkState === "debil" && <span className="mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--org-deep)" }}>DÉBIL</span>}
+        {linkState === "source" && <span className="mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--ink)" }}>ESTA</span>}
+        {!linkingMode && computed.status === "bloqueada" && <Icon name="x" size={11} color="var(--tx-3)" />}
       </div>
       <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.25, color: "var(--tx-1)" }}>{s.name}</div>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: meta.color, marginTop: 5 }}>{meta.label}</div>
@@ -154,11 +174,38 @@ const CorrelLines = ({ subjects, positions }) => {
   );
 };
 
+/* ---------- modal de carga rápida (varias materias de una) ---------- */
+const BulkAddModal = ({ onClose, onAdd }) => {
+  const [text, setText] = React.useState("");
+  const [year, setYear] = React.useState("1");
+  const submit = () => {
+    const names = text.split("\n").map(l => l.trim()).filter(Boolean);
+    if (!names.length) return toast("Escribí al menos una materia");
+    onAdd(names, year);
+  };
+  return (
+    <Modal title="Cargar varias materias" icon="layers" onClose={onClose}
+      footer={<><span className="link" style={{ color: "var(--tx-3)", cursor: "pointer" }} onClick={onClose}>Cancelar</span><Btn variant="primary" onClick={submit}>Agregar</Btn></>}>
+      <div style={{ display: "grid", gap: 14 }}>
+        <Field label="Año de estas materias"><Seg opts={[1, 2, 3, 4, 5].map(y => ({ id: String(y), label: String(y) }))} value={year} onChange={setYear} /></Field>
+        <Field label="Una materia por línea">
+          <textarea className="input" rows={8} value={text} onChange={e => setText(e.target.value)}
+            placeholder={"Álgebra\nAnálisis Matemático I\nIntroducción a la Programación"}
+            style={{ resize: "vertical", fontFamily: "var(--font-body)", lineHeight: 1.7 }} />
+        </Field>
+        <div className="small" style={{ color: "var(--tx-3)" }}>Después las vinculás tocando cada una en el mapa. Podés repetir esto por cada año.</div>
+      </div>
+    </Modal>
+  );
+};
+
 /* ---------- pantalla principal ---------- */
 const Correlatividades = () => {
   const [data, set] = useStore();
   const subjects = data.plan.subjects;
   const [modal, setModal] = React.useState(null);
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const [linking, setLinking] = React.useState(null); /* { id, kind: 'cursar'|'final' } */
   /* ojo: el store muta data.plan.subjects in-place (misma referencia),
      por eso NO se memoiza en base a `subjects` — un useMemo con esa
      dependencia queda stale después de agregar/editar una materia. */
@@ -179,20 +226,102 @@ const Correlatividades = () => {
   };
   const deleteSubject = (id) => {
     set(s => { s.plan.subjects = s.plan.subjects.filter(x => x.id !== id); });
+    if (linking?.id === id) setLinking(null);
     toast("Eliminada");
     setModal(null);
   };
 
+  /* traer las materias que ya existen en Facultad (nombre, año y estado) */
+  const importFromFacultad = () => {
+    const src = data.subjects || [];
+    if (!src.length) return toast("No tenés materias en Facultad todavía");
+    let added = 0;
+    set(s => {
+      const existing = new Set(s.plan.subjects.map(x => (x.name || "").toLowerCase().trim()));
+      src.forEach(sub => {
+        const key = (sub.name || "").toLowerCase().trim();
+        if (!key || existing.has(key)) return;
+        existing.add(key);
+        s.plan.subjects.push({ id: uid(), name: sub.name, year: String(sub.year || "1"), semester: "1", base: estadoToBase(deriveEstado(sub)), correlativas: { cursar: [], final: [] } });
+        added++;
+      });
+    });
+    toast(added ? `${added} materia${added !== 1 ? "s" : ""} traída${added !== 1 ? "s" : ""} ✓` : "Ya estaban todas cargadas");
+  };
+
+  /* agregar varias de una (del modal de carga rápida) */
+  const addBulk = (names, year) => {
+    set(s => {
+      const existing = new Set(s.plan.subjects.map(x => (x.name || "").toLowerCase().trim()));
+      names.forEach(n => {
+        const key = n.toLowerCase().trim();
+        if (existing.has(key)) return;
+        existing.add(key);
+        s.plan.subjects.push({ id: uid(), name: n, year: String(year), semester: "1", base: "no_cursada", correlativas: { cursar: [], final: [] } });
+      });
+    });
+    setBulkOpen(false);
+    toast("Materias agregadas ✓");
+  };
+
+  /* modo vincular: tocar una materia la cicla fuerte → débil → sacada */
+  const cycleCorrel = (targetId) => {
+    if (!linking || targetId === linking.id) return;
+    set(s => {
+      const srcS = s.plan.subjects.find(x => x.id === linking.id);
+      if (!srcS) return;
+      if (!srcS.correlativas) srcS.correlativas = { cursar: [], final: [] };
+      const arr = srcS.correlativas[linking.kind] || (srcS.correlativas[linking.kind] = []);
+      const idx = arr.findIndex(c => c.id === targetId);
+      if (idx < 0) arr.push({ id: targetId, req: "regular", tipo: "fuerte" });
+      else if (arr[idx].tipo === "fuerte") arr[idx] = { ...arr[idx], tipo: "debil" };
+      else arr.splice(idx, 1);
+    });
+  };
+  const linkStateFor = (nodeId) => {
+    if (!linking) return null;
+    if (nodeId === linking.id) return "source";
+    const srcS = subjects.find(x => x.id === linking.id);
+    const c = (srcS?.correlativas?.[linking.kind] || []).find(c => c.id === nodeId);
+    return c ? c.tipo : null;
+  };
+  const linkingSubj = linking && subjects.find(x => x.id === linking.id);
+
   return (
     <div className="page page-wide" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <PageHead title="Plan de correlatividades" meta="BETA · lienzo con zoom — arrastrá y hacé scroll para acercar">
+        <Btn variant="secondary" icon="layers" onClick={importFromFacultad}>Traer de Facultad</Btn>
+        <Btn variant="secondary" icon="plus" onClick={() => setBulkOpen(true)}>Cargar varias</Btn>
         <Btn variant="primary" icon="plus" onClick={() => setModal("new")}>Nueva materia</Btn>
       </PageHead>
+
+      {linking && (
+        <div className="plan-linkbar">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+            <Icon name="space" size={16} />
+            <span style={{ fontSize: 13 }}>Correlativas de <b>{linkingSubj?.name}</b> para {linking.kind === "final" ? "rendir el FINAL" : "CURSAR"} — tocá las materias que van antes.</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span className="plan-legend"><i style={{ background: "var(--org)" }} />1 toque fuerte</span>
+            <span className="plan-legend"><i style={{ background: "var(--org-2)" }} />2 débil</span>
+            <span className="plan-legend"><i style={{ background: "rgba(244,237,224,.3)" }} />3 sacar</span>
+            <div className="plan-kind">
+              <button className={linking.kind === "cursar" ? "on" : ""} onClick={() => setLinking(l => ({ ...l, kind: "cursar" }))}>Cursar</button>
+              <button className={linking.kind === "final" ? "on" : ""} onClick={() => setLinking(l => ({ ...l, kind: "final" }))}>Final</button>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setLinking(null)}>Listo</button>
+          </div>
+        </div>
+      )}
 
       {subjects.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: 40 }}>
           <div className="h3" style={{ marginBottom: 8 }}>Todavía no cargaste tu plan</div>
-          <div className="small">Agregá tus materias con sus correlativas para ver qué podés cursar.</div>
+          <div className="small" style={{ marginBottom: 16, maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>Traé las materias que ya tenés en Facultad, cargá varias juntas, o agregá una por una. Después vinculás las correlativas tocándolas en el mapa.</div>
+          <div className="row" style={{ gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <Btn variant="primary" icon="layers" onClick={importFromFacultad}>Traer de Facultad</Btn>
+            <Btn variant="secondary" icon="plus" onClick={() => setBulkOpen(true)}>Cargar varias</Btn>
+          </div>
         </div>
       ) : (
         <div className="card card-flush" style={{ flex: 1, overflow: "hidden", position: "relative", minHeight: 480 }}>
@@ -206,7 +335,9 @@ const Correlatividades = () => {
                 ))}
                 <CorrelLines subjects={subjects} positions={positions} />
                 {subjects.map(s => (
-                  <SubjectNode key={s.id} s={s} computed={computedAll[s.id]} pos={positions[s.id]} onClick={() => setModal(s)} />
+                  <SubjectNode key={s.id} s={s} computed={computedAll[s.id]} pos={positions[s.id]}
+                    linkingMode={!!linking} linkState={linkStateFor(s.id)}
+                    onClick={() => linking ? cycleCorrel(s.id) : setModal(s)} />
                 ))}
               </div>
             </TransformComponent>
@@ -221,8 +352,10 @@ const Correlatividades = () => {
           onClose={() => setModal(null)}
           onSave={saveSubject}
           onDelete={deleteSubject}
+          onLink={(id) => { setModal(null); setLinking({ id, kind: "cursar" }); }}
         />
       )}
+      {bulkOpen && <BulkAddModal onClose={() => setBulkOpen(false)} onAdd={addBulk} />}
     </div>
   );
 };
