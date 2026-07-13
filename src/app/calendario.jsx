@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, COLORS } from './store.jsx';
 import { Btn, Modal, Field, Seg } from './ui.jsx';
@@ -200,42 +202,87 @@ const EventCard = ({ e, subj, onClick }) => {
   );
 };
 
-/* ---------- vista SEMANA ---------- */
-const WeekView = ({ viewDate, events, subjects, onDay, onEvent }) => {
+/* ---------- vista SEMANA (con arrastre de eventos) ---------- */
+const timeNum = (e) => { if (!e.time) return 9000; const [h, m] = e.time.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+/* orden dentro de un día: por 'order' manual si existe, si no por hora */
+const sortDay = (evs) => [...evs].sort((a, b) => {
+  const ao = a.order != null ? a.order : 10000 + timeNum(a);
+  const bo = b.order != null ? b.order : 10000 + timeNum(b);
+  return ao - bo;
+});
+
+/* tarjeta de evento arrastrable (real, no derivada del planificador) */
+const DraggableEvent = ({ e, subj, onClick }) => {
+  const { attributes, listeners, setNodeRef: dragRef, transform, isDragging } = useDraggable({ id: e.id });
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: `evdrop|${e.id}` });
+  const ref = (node) => { dragRef(node); dropRef(node); };
+  return (
+    <div ref={ref} {...attributes} {...listeners}
+      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1, position: "relative", touchAction: "none", cursor: "grab", zIndex: isDragging ? 50 : "auto" }}>
+      {isOver && <div className="cal-drop-line" />}
+      <EventCard e={e} subj={subj} onClick={onClick} />
+    </div>
+  );
+};
+
+/* columna de un día = zona donde soltar */
+const DayColumn = ({ iso, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: `daydrop|${iso}` });
+  return <div ref={setNodeRef} className={`cal-day-drop${isOver ? " over" : ""}`} style={{ display: "grid", gap: 8, minHeight: 60, borderRadius: 10, padding: 2 }}>{children}</div>;
+};
+
+const WeekView = ({ viewDate, events, subjects, onDay, onEvent, onMoveEvent }) => {
   const start = startOfWeek(viewDate);
   const today = isoOf(new Date());
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const onDragEnd = ({ active, over }) => {
+    if (!over) return;
+    const overId = String(over.id);
+    let targetIso = null, beforeId = null;
+    if (overId.startsWith("daydrop|")) targetIso = overId.slice(8);
+    else if (overId.startsWith("evdrop|")) beforeId = overId.slice(7);
+    else return;
+    if (String(active.id) === beforeId) return;
+    onMoveEvent(String(active.id), targetIso, beforeId);
+  };
 
   return (
-    <div className="cal-scroll">
-      <div className="grid cal-week-grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 14 }}>
-        {days.map(d => {
-          const iso = isoOf(d);
-          const isToday = iso === today;
-          const dayEvents = events.filter(e => e.date === iso).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
-          const important = dayEvents.some(e => e.important);
-          return (
-            <div key={iso} style={{ minHeight: 160, borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
-              <div style={{ marginBottom: 12 }}>
-                <div className="mono" style={{ fontSize: 10, color: important ? "var(--org-deep)" : "var(--tx-3)", letterSpacing: ".08em", display: "flex", alignItems: "center", gap: 4 }}>{DOW_ES[(d.getDay() + 6) % 7]}{important && <Icon name="star" size={10} color="var(--org)" />}</div>
-                <span
-                  onClick={() => onDay(iso)}
-                  style={{
-                    fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, cursor: "pointer",
-                    color: isToday ? "#fff" : "var(--ink)",
-                    background: isToday ? "var(--org)" : "transparent",
-                    border: !isToday && important ? "2px solid var(--org)" : "2px solid transparent",
-                    width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", marginTop: 3,
-                  }}>{d.getDate()}</span>
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="cal-scroll">
+        <div className="grid cal-week-grid" style={{ gridTemplateColumns: "repeat(7,1fr)", gap: 14 }}>
+          {days.map(d => {
+            const iso = isoOf(d);
+            const isToday = iso === today;
+            const dayEvents = sortDay(events.filter(e => e.date === iso));
+            const important = dayEvents.some(e => e.important);
+            return (
+              <div key={iso} style={{ minHeight: 160, borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div className="mono" style={{ fontSize: 10, color: important ? "var(--org-deep)" : "var(--tx-3)", letterSpacing: ".08em", display: "flex", alignItems: "center", gap: 4 }}>{DOW_ES[(d.getDay() + 6) % 7]}{important && <Icon name="star" size={10} color="var(--org)" />}</div>
+                  <span
+                    onClick={() => onDay(iso)}
+                    style={{
+                      fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, cursor: "pointer",
+                      color: isToday ? "#fff" : "var(--ink)",
+                      background: isToday ? "var(--org)" : "transparent",
+                      border: !isToday && important ? "2px solid var(--org)" : "2px solid transparent",
+                      width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", marginTop: 3,
+                    }}>{d.getDate()}</span>
+                </div>
+                <DayColumn iso={iso}>
+                  {dayEvents.map(e => e.studyPlanSubjectId
+                    ? <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />
+                    : <DraggableEvent key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />
+                  )}
+                </DayColumn>
               </div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {dayEvents.map(e => <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />)}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </DndContext>
   );
 };
 
@@ -308,10 +355,13 @@ const MiniMonth = ({ year, month, events, onOpen }) => {
             <div key={d} style={{ height: 18, display: "grid", placeItems: "center" }}>
               <span style={{
                 fontSize: 9, fontFamily: "var(--font-mono)", width: 16, height: 16, borderRadius: "50%",
-                display: "grid", placeItems: "center", color: isToday ? "var(--org)" : meta.parcial ? "#fff" : meta.entrega ? "#fff" : meta.important ? "var(--org-deep)" : "var(--tx-3)",
-                border: (isToday || (meta.important && !meta.parcial && !meta.entrega)) ? "1.5px solid var(--org)" : "none",
-                background: !isToday && meta.parcial ? "var(--org)" : !isToday && meta.entrega ? "var(--ink)" : "transparent",
-                fontWeight: (meta.parcial || meta.entrega || isToday || meta.important) ? 700 : 400,
+                display: "grid", placeItems: "center",
+                /* destacado o parcial = naranja sólido · entrega = marrón · hoy (si no) = anillo */
+                color: (meta.important || meta.parcial || meta.entrega) ? "#fff" : isToday ? "var(--org)" : "var(--tx-3)",
+                border: isToday && !(meta.important || meta.parcial || meta.entrega) ? "1.5px solid var(--org)" : "none",
+                background: (meta.important || meta.parcial) ? "var(--org)" : meta.entrega ? "var(--ink)" : "transparent",
+                boxShadow: meta.important ? "0 0 0 1.5px var(--card), 0 0 0 3px var(--org)" : "none",
+                fontWeight: (meta.important || meta.parcial || meta.entrega || isToday) ? 700 : 400,
               }}>{d}</span>
             </div>
           );
@@ -368,6 +418,29 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
   const prev = () => setView(d => vista === "año" ? new Date(d.getFullYear() - 1, 0, 1) : vista === "semana" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const next = () => setView(d => vista === "año" ? new Date(d.getFullYear() + 1, 0, 1) : vista === "semana" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
+  /* mover un evento arrastrándolo: a otro día (daydrop) o reordenar dentro del día (evdrop) */
+  const moveEvent = (activeId, targetIso, beforeId) => {
+    set(s => {
+      const evs = s.events || [];
+      const act = evs.find(e => e.id === activeId);
+      if (!act) return; /* los bloques "Estudiar" derivados no se mueven acá */
+      if (!targetIso && beforeId) targetIso = evs.find(e => e.id === beforeId)?.date;
+      if (!targetIso) return;
+      act.date = targetIso;
+      act.day = parseInt(targetIso.slice(8, 10));
+      /* reconstruir el orden del día destino (solo eventos reales) */
+      const dayEvs = sortDay(evs.filter(e => e.date === targetIso && e.id !== activeId && !e.studyPlanSubjectId));
+      let insertIdx = dayEvs.length;
+      if (beforeId) { const bi = dayEvs.findIndex(e => e.id === beforeId); if (bi >= 0) insertIdx = bi; }
+      [...dayEvs.slice(0, insertIdx), act, ...dayEvs.slice(insertIdx)].forEach((e, i) => {
+        const ref = evs.find(x => x.id === e.id); if (ref) ref.order = i;
+      });
+      /* si el evento tiene una tarea vinculada, actualizarle la fecha */
+      const taskId = Object.keys(s.taskCalendarMap || {}).find(k => s.taskCalendarMap[k] === activeId);
+      if (taskId) { const t = (s.tasks || []).find(x => x.id === taskId); if (t) { const [, m, dd] = targetIso.split("-"); t.dueDate = targetIso; t.due = `${parseInt(dd)}/${parseInt(m)}`; } }
+    });
+  };
+
   const importICS = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -410,7 +483,7 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
         </div>
       </div>
 
-      {vista === "semana" && <WeekView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(iso) => setModal({ day: parseInt(iso.slice(8, 10)), month: parseInt(iso.slice(5, 7)) - 1, year: parseInt(iso.slice(0, 4)) })} onEvent={onEventClick} />}
+      {vista === "semana" && <WeekView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(iso) => setModal({ day: parseInt(iso.slice(8, 10)), month: parseInt(iso.slice(5, 7)) - 1, year: parseInt(iso.slice(0, 4)) })} onEvent={onEventClick} onMoveEvent={moveEvent} />}
       {vista === "mes" && <MonthView viewDate={viewDate} events={events} subjects={data.subjects} onDay={(d) => setModal({ day: d, month: viewDate.getMonth(), year: viewDate.getFullYear() })} onEvent={onEventClick} />}
       {vista === "año" && <YearView year={viewDate.getFullYear()} events={events} onOpenMonth={(m) => { setView(new Date(viewDate.getFullYear(), m, 1)); setVista("mes"); }} />}
 

@@ -331,6 +331,13 @@ input,select,textarea{ font-size:16px; }
   box-shadow:0 2px 0 #e0d5c3; transition:transform .12s ease, box-shadow .12s ease; }
 .cal-year-card:hover{ transform:translateY(-2px); box-shadow:0 4px 0 #e0d5c3; }
 
+/* arrastre de eventos en la vista semana */
+.cal-day-drop{ transition:background .15s ease, box-shadow .15s ease; }
+.cal-day-drop.over{ background:rgba(217,85,31,.07); box-shadow:inset 0 0 0 1.5px var(--org); }
+.cal-drop-line{ position:absolute; top:-5px; left:0; right:0; height:3px; border-radius:99px; background:var(--org); box-shadow:0 0 0 3px rgba(217,85,31,.18); animation:dropline-in .16s ease both; z-index:60; }
+@keyframes dropline-in{ from{ opacity:0; transform:scaleX(.6); } to{ opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce){ .cal-drop-line{ animation:none; } }
+
 /* ===== INTERIOR DE MATERIA (temario, botones) ===== */
 .ms{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; white-space:nowrap; border:1px solid #d3c7b3; color:#a99e8c; background:transparent; cursor:pointer; user-select:none; transition:transform .1s ease, all .12s ease; }
 .ms:hover{ transform:translateY(-1px); }

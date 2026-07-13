@@ -133,7 +133,7 @@ export function syncEventToTask(event, data, set) {
     due: formatDateToDue(event.date),
     dueDate: event.date || "",
     desc: event.desc || "",
-    subject: null,
+    subject: event.subjectId || null, /* si el evento tiene materia, la tarea va a esa materia */
     prio: "media",
     xp: 20,
     status: "pendiente",
