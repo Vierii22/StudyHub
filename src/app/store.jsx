@@ -130,7 +130,7 @@ const SEED = {
       ]},
     ],
   },
-  settings: { uiScale: 40, glow: true, anim: true, sounds: false, accent: "violet" },
+  settings: { uiScale: 40, glow: true, anim: true, sounds: false, accent: "violet", tutorialDone: false },
 };
 
 const ALL_WIDGETS = {

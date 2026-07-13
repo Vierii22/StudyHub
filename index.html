@@ -403,6 +403,24 @@ input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
 .p-add:active{ transform:translateY(1px); box-shadow:0 1px 0 #e0d5c3; }
 @media(prefers-reduced-motion:reduce){ .file-row, .parcial-row{ animation:none; } }
 
+/* ===== TUTORIAL DE BIENVENIDA ===== */
+.tut-overlay{ position:fixed; inset:0; z-index:400; background:rgba(58,51,43,.5); backdrop-filter:blur(5px); display:grid; place-items:center; padding:24px; overflow-y:auto; animation:tut-fade .25s ease both; }
+@keyframes tut-fade{ from{ opacity:0; } to{ opacity:1; } }
+.tut-card{ position:relative; width:min(420px,100%); background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl); padding:30px 28px 24px; text-align:center; box-shadow:0 3px 0 #e0d5c3, 0 40px 80px -30px rgba(58,51,43,.45); animation:tut-pop .32s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes tut-pop{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:none; } }
+.tut-skip{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--tx-3); font-family:var(--font-body); font-size:12.5px; font-weight:600; cursor:pointer; padding:4px 6px; }
+.tut-skip:hover{ color:var(--ink); }
+.tut-hubby{ display:flex; justify-content:center; }
+.tut-badge{ display:inline-grid; place-items:center; width:36px; height:36px; border-radius:11px; background:var(--ink); color:var(--org); margin:-6px auto 2px; box-shadow:0 3px 0 var(--ink-2); }
+.tut-title{ font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin-top:8px; animation:tut-in .3s ease both; }
+.tut-body{ font-size:14px; line-height:1.55; color:var(--tx-2); margin:8px auto 0; max-width:340px; text-wrap:pretty; animation:tut-in .3s .04s ease both; }
+@keyframes tut-in{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+.tut-dots{ display:flex; gap:6px; justify-content:center; margin:18px 0 16px; }
+.tut-dots span{ width:7px; height:7px; border-radius:99px; background:var(--line-2); cursor:pointer; transition:all .18s ease; }
+.tut-dots span.on{ width:20px; background:var(--org); }
+.tut-nav{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+@media(prefers-reduced-motion:reduce){ .tut-overlay, .tut-card, .tut-title, .tut-body{ animation:none; } }
+
 /* ===== TAREAS (vista general) ===== */
 .tsk-group{ animation:uni-in .32s cubic-bezier(.2,.8,.3,1) both; }
 .tsk-line{ transition:background .12s ease; }

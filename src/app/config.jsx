@@ -353,6 +353,10 @@ const ConfigSection = ({ onLogout, initialTab }) => {
             {/* Instalar como app */}
             <InstallPWA />
 
+            <button className="btn-soft" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={() => window.dispatchEvent(new CustomEvent("sh:open-tutorial"))}>
+              <Icon name="idea" size={15} /> Ver el tutorial de nuevo
+            </button>
+
             <div className="small" style={{ marginTop: 18, textAlign: "center", color: "var(--tx-3)" }}>
               Tus datos se sincronizan en la nube.
             </div>

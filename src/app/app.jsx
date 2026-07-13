@@ -19,6 +19,7 @@ import { Landing } from './landing.jsx';
 import { FeedbackWidget } from './feedback.jsx';
 import { TabBar } from './tabbar.jsx';
 import { Palette } from './palette.jsx';
+import { Tutorial } from './tutorial.jsx';
 import { supabase } from '../supabase.js';
 
 /* ============================================================
@@ -274,6 +275,7 @@ function App() {
       {paletteOpen && <Palette onNav={nav} onClose={() => setPaletteOpen(false)} />}
       <HubbyChatFab section={section} onNav={nav} />
       <FeedbackWidget section={section} />
+      <Tutorial />
       <ToastHost />
     </div>
   );
