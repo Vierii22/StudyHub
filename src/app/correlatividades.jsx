@@ -33,10 +33,13 @@ const STATUS_META = {
 
 const COL_W = 200, ROW_H = 92, YEAR_PAD = 40;
 
+/* el año puede venir como texto libre ("1°", "primero", "") → lo llevamos a 1-9 */
+const normYear = (v) => { const n = parseInt(String(v ?? "").replace(/[^0-9]/g, ""), 10); return (n >= 1 && n <= 9) ? n : 1; };
+
 /* posiciona cada materia: x por año, y apilado dentro del año */
 function layout(subjects) {
   const byYear = {};
-  subjects.forEach(s => { (byYear[s.year] ||= []).push(s); });
+  subjects.forEach(s => { const y = normYear(s.year); (byYear[y] ||= []).push(s); });
   const pos = {};
   Object.entries(byYear).forEach(([year, list]) => {
     list.forEach((s, i) => {
@@ -213,7 +216,7 @@ const Correlatividades = () => {
   const computedAll = {};
   subjects.forEach(s => { computedAll[s.id] = deriveCourseStatus(s, subjects); });
 
-  const years = [...new Set(subjects.map(s => Number(s.year)))].sort((a, b) => a - b);
+  const years = [...new Set(subjects.map(s => normYear(s.year)))].sort((a, b) => a - b);
   const maxYear = Math.max(5, ...years);
 
   const saveSubject = (subj) => {
@@ -242,7 +245,7 @@ const Correlatividades = () => {
         const key = (sub.name || "").toLowerCase().trim();
         if (!key || existing.has(key)) return;
         existing.add(key);
-        s.plan.subjects.push({ id: uid(), name: sub.name, year: String(sub.year || "1"), semester: "1", base: estadoToBase(deriveEstado(sub)), correlativas: { cursar: [], final: [] } });
+        s.plan.subjects.push({ id: uid(), name: sub.name, year: String(normYear(sub.year)), semester: "1", base: estadoToBase(deriveEstado(sub)), correlativas: { cursar: [], final: [] } });
         added++;
       });
     });
