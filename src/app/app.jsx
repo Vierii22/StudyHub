@@ -188,6 +188,16 @@ function App() {
     window.addEventListener("resize", upd);
     return () => window.removeEventListener("resize", upd);
   }, []);
+  /* mantener la sección en la URL para que F5 no te devuelva al inicio */
+  useEffect(() => {
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.set("section", section);
+      u.searchParams.delete("action");
+      window.history.replaceState(null, "", u);
+    } catch {}
+  }, [section]);
+
   const nav = (s) => {
     if (document.startViewTransition) {
       document.startViewTransition(() => { setOpenSubject(null); setSection(s); });
