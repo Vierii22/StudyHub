@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Icon } from './icons.jsx';
 import { Store, useStore, toast, scaleToZoom, ToastHost } from './store.jsx';
-import { Header, HubbyChatFab } from './ui.jsx';
+import { Header, HubbyChatFab, MobileMenu } from './ui.jsx';
 import { Login, Onboarding, ConfirmEmail } from './login.jsx';
 import { Dashboard } from './dashboard2.jsx';
 import { Facultad } from './facultad.jsx';
@@ -102,6 +102,7 @@ function App() {
   const [openSubject, setOpenSubject] = useState(null);
   const [autoPlanner, setAutoPlanner] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [data] = useStore();
 
   /* mantener ref sincronizado con el estado real */
@@ -262,16 +263,17 @@ function App() {
           profile={data.profile}
           onNav={nav}
           section={section}
+          onMenu={() => setMenuOpen(true)}
         />
         <div
           className="scroll"
           key={section + (openSubject || "")}
-          style={{ paddingBottom: isMobile ? "80px" : undefined }}
+          style={{ paddingBottom: isMobile ? "90px" : undefined }}
         >
           {render()}
         </div>
       </div>
-      {isMobile && <TabBar active={section} onNav={nav} />}
+      {isMobile && <MobileMenu open={menuOpen} section={section} onNav={nav} onClose={() => setMenuOpen(false)} />}
       {paletteOpen && <Palette onNav={nav} onClose={() => setPaletteOpen(false)} />}
       <HubbyChatFab section={section} onNav={nav} />
       <FeedbackWidget section={section} />

@@ -57,10 +57,11 @@ const TOPNAV = [
   { id: "notas",      label: "Progreso" },
   { id: "ocio",       label: "Ocio" },
 ];
-const Header = ({ profile, onNav, section }) => {
+const Header = ({ profile, onNav, section, onMenu }) => {
   const initial = profile.initial || (profile.name ? profile.name[0] : "?");
   return (
     <header className="topbar">
+      <button className="tb-burger" onClick={onMenu} aria-label="Abrir menú"><Icon name="menu" size={22} /></button>
       <div className="tb-brand" onClick={() => onNav("dashboard")}>
         <img src="/assets/icon.png" alt="" className="tb-logo" />
         <span className="tb-word"><span className="w1">study</span><span className="w2">hub</span><span className="w3">.</span></span>
@@ -74,6 +75,39 @@ const Header = ({ profile, onNav, section }) => {
         <div className="tb-avatar" onClick={() => onNav("config")} title="Tu perfil">{initial}</div>
       </div>
     </header>
+  );
+};
+
+/* ---------- MENÚ MOBILE a pantalla completa (reemplaza la tab bar) ---------- */
+const MENU_SECTIONS = [
+  { id: "dashboard",  label: "Hoy",        icon: "home" },
+  { id: "calendario", label: "Calendario", icon: "calendar" },
+  { id: "facultad",   label: "Facultad",   icon: "layers" },
+  { id: "tareas",     label: "Tareas",     icon: "check" },
+  { id: "notas",      label: "Progreso",   icon: "target" },
+  { id: "ocio",       label: "Ocio",       icon: "film" },
+];
+const MobileMenu = ({ open, section, onNav, onClose }) => {
+  if (!open) return null;
+  const go = (id) => { onNav(id); onClose(); };
+  return (
+    <div className="mobmenu" role="dialog" aria-modal="true">
+      <div className="mobmenu-top">
+        <span className="mobmenu-logo">studyhub<span>.</span></span>
+        <button className="mobmenu-x" onClick={onClose} aria-label="Cerrar menú"><Icon name="x" size={22} /></button>
+      </div>
+      <nav className="mobmenu-list">
+        {MENU_SECTIONS.map(it => (
+          <button key={it.id} className={`mobmenu-item${section === it.id ? " active" : ""}`} onClick={() => go(it.id)}>
+            <Icon name={it.icon} size={22} /> {it.label}
+          </button>
+        ))}
+      </nav>
+      <div className="mobmenu-foot">
+        <button className="mobmenu-hubby" onClick={() => go("chat")}><Icon name="chat" size={20} /> Hablar con Hubby</button>
+        <button className="mobmenu-cfg" onClick={() => go("config")}><Icon name="gear" size={19} /> Configuración</button>
+      </div>
+    </div>
   );
 };
 
@@ -150,6 +184,6 @@ const HubbyChatFab = ({ section, onNav }) => {
 
 export {
   TerminalCorners, Btn, Chip, MonoLabel, Hubby, HubbyChatFab,
-  Header, PageHead, Seg, Field,
+  Header, MobileMenu, PageHead, Seg, Field,
   Modal, Toggle, Empty, SubjectDot,
 };
