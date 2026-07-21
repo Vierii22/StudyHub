@@ -1212,6 +1212,20 @@ a{ color:inherit; text-decoration:none; }
   box-shadow:0 0 0 2px var(--ink);
 }
 
+/* — recordatorio de conectar el bot — */
+.bot-reminder{ display:flex; align-items:center; gap:12px; background:var(--ink); color:#F4EDE0; border-radius:16px;
+  padding:11px 14px; margin-bottom:16px; cursor:pointer; box-shadow:0 3px 0 var(--ink-2);
+  transition:transform .14s ease, box-shadow .14s ease; animation:uni-in .3s ease both; }
+.bot-reminder:hover{ transform:translateY(-2px); box-shadow:0 5px 0 var(--ink-2); }
+.bot-reminder-hubby{ width:42px; height:42px; object-fit:contain; flex:0 0 auto; }
+.bot-reminder-title{ font-weight:700; font-size:14px; }
+.bot-reminder-sub{ font-size:11.5px; color:#c9bda9; margin-top:2px; }
+.bot-reminder-cta{ flex:0 0 auto; background:var(--org); color:#fff; font-size:12.5px; font-weight:700;
+  padding:8px 14px; border-radius:10px; box-shadow:0 2px 0 var(--org-deep); white-space:nowrap; }
+.bot-reminder-x{ flex:0 0 auto; color:#9a8f7d; cursor:pointer; padding:4px; display:flex; }
+.bot-reminder-x:hover{ color:#F4EDE0; }
+@media(max-width:600px){ .bot-reminder-sub{ display:none; } }
+
 /* — Hubby (mascota) — */
 .hubby{ user-select:none; -webkit-user-drag:none; display:block; }
 @keyframes hubby-float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }

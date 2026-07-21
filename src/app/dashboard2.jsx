@@ -6,6 +6,24 @@ import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
 
 const greetingTime = () => { const h = new Date().getHours(); return h < 6 ? "noche" : h < 13 ? "mañana" : h < 20 ? "tarde" : "noche"; };
 
+/* recordatorio de conectar el bot de Telegram (hasta que lo vinculás o lo cerrás) */
+const BotReminder = ({ profile, onNav }) => {
+  const [gone, setGone] = React.useState(() => { try { return localStorage.getItem("sh_bot_reminder") === "off"; } catch { return false; } });
+  if (profile.hubby || gone) return null;
+  const dismiss = (e) => { e.stopPropagation(); try { localStorage.setItem("sh_bot_reminder", "off"); } catch {} setGone(true); };
+  return (
+    <div className="bot-reminder" onClick={() => onNav("config")}>
+      <img src="/assets/hubby/hubby-saluda.png" alt="" className="bot-reminder-hubby" />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="bot-reminder-title">Conectá el bot de Telegram</div>
+        <div className="bot-reminder-sub">Anotá tareas y parciales escribiéndole a Hubby, sin abrir la app.</div>
+      </div>
+      <span className="bot-reminder-cta">Conectar</span>
+      <span className="bot-reminder-x" onClick={dismiss} title="Ahora no"><Icon name="x" size={15} /></span>
+    </div>
+  );
+};
+
 /* ============================================================
    DASHBOARD "HOY" — mockup confirmado (DESIGN.md pantalla 1)
    Layout fijo, sin modo edición ni widgets configurables:
@@ -57,6 +75,9 @@ const Dashboard = ({ onNav }) => {
       <div style={{ margin: "18px 0" }}>
         <CaptureBar data={data} set={set} onOpen={onNav} />
       </div>
+
+      {/* ── recordatorio del bot (si no está conectado) ── */}
+      <BotReminder profile={p} onNav={onNav} />
 
       {/* ── MENÚ DE ÍCONOS ── */}
       <HoyMenu active="dashboard" onNav={onNav} />
