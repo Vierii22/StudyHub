@@ -57,11 +57,33 @@ const HoyMenu = ({ active, onNav }) => (
 const Dashboard = ({ onNav }) => {
   const [data, set] = useStore();
   const p = data.profile;
+  const [mobile, setMobile] = React.useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  React.useEffect(() => {
+    const f = () => setMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
 
   const now = new Date();
   const gt = greetingTime();
   const saludo = gt === "mañana" ? "Buen día" : gt === "tarde" ? "Buenas tardes" : "Buenas noches";
   const fecha = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+
+  /* ── MOBILE: home tipo feed (el menú de secciones vive en el ☰) ── */
+  if (mobile) {
+    return (
+      <div className="page page-cozy hoy-feed">
+        <div className="hoy-hero">
+          <div className="hoy-fecha">{fecha}</div>
+          <h1 className="hoy-saludo">{saludo}, <em>{p.name}</em></h1>
+        </div>
+        <div style={{ marginTop: 16 }}><CoachCard data={data} onNav={onNav} /></div>
+        <div style={{ margin: "14px 0" }}><CaptureBar data={data} set={set} onOpen={onNav} /></div>
+        <BotReminder profile={p} onNav={onNav} />
+        <TodayTimeline data={data} set={set} onNav={onNav} />
+      </div>
+    );
+  }
 
   return (
     <div className="page page-cozy">
