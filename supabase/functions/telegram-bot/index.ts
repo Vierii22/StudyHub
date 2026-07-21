@@ -1,7 +1,7 @@
 // ============================================================
 // Bot de Telegram de StudyHub — Edge Function (Deno / Supabase)
-// v2: /help, respuestas intuitivas, confirmación real (solo dice
-// "agregado" si de verdad guardó), y consultas ("¿qué tengo?").
+// v3: + marcar hecho, anotar en materia, cargar nota, y botones
+// rápidos (menú con inline keyboard). v2: /help, confirmación real.
 //
 // Deploy:  supabase functions deploy telegram-bot --no-verify-jwt
 //          (o desde el dashboard con "Verify JWT" APAGADO)
@@ -33,20 +33,40 @@ async function sendMsg(chatId: number | string, text: string) {
   });
 }
 
+/* menú con botones (para quien no sabe usar un bot) */
+async function sendMenu(chatId: number | string) {
+  await fetch(`${TG_API}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: "¿Qué querés hacer? También podés escribirme cualquier cosa 👇",
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📋 Ver pendientes", callback_data: "q_pend" }, { text: "🗓 Esta semana", callback_data: "q_week" }],
+          [{ text: "❓ Cómo se usa", callback_data: "help" }],
+        ],
+      },
+    }),
+  });
+}
+
 const HELP = `Soy <b>Hubby</b> 🤖, tu asistente de StudyHub. Escribime en lenguaje normal y lo guardo solo en la app.
 
-<b>Ejemplos:</b>
+<b>Podés tirarme cosas como:</b>
 • <i>tarea: terminar el TP de redes para el viernes</i>
 • <i>parcial de álgebra el 24</i>
-• <i>entrega del práctico 5 el 30/6</i>
-• <i>¿qué tengo pendiente?</i>
-• <i>¿qué tengo esta semana?</i>
+• <i>ya terminé el TP de redes</i> (lo marco hecho)
+• <i>anotá en filosofía: el parcial entra hasta la unidad 3</i>
+• <i>me saqué 8 en el parcial de álgebra</i>
+• <i>¿qué tengo pendiente?</i> · <i>¿qué tengo esta semana?</i>
 
 <b>Comandos:</b>
 /start — vincular tu cuenta
 /help — ver esta ayuda
 
-Probá tirándome cualquier cosa que tengas que hacer o cualquier fecha 👇`;
+Escribime cualquier cosa que tengas que hacer, una fecha, o preguntame qué tenés 👇`;
 
 async function getDomain(userId: string, key: string) {
   const { data } = await supabase.from("app_data").select("value").eq("user_id", userId).eq("key", key).maybeSingle();
@@ -88,13 +108,16 @@ async function interpret(userId: string, text: string) {
 
   const sys = `Sos Hubby, el asistente de StudyHub (organización para la facultad). El usuario te escribe por Telegram en español (Argentina).
 Devolvé SOLO un JSON válido (sin markdown), con esta forma:
-{"intent":"add_task"|"add_event"|"query"|"chat","reply":"...","task":{"t":"","prio":"alta|media|baja","due":"YYYY-MM-DD o vacío","subjectName":""},"event":{"title":"","date":"YYYY-MM-DD","kind":"evento|parcial|entrega","important":false,"subjectName":""}}
+{"intent":"add_task"|"add_event"|"complete_task"|"note_subject"|"set_grade"|"query"|"chat","reply":"...","task":{"t":"","prio":"alta|media|baja","due":"YYYY-MM-DD o vacío","subjectName":""},"event":{"title":"","date":"YYYY-MM-DD","kind":"evento|parcial|entrega","important":false,"subjectName":""},"taskName":"","subjectName":"","note":"","gradeKey":"p1|p2|p3|coloquio|final","gradeValue":0}
 Reglas MUY importantes:
-- Si el usuario quiere GUARDAR algo para hacer/estudiar/entregar → intent "add_task" (poné task).
-- Si menciona una FECHA concreta (parcial, final, entrega, evento) → intent "add_event" (poné event).
-- Si PREGUNTA por sus datos ("qué tengo", "qué pendientes", "cuándo es") → intent "query" y respondé en "reply" usando el contexto.
-- Solo usá "chat" para saludos o charla suelta.
-- NUNCA digas en "reply" que guardaste algo si el intent no es add_task/add_event. El sistema pone la confirmación.
+- Guardar algo para hacer/estudiar/entregar → "add_task" (poné task).
+- Menciona una FECHA concreta (parcial, final, entrega, evento) → "add_event" (poné event).
+- Marca algo como HECHO/terminado ("ya terminé X", "hice X", "listo el TP") → "complete_task" (poné taskName con el nombre de la tarea).
+- Quiere ANOTAR algo EN una materia ("anotá en filosofía: ...", "agregá a álgebra que...") → "note_subject" (poné subjectName y note).
+- Dice una NOTA/calificación ("me saqué 8 en el parcial de álgebra", "aprobé el final de redes con 7") → "set_grade" (poné subjectName, gradeKey y gradeValue). Si dice "parcial" sin número, usá "p1".
+- PREGUNTA por sus datos ("qué tengo", "qué pendientes", "cuándo es") → "query" y respondé en "reply" usando el contexto.
+- Solo "chat" para saludos o charla suelta.
+- NUNCA digas en "reply" que hiciste algo si el intent es query/chat. El sistema pone la confirmación de las acciones.
 - Si menciona una materia, poné subjectName parecido a la lista.
 Hoy es ${todayAR()}. Contexto del usuario: ${JSON.stringify(ctx)}`;
 
@@ -160,6 +183,46 @@ async function applyIntent(userId: string, parsed: any, subjects: any[]): Promis
       : `Uf, no pude agendarlo 😕 probá de nuevo.`;
   }
 
+  if (parsed?.intent === "complete_task" && parsed.taskName) {
+    const n = parsed.taskName.toLowerCase().trim();
+    const dom = await getDomain(userId, "sh_tasks");
+    const tasks = (dom.tasks || []) as any[];
+    const hit = tasks.find((t) => !t.done && (t.t || "").toLowerCase().includes(n))
+      || tasks.find((t) => (t.t || "").toLowerCase().includes(n));
+    if (!hit) return `No encontré una tarea parecida a "<b>${parsed.taskName}</b>" 🤔`;
+    hit.done = true; hit.status = "lista"; hit.completedAt = todayAR();
+    const ok = await setDomain(userId, "sh_tasks", dom);
+    return ok ? `✅ Marqué como hecha: <b>${hit.t}</b> ¡Bien ahí! 🎉` : `Uf, no pude actualizarla 😕`;
+  }
+
+  if (parsed?.intent === "note_subject" && parsed.subjectName && parsed.note) {
+    const dom = await getDomain(userId, "sh_subjects");
+    const subs = (dom.subjects || []) as any[];
+    const n = parsed.subjectName.toLowerCase().trim();
+    const sub = subs.find((s) => (s.name || "").toLowerCase().includes(n) || n.includes((s.name || "").toLowerCase()));
+    if (!sub) return `No encontré la materia "<b>${parsed.subjectName}</b>" 🤔 Fijate cómo la escribiste en la app.`;
+    if (!sub.lists) sub.lists = {};
+    if (!Array.isArray(sub.lists.notas)) sub.lists.notas = [];
+    sub.lists.notas.push({ id: uid(), t: parsed.note.trim() });
+    const ok = await setDomain(userId, "sh_subjects", dom);
+    return ok ? `📝 Anoté en <b>${sub.name}</b>: “${parsed.note.trim()}”` : `Uf, no pude anotarlo 😕`;
+  }
+
+  if (parsed?.intent === "set_grade" && parsed.subjectName && parsed.gradeValue != null) {
+    const dom = await getDomain(userId, "sh_subjects");
+    const subs = (dom.subjects || []) as any[];
+    const n = parsed.subjectName.toLowerCase().trim();
+    const sub = subs.find((s) => (s.name || "").toLowerCase().includes(n) || n.includes((s.name || "").toLowerCase()));
+    if (!sub) return `No encontré la materia "<b>${parsed.subjectName}</b>" 🤔`;
+    const key = ["p1", "p2", "p3", "coloquio", "final"].includes(parsed.gradeKey) ? parsed.gradeKey : "p1";
+    const val = Math.max(1, Math.min(10, Number(parsed.gradeValue)));
+    if (!sub.grades) sub.grades = {};
+    sub.grades[key] = val;
+    const ok = await setDomain(userId, "sh_subjects", dom);
+    const label = key === "final" ? "el final" : key === "coloquio" ? "el coloquio" : `el parcial ${key.slice(1)}`;
+    return ok ? `📊 Cargué <b>${val}</b> en ${label} de <b>${sub.name}</b>. Lo ves en <b>Progreso</b>.` : `Uf, no pude cargarla 😕`;
+  }
+
   /* query o chat: contestamos lo que dijo Gemini */
   return parsed?.reply || "No te entendí del todo 🤔 probá /help para ver ejemplos.";
 }
@@ -168,6 +231,21 @@ serve(async (req) => {
   if (req.method !== "POST") return new Response("ok");
   let update: any;
   try { update = await req.json(); } catch { return new Response("ok"); }
+
+  /* clicks en los botones */
+  const cq = update?.callback_query;
+  if (cq) {
+    const cqChat = cq.message?.chat?.id;
+    try { await fetch(`${TG_API}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: cq.id }) }); } catch {}
+    if (!cqChat) return new Response("ok");
+    if (cq.data === "help") { await sendMsg(cqChat, HELP); return new Response("ok"); }
+    const cqUser = await userIdForChat(cqChat);
+    if (!cqUser) { await sendMsg(cqChat, "Vinculate primero con <code>/start TUCODIGO</code>."); return new Response("ok"); }
+    const q = cq.data === "q_pend" ? "¿qué tengo pendiente?" : "¿qué tengo esta semana?";
+    const r = await interpret(cqUser, q);
+    await sendMsg(cqChat, r.parsed ? await applyIntent(cqUser, r.parsed, r.subjects) : "No pude ahora, probá de nuevo 😕");
+    return new Response("ok");
+  }
 
   const msg = update?.message;
   const chatId = msg?.chat?.id;
@@ -179,6 +257,7 @@ serve(async (req) => {
       const code = text.split(/\s+/)[1];
       if (code && await linkChat(code, chatId)) {
         await sendMsg(chatId, `¡Listo! 🎉 Tu Telegram quedó vinculado a StudyHub.\n\n${HELP}`);
+        await sendMenu(chatId);
       } else {
         await sendMsg(chatId, "¡Hola! Soy Hubby 🤖\n\nPara empezar, entrá a StudyHub → <b>Configuración → Integraciones</b>, generá tu código, y mandámelo así:\n<code>/start TUCODIGO</code>");
       }
@@ -186,6 +265,10 @@ serve(async (req) => {
     }
     if (text === "/help" || text === "/ayuda" || text.toLowerCase() === "ayuda") {
       await sendMsg(chatId, HELP);
+      return new Response("ok");
+    }
+    if (text === "/menu" || text.toLowerCase() === "menu" || text.toLowerCase() === "menú") {
+      await sendMenu(chatId);
       return new Response("ok");
     }
 
