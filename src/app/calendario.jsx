@@ -258,7 +258,7 @@ const WeekView = ({ viewDate, events, subjects, onDay, onEvent, onMoveEvent }) =
             const dayEvents = sortDay(events.filter(e => e.date === iso));
             const important = dayEvents.some(e => e.important);
             return (
-              <div key={iso} style={{ display: "flex", flexDirection: "column", minHeight: "min(58vh, 560px)", borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
+              <div key={iso} className="cal-week-day" style={{ display: "flex", flexDirection: "column", borderRadius: 12, padding: important ? "8px 8px 10px" : 0, border: "1.5px solid " + (important ? "var(--org)" : "transparent"), background: important ? "rgba(217,85,31,.05)" : "transparent", transition: "background .15s ease" }}>
                 <div style={{ marginBottom: 12 }}>
                   <div className="mono" style={{ fontSize: 10, color: important ? "var(--org-deep)" : "var(--tx-3)", letterSpacing: ".08em", display: "flex", alignItems: "center", gap: 4 }}>{DOW_ES[(d.getDay() + 6) % 7]}{important && <Icon name="star" size={10} color="var(--org)" />}</div>
                   <span

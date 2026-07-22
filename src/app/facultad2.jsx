@@ -407,7 +407,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
           return (
             <div key={u.id} className="unidad-block" style={{ borderLeft: `3px solid ${allEstudiado ? "var(--ink)" : unitTemas.length ? "var(--org)" : "#cbbfa8"}`, paddingLeft: 14, marginBottom: 16, animationDelay: `${ui * 55}ms` }}>
               {/* encabezado de la unidad */}
-              <div className="row" style={{ gap: 8, marginBottom: 8, alignItems: "center" }}>
+              <div className="row uni-head" style={{ gap: 8, marginBottom: 8, alignItems: "center" }}>
                 <span className="uni-caret" onClick={() => upUnidad(u.id, { collapsed: !u.collapsed })} style={{ cursor: "pointer", color: "var(--tx-3)", display: "flex", flex: "0 0 auto", transform: u.collapsed ? "rotate(-90deg)" : "none", transition: "transform .2s ease" }} title={u.collapsed ? "Desplegar" : "Plegar"}><Icon name="chevron" size={16} /></span>
                 <span className="mono" style={{ fontSize: 10.5, fontWeight: 800, color: "var(--ink)", letterSpacing: ".05em", flex: "0 0 auto" }}>U{ui + 1}</span>
                 <input value={u.name || ""} onChange={e => upUnidad(u.id, { name: e.target.value })} placeholder={`Unidad ${ui + 1}`}

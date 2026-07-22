@@ -339,6 +339,18 @@ input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
 
 /* ===== CALENDARIO (Semana/Mes/Año) ===== */
 .cal-scroll{ overflow-x:auto; }
+.cal-week-day{ min-height:min(58vh, 560px); }
+@media(max-width:768px){
+  /* semana → agenda vertical (cada día full-width) */
+  .cal-week-grid{ grid-template-columns:1fr !important; gap:14px !important; }
+  .cal-week-day{ min-height:auto; }
+  /* mes → celdas compactas para que entre el grid de 7 */
+  .cal-month-grid{ gap:5px !important; }
+  .cal-month-cell{ min-height:58px; padding:5px; border-radius:9px; }
+  .cal-month-daynum{ width:20px; height:20px; font-size:10px; }
+  /* año → 2 mini-meses por fila */
+  .cal-year-grid{ grid-template-columns:repeat(2,1fr) !important; }
+}
 .cal-year-grid{ grid-template-columns:repeat(4,1fr); }
 @media(max-width:768px){
   .cal-scroll{ margin:0 -14px; padding:0 14px; }
@@ -403,6 +415,7 @@ input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
 .add-unidad{ transition:color .14s ease; }
 .add-unidad:hover{ color:var(--org-deep); }
 .add-unidad:active{ transform:scale(.98); }
+@media(max-width:768px){ .uni-head{ flex-wrap:wrap; } .uni-head input{ min-width:110px; } }
 @media(prefers-reduced-motion:reduce){ .unidad-block, .unidad-block .tema-row{ animation:none; } .unidad-body{ transition:none; } }
 
 /* ===== BOTÓN VOLVER (interior de materia) ===== */
