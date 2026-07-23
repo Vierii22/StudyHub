@@ -305,6 +305,35 @@ const ConfigSection = ({ onLogout, initialTab }) => {
               {tgCode && <Btn variant="secondary" icon="copy" onClick={() => { navigator.clipboard?.writeText(tgCode); toast("Código copiado"); }}>Copiar</Btn>}
               {tgCode && <Btn variant="primary" icon="send" onClick={() => window.open("https://t.me/Hubby_ia_bot?start=" + tgCode, "_blank")}>Abrir en Telegram</Btn>}
             </div>
+
+            {/* ── guía: qué puede hacer el bot ── */}
+            <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+              <div className="h3" style={{ marginBottom: 4 }}>¿Qué le podés pedir?</div>
+              <div className="small" style={{ marginBottom: 12 }}>Ya conectado, escribile en Telegram como a una persona — la IA lo guarda solo en la app:</div>
+              <div style={{ display: "grid", gap: 2 }}>
+                {[
+                  ["plus", "Agregar una tarea", "tarea: terminar el TP de redes para el viernes"],
+                  ["calendar", "Agendar un parcial o evento", "parcial de álgebra el 24"],
+                  ["check", "Marcar algo como hecho", "ya terminé el TP de redes"],
+                  ["pen", "Anotar en una materia", "anotá en filosofía: entra hasta la unidad 3"],
+                  ["target", "Cargar una nota", "me saqué 8 en el parcial de álgebra"],
+                  ["paperclip", "Guardar una foto o archivo", "mandale la foto y elegís la materia"],
+                  ["chat", "Preguntar qué tenés", "¿qué tengo esta semana?"],
+                ].map(([icon, title, ex]) => (
+                  <div key={title} className="row" style={{ gap: 11, alignItems: "flex-start", padding: "9px 0", borderBottom: "1px solid var(--line)" }}>
+                    <span style={{ color: "var(--org)", flex: "0 0 auto", display: "flex", marginTop: 1 }}><Icon name={icon} size={16} /></span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{title}</div>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginTop: 3, lineHeight: 1.4 }}>“{ex}”</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="small" style={{ marginTop: 14, color: "var(--tx-2)", lineHeight: 1.6 }}>
+                <b>Comandos:</b> <span className="mono" style={{ fontSize: 11 }}>/start</span> vincular · <span className="mono" style={{ fontSize: 11 }}>/help</span> ayuda · <span className="mono" style={{ fontSize: 11 }}>/menu</span> botones rápidos.<br />
+                En el bot también podés usar los <b>botones</b> (Ver pendientes / Esta semana) sin escribir nada.
+              </div>
+            </div>
           </div>}
 
           {/* ── CUENTA ── */}

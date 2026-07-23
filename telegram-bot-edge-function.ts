@@ -1,7 +1,7 @@
 // ============================================================
 // Bot de Telegram de StudyHub — Edge Function (Deno / Supabase)
-// v3: + marcar hecho, anotar en materia, cargar nota, y botones
-// rápidos (menú con inline keyboard). v2: /help, confirmación real.
+// v4: + foto/archivo → lo guarda en la materia que elijas (te pregunta
+// con botones). v3: marcar hecho, anotar, notas, botones. v2: /help.
 //
 // Deploy:  supabase functions deploy telegram-bot --no-verify-jwt
 //          (o desde el dashboard con "Verify JWT" APAGADO)
@@ -61,6 +61,7 @@ const HELP = `Soy <b>Hubby</b> 🤖, tu asistente de StudyHub. Escribime en leng
 • <i>anotá en filosofía: el parcial entra hasta la unidad 3</i>
 • <i>me saqué 8 en el parcial de álgebra</i>
 • <i>¿qué tengo pendiente?</i> · <i>¿qué tengo esta semana?</i>
+• 📎 Mandame una <b>foto o archivo</b> y lo guardo en la materia que elijas.
 
 <b>Comandos:</b>
 /start — vincular tu cuenta
@@ -90,6 +91,56 @@ async function linkChat(code: string, chatId: number): Promise<boolean> {
 async function userIdForChat(chatId: number): Promise<string | null> {
   const { data } = await supabase.from("telegram_links").select("user_id").eq("telegram_chat_id", String(chatId)).eq("linked", true).maybeSingle();
   return (data?.user_id as string) || null;
+}
+
+/* estado de conversación (para el flujo foto → ¿qué materia?) */
+async function saveState(chatId: number | string, state: unknown) {
+  await supabase.from("telegram_state").upsert({ chat_id: String(chatId), state, updated_at: new Date().toISOString() }, { onConflict: "chat_id" });
+}
+async function getState(chatId: number | string) {
+  const { data } = await supabase.from("telegram_state").select("state").eq("chat_id", String(chatId)).maybeSingle();
+  return (data?.state as any) || null;
+}
+async function clearState(chatId: number | string) {
+  await supabase.from("telegram_state").delete().eq("chat_id", String(chatId));
+}
+
+/* foto/archivo → lo sube al Storage y pregunta a qué materia guardarlo */
+async function handleFile(chatId: number, userId: string, msg: any): Promise<void> {
+  let fileId = "", fname = "", ftype = "", fsize = 0;
+  if (Array.isArray(msg.photo) && msg.photo.length) {
+    const big = msg.photo[msg.photo.length - 1];
+    fileId = big.file_id; fname = `foto-${todayAR()}.jpg`; ftype = "image/jpeg"; fsize = big.file_size || 0;
+  } else if (msg.document) {
+    fileId = msg.document.file_id; fname = msg.document.file_name || "archivo"; ftype = msg.document.mime_type || "application/octet-stream"; fsize = msg.document.file_size || 0;
+  } else return;
+
+  const subsDom = await getDomain(userId, "sh_subjects");
+  const subjects = (subsDom.subjects || []) as any[];
+  if (!subjects.length) { await sendMsg(chatId, "Primero creá una materia en la app 🙂 Después mandame el archivo y lo guardo ahí."); return; }
+
+  try {
+    const info = await fetch(`${TG_API}/getFile?file_id=${fileId}`).then((r) => r.json());
+    const tgPath = info?.result?.file_path;
+    if (!tgPath) throw new Error("no file_path");
+    const blob = await fetch(`https://api.telegram.org/file/bot${TG_TOKEN}/${tgPath}`).then((r) => r.blob());
+    if (blob.size > 100 * 1048576) { await sendMsg(chatId, "Ese archivo supera los 100 MB 😕"); return; }
+    const safe = fname.replace(/[^\w.\-]+/g, "_");
+    const path = `${userId}/tg-${uid()}-${safe}`;
+    const { error } = await supabase.storage.from("materiales").upload(path, blob, { contentType: ftype, upsert: false });
+    if (error) { console.error("storage upload:", error.message); await sendMsg(chatId, "No pude subir el archivo 😕 (¿está creado el bucket \"materiales\"?)."); return; }
+    const { data: pub } = supabase.storage.from("materiales").getPublicUrl(path);
+    await saveState(chatId, { type: "await_subject", file: { name: fname, type: ftype, size: blob.size, path, url: pub.publicUrl } });
+
+    const rows: any[] = [];
+    for (let i = 0; i < subjects.length; i += 2) {
+      rows.push(subjects.slice(i, i + 2).map((s) => ({ text: s.name, callback_data: `fsub|${s.id}` })));
+    }
+    await fetch(`${TG_API}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: `📎 Recibí <b>${fname}</b>. ¿A qué materia lo guardo?`, parse_mode: "HTML", reply_markup: { inline_keyboard: rows } }),
+    });
+  } catch (e) { console.error("handleFile:", e); await sendMsg(chatId, "Uf, no pude procesar el archivo 😕"); }
 }
 
 /* Gemini interpreta el mensaje → JSON con la intención */
@@ -241,6 +292,22 @@ serve(async (req) => {
     if (cq.data === "help") { await sendMsg(cqChat, HELP); return new Response("ok"); }
     const cqUser = await userIdForChat(cqChat);
     if (!cqUser) { await sendMsg(cqChat, "Vinculate primero con <code>/start TUCODIGO</code>."); return new Response("ok"); }
+    /* eligió la materia para el archivo pendiente */
+    if (typeof cq.data === "string" && cq.data.startsWith("fsub|")) {
+      const subjId = cq.data.slice(5);
+      const st = await getState(cqChat);
+      if (!st || st.type !== "await_subject" || !st.file) { await sendMsg(cqChat, "Ya no tengo el archivo pendiente, mandámelo de nuevo 🙂"); return new Response("ok"); }
+      const dom = await getDomain(cqUser, "sh_subjects");
+      const subs = (dom.subjects || []) as any[];
+      const sub = subs.find((s) => s.id === subjId);
+      if (!sub) { await sendMsg(cqChat, "No encontré esa materia 🤔"); await clearState(cqChat); return new Response("ok"); }
+      if (!Array.isArray(sub.files)) sub.files = [];
+      sub.files.unshift({ id: uid(), name: st.file.name, type: st.file.type, size: st.file.size, path: st.file.path, url: st.file.url, folder: "material", date: new Date(Date.now() - 3 * 3600 * 1000).toLocaleDateString("es", { day: "numeric", month: "short" }) });
+      const ok = await setDomain(cqUser, "sh_subjects", dom);
+      await clearState(cqChat);
+      await sendMsg(cqChat, ok ? `📎 Guardado en <b>${sub.name}</b> → Archivos → Material.` : "No pude guardarlo 😕");
+      return new Response("ok");
+    }
     const q = cq.data === "q_pend" ? "¿qué tengo pendiente?" : "¿qué tengo esta semana?";
     const r = await interpret(cqUser, q);
     await sendMsg(cqChat, r.parsed ? await applyIntent(cqUser, r.parsed, r.subjects) : "No pude ahora, probá de nuevo 😕");
@@ -250,7 +317,7 @@ serve(async (req) => {
   const msg = update?.message;
   const chatId = msg?.chat?.id;
   const text = (msg?.text || "").trim();
-  if (!chatId || !text) return new Response("ok");
+  if (!chatId) return new Response("ok");
 
   try {
     if (text.startsWith("/start")) {
@@ -277,6 +344,13 @@ serve(async (req) => {
       await sendMsg(chatId, "Todavía no estás vinculado 🔗\nEntrá a StudyHub → <b>Configuración → Integraciones</b>, generá tu código y mandámelo con <code>/start TUCODIGO</code>.");
       return new Response("ok");
     }
+
+    /* foto o archivo → guardarlo en una materia */
+    if (Array.isArray(msg.photo) || msg.document) {
+      await handleFile(chatId, userId, msg);
+      return new Response("ok");
+    }
+    if (!text) return new Response("ok");
 
     await fetch(`${TG_API}/sendChatAction`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: chatId, action: "typing" }) });
 
