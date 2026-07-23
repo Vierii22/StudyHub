@@ -100,23 +100,25 @@ const DIAS_PLAN = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const startOfWeekPlan = (d) => { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x; };
 const isoOfPlan = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const PlanChip = ({ tema, planId }) => {
+const PlanChip = ({ tema, planId, selected, onSelect }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: planId ? `plan-${planId}` : `pool-${tema.id}`, data: { temaId: tema.id, planId } });
   const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} style={{ ...style, display: "flex", alignItems: "center", gap: 6, background: "var(--field)", border: "1px solid var(--line)", borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: "var(--ink)", cursor: "grab", touchAction: "none" }}>
-      <Icon name="dots" size={12} color="var(--tx-3)" />{tema.t}
+    <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect}
+      style={{ ...style, display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", cursor: "grab", touchAction: "none" }}>
+      <Icon name="dots" size={12} color={selected ? "#fff" : "var(--tx-3)"} />{tema.t}
     </div>
   );
 };
 
-const PlanCell = ({ id, children }) => {
+const PlanCell = ({ id, children, onClick }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
-  return <div ref={setNodeRef} style={{ minHeight: 56, borderRadius: 9, padding: 6, display: "flex", flexDirection: "column", gap: 6, background: isOver ? "var(--field)" : "transparent", border: "1px dashed " + (isOver ? "var(--org)" : "var(--line)"), transition: "background .12s ease" }}>{children}</div>;
+  return <div ref={setNodeRef} onClick={onClick} style={{ minHeight: 56, borderRadius: 9, padding: 6, display: "flex", flexDirection: "column", gap: 6, background: isOver ? "var(--field)" : "transparent", border: "1px dashed " + (isOver ? "var(--org)" : "var(--line)"), transition: "background .12s ease", cursor: onClick ? "pointer" : "default" }}>{children}</div>;
 };
 
 const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekPlan(new Date()));
+  const [sel, setSel] = React.useState(null); /* tema seleccionado para "tocar y colocar" */
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const temas = subject.lists?.temas || [];
   const unidades = subject.lists?.unidades || [];
@@ -139,6 +141,14 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
     else onChangePlan([...plan, { id: uid(), temaId, date: iso, franja }]);
   };
   const removeFromPlan = (planId) => onChangePlan(plan.filter(p => p.id !== planId));
+  /* tocar-y-colocar: si hay un tema seleccionado, al tocar una celda lo pone ahí */
+  const placeSelected = (iso, franja) => {
+    if (!sel) return;
+    if (!placedThisWeek.some(p => p.temaId === sel && p.date === iso && p.franja === franja)) {
+      onChangePlan([...plan, { id: uid(), temaId: sel, date: iso, franja }]);
+    }
+    setSel(null);
+  };
 
   return (
     <div className="page page-wide">
@@ -160,12 +170,14 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
         <div className="grid" style={{ gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
           <Card>
             <CardTitle icon="target">Temas sin ubicar</CardTitle>
-            {unlocated.length === 0 && <div className="small" style={{ color: "var(--tx-3)" }}>Todos los temas están ubicados esta semana.</div>}
+            {unlocated.length === 0
+              ? <div className="small" style={{ color: "var(--tx-3)" }}>Todos los temas están ubicados esta semana.</div>
+              : <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 4, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá un tema y después la celda donde va (o arrastralo)."}</div>}
             {unlocatedByUnidad.map(({ unidad, temas: uts }) => (
               <div key={unidad.id} style={{ marginTop: 10 }}>
                 <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>{(unidad.name || "").toUpperCase()}</div>
                 <div style={{ display: "grid", gap: 8 }}>
-                  {uts.map(t => <PlanChip key={t.id} tema={t} />)}
+                  {uts.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
                 </div>
               </div>
             ))}
@@ -173,7 +185,7 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
               <div style={{ marginTop: 10 }}>
                 <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>SIN UNIDAD</div>
                 <div style={{ display: "grid", gap: 8 }}>
-                  {unlocatedHuerfanos.map(t => <PlanChip key={t.id} tema={t} />)}
+                  {unlocatedHuerfanos.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
                 </div>
               </div>
             )}
@@ -189,14 +201,14 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
                   {weekIsos.map(iso => {
                     const items = placedThisWeek.filter(p => p.date === iso && p.franja === fk);
                     return (
-                      <PlanCell key={iso + fk} id={`cell|${iso}|${fk}`}>
+                      <PlanCell key={iso + fk} id={`cell|${iso}|${fk}`} onClick={sel ? () => placeSelected(iso, fk) : undefined}>
                         {items.map(p => {
                           const tema = temas.find(t => t.id === p.temaId);
                           if (!tema) return null;
                           return (
                             <div key={p.id} className="row" style={{ gap: 4 }}>
                               <div style={{ flex: 1, minWidth: 0 }}><PlanChip tema={tema} planId={p.id} /></div>
-                              <span onClick={() => removeFromPlan(p.id)} style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="x" size={12} /></span>
+                              <span onClick={(e) => { e.stopPropagation(); removeFromPlan(p.id); }} style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="x" size={12} /></span>
                             </div>
                           );
                         })}
