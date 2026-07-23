@@ -345,8 +345,8 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   return (
     <div className="page page-cozy">
       {/* ── header ── */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 22 }}>
-        <div>
+      <div className="subj-head" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 22 }}>
+        <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
             <button className="btn-back" onClick={onBack} title="Volver a Mis materias"><Icon name="arrowLeft" size={15} /> Mis materias</button>
             <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -357,7 +357,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-1px", color: "var(--ink)", margin: 0, lineHeight: 1 }}>{s.name}</h1>
         </div>
-        <div style={{ display: "flex", gap: 9, flex: "0 0 auto" }}>
+        <div className="subj-head-actions" style={{ display: "flex", gap: 9, flex: "0 0 auto" }}>
           {link && <a href={link} target="_blank" rel="noreferrer" className="btnB-aula"><Icon name="link" size={15} /> Aula virtual</a>}
           <button className="btn-soft" onClick={() => setEditModal(true)}><Icon name="edit" size={14} /> Editar</button>
         </div>
