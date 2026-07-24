@@ -152,14 +152,14 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
 
   return (
     <div className="page page-wide">
-      <div className="row between" style={{ marginBottom: 18, alignItems: "flex-end" }}>
-        <div>
+      <div className="row between planner-head" style={{ marginBottom: 18, alignItems: "flex-end", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, marginBottom: 8 }}>
             <span onClick={onBack} style={{ cursor: "pointer", color: "var(--org)", fontWeight: 600 }}>← {subject.name}</span>
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Planificar la semana</h1>
         </div>
-        <div className="seg" style={{ padding: 3 }}>
+        <div className="seg" style={{ padding: 3, flex: "0 0 auto" }}>
           <button onClick={() => setWeekStart(d => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; })} style={{ padding: "7px 10px" }}><Icon name="chevL" size={15} /></button>
           <button className="on" style={{ padding: "7px 14px" }}>{weekDays[0].getDate()} — {weekDays[6].getDate()}</button>
           <button onClick={() => setWeekStart(d => { const x = new Date(d); x.setDate(x.getDate() + 7); return x; })} style={{ padding: "7px 10px" }}><Icon name="chevR" size={15} /></button>

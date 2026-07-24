@@ -20,8 +20,8 @@ const FeedbackWidget = ({ section }) => {
   const [text, setText] = React.useState("");
   const [contact, setContact] = React.useState("");
   const cur = FB_TYPES.find(t => t.id === type);
-  // en Chat IA el bot\u00f3n de enviar vive abajo a la derecha: subimos el FAB para no taparlo
-  const fabBottom = section === "chat" ? 102 : 26;
+  /* en el Chat el bot\u00f3n de enviar vive abajo a la derecha \u2192 escondemos el FAB ah\u00ed */
+  const hideFab = section === "chat";
 
   const [sending, setSending] = React.useState(false);
 
@@ -55,10 +55,12 @@ const FeedbackWidget = ({ section }) => {
 
   return (
     <>
-      {/* botón flotante */}
-      <button className="fb-fab" style={{ bottom: fabBottom, transition: "bottom .28s cubic-bezier(.4,.1,.2,1), transform .18s cubic-bezier(.2,.9,.2,1.2), filter .18s ease" }} onClick={() => setOpen(o => !o)} title="Ideas y comentarios" aria-label="Feedback">
-        <Icon name={open ? "x" : "chat"} size={23} />
-      </button>
+      {/* botón flotante (oculto en el Chat para no chocar con el enviar) */}
+      {!hideFab && (
+        <button className="fb-fab" onClick={() => setOpen(o => !o)} title="Ideas y comentarios" aria-label="Feedback">
+          <Icon name={open ? "x" : "chat"} size={20} />
+        </button>
+      )}
 
       {/* panel */}
       {open && (

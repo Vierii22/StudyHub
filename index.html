@@ -955,6 +955,29 @@ a{ color:inherit; text-decoration:none; }
 .fb-fab svg{ color:var(--org); }
 .fb-fab:hover{ transform:translateY(-2px); }
 .fb-fab:active{ transform:translateY(1px); }
+@media(max-width:768px){
+  .fb-fab{ width:38px; height:38px; right:14px; bottom:calc(16px + env(safe-area-inset-bottom)); box-shadow:0 2px 0 var(--ink-2), 0 6px 16px -8px rgba(58,51,43,.5); opacity:.82; }
+  .fb-fab svg{ width:17px; height:17px; }
+}
+
+/* ===== CHAT en mobile: pantalla completa tipo chat ===== */
+@media(max-width:768px){
+  .chat-page{ padding:0 !important; }
+  .chat-page .toolbar{ padding:13px 16px 11px; margin-bottom:0; }
+  .chat-shell{ border-radius:0 !important; border-left:none !important; border-right:none !important; box-shadow:none !important; }
+  .chat-sugg{ flex-wrap:nowrap !important; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .chat-sugg::-webkit-scrollbar{ display:none; }
+  .chat-sugg .tab{ flex:0 0 auto; }
+  .chat-shell form{ padding-bottom:calc(16px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* ===== otros ajustes mobile ===== */
+@media(max-width:768px){
+  .planner-head{ flex-direction:column; align-items:flex-start !important; }
+  .planner-head h1{ font-size:22px !important; }
+  .ocio-cover{ aspect-ratio:4/5 !important; }
+  .ocio-grid{ gap:14px !important; }
+}
 .fb-scrim{ position:fixed; inset:0; z-index:201; background:rgba(58,51,43,.42); backdrop-filter:blur(3px); animation:fade .2s ease; display:flex; justify-content:flex-end; }
 .fb-panel{
   width:min(420px,100%); height:100%; padding:30px 30px 26px;

@@ -88,10 +88,10 @@ const ChatIA = () => {
   const initial = data.profile?.initial || "?";
 
   return (
-    <div className="page page-wide" style={{ height: "100%", display: "flex", flexDirection: "column", paddingBottom: 32 }}>
+    <div className="page page-wide chat-page" style={{ height: "100%", display: "flex", flexDirection: "column", paddingBottom: 32 }}>
       <PageHead title="Hubby" meta="Planificá tu día, priorizá tareas, pedí ayuda." />
-      <div className="card card-flush" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        <div className="wrap-gap" style={{ padding: 18, borderBottom: "1px solid var(--line)" }}>
+      <div className="card card-flush chat-shell" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div className="chat-sugg" style={{ display: "flex", gap: 10, padding: 16, borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
           {SUGGESTIONS.map(([ic, l]) => (
             <button key={l} className="tab" onClick={() => send(l)}>
               <Icon name={ic} size={15} /> {l}

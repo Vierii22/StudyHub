@@ -62,7 +62,7 @@ const StarRating = ({ value = 0, onChange }) => (
 
 /* ---------- tarjeta con carátula placeholder ---------- */
 const Cover = ({ title, icon }) => (
-  <div style={{
+  <div className="ocio-cover" style={{
     width: "100%", aspectRatio: "2/3", borderRadius: 12, background: "var(--field)",
     display: "grid", placeItems: "center", color: "var(--soft)", overflow: "hidden",
   }}>
@@ -233,7 +233,7 @@ const Ocio = () => {
       {visible.length === 0
         ? <Empty hubby="idle" title="Sin entradas" sub="Agregá algo con el botón de arriba." />
         : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 18 }}>
+          <div className="ocio-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 18 }}>
             {visible.map(item => <ItemCard key={item.id} item={item} kind={tab} onClick={() => setModal(item)} />)}
           </div>
         )}
