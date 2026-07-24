@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
 import { APP_GUIDE } from './help-content.js';
+import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 
 /* ============================================================
    CHAT IA (Gemini via /api/chat) — "Hubby", tu organizador in-app
@@ -16,6 +17,25 @@ const SUGGESTIONS = [
   ["info",     "¿Cómo uso la app?"],
 ];
 
+/* Protocolo para que Hubby EJECUTE acciones (Fase 2). Si el usuario pide
+   agregar/editar/completar/borrar algo, además de responder en texto,
+   termina con el marcador y un array JSON de acciones. */
+const ACTION_PROTOCOL = (todayISO, subjNames) => [
+  `── CÓMO EJECUTAR ACCIONES ──`,
+  `Además de aconsejar, PODÉS HACER cambios en la app por el usuario: crear/editar/completar/borrar tareas, agregar/borrar eventos del calendario y anotar en materias.`,
+  `Cuando el usuario te pida hacer algo (o aceptes un plan que armaste), respondé normal en texto Y AL FINAL agregá una línea con el marcador exacto @@ACTIONS@@ seguido de un array JSON con las acciones. Ejemplo:`,
+  `Listo, te agrego eso.\n@@ACTIONS@@\n[{"type":"add_task","t":"Leer capítulo 3","prio":"media","due":"${todayISO}"}]`,
+  `Tipos de acción válidos (usá EXACTAMENTE estos campos):`,
+  `- {"type":"add_task","t":"título","prio":"alta|media|baja","due":"YYYY-MM-DD","subject":"nombre materia opcional"}`,
+  `- {"type":"complete_task","match":"parte del título de la tarea"}`,
+  `- {"type":"edit_task","match":"título actual","t":"nuevo título opcional","prio":"...","due":"YYYY-MM-DD"}`,
+  `- {"type":"delete_task","match":"parte del título"}`,
+  `- {"type":"add_event","title":"...","date":"YYYY-MM-DD","time":"HH:MM opcional","kind":"parcial|entrega|evento","subject":"nombre materia opcional"}`,
+  `- {"type":"delete_event","match":"parte del título del evento"}`,
+  `- {"type":"note_subject","subject":"nombre de materia","text":"la anotación"}`,
+  `REGLAS: Las fechas SIEMPRE en formato YYYY-MM-DD calculadas desde hoy (${todayISO}). Si el usuario dice "mañana", "el viernes", etc., convertilo vos a la fecha exacta. Podés poner varias acciones en el array (ej: organizar la semana = varias add_task). Solo emití acciones que el usuario pidió o aprobó explícitamente — NO inventes. Si NO hay nada que ejecutar (solo pregunta o consejo), NO pongas el marcador. Para borrar, igual emití la acción delete_*: la app le va a pedir confirmación al usuario antes de aplicarla, así que en el texto podés decir algo como "¿Confirmás que borre X?". ${subjNames.length ? `Materias del usuario (usá estos nombres): ${subjNames.join(", ")}.` : ""}`,
+].join("\n");
+
 const buildSystemPrompt = (data) => {
   const profile  = data.profile || {};
   const tasks    = data.tasks   || [];
@@ -25,6 +45,8 @@ const buildSystemPrompt = (data) => {
   const pending  = tasks.filter(t => !t.done);
   const urgent   = pending.filter(t => t.prio === "alta");
   const today    = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const subjNames = subjects.map(s => s.name).filter(Boolean);
 
   const lines = [
     `Sos Hubby, el ORGANIZADOR PERSONAL de ${profile.name || "el usuario"} dentro de la app StudyHub (organización para la facultad).`,
@@ -40,6 +62,7 @@ const buildSystemPrompt = (data) => {
       : "No tiene tareas pendientes.",
     events.length ? `Próximos eventos/parciales: ${events.slice(0,6).map(e => `${e.title}${e.date ? " (" + e.date + ")" : ""}`).join(", ")}.` : "",
     `Respondé en español (Argentina), directo y práctico. Usá puntos para las listas. Máximo 4 párrafos cortos. Podés hacer preguntas para afinar el plan.`,
+    ACTION_PROTOCOL(todayISO, subjNames),
     APP_GUIDE,
   ].filter(Boolean);
 
@@ -80,12 +103,29 @@ const ChatIA = () => {
       });
       const json  = await resp.json();
       const reply = json.text || "No pude responder. Intentá de nuevo.";
+      const { text, actions } = parseActions(reply);
+      const confirmables = actions.filter(needsConfirm);
+      const safe         = actions.filter(a => !needsConfirm(a));
+      const done         = safe.length ? applyActions(safe) : [];
       ChatStore.setTyping(false);
-      ChatStore.addMsg({ role: "assistant", content: reply, me: false, displayTime: now() });
+      ChatStore.addMsg({ role: "assistant", content: text, me: false, displayTime: now(), done, confirm: confirmables });
     } catch {
       ChatStore.setTyping(false);
       ChatStore.addMsg({ role: "assistant", content: "Error de conexión. Verificá tu internet.", me: false, displayTime: "ahora" });
     }
+  };
+
+  /* confirmar / cancelar las acciones destructivas de un mensaje */
+  const confirmActions = (i) => {
+    const m = msgs[i];
+    if (!m?.confirm?.length) return;
+    const results = applyActions(m.confirm);
+    ChatStore.setMsgs(msgs.map((mm, j) =>
+      j === i ? { ...mm, confirm: [], done: [...(mm.done || []), ...results] } : mm));
+  };
+  const cancelActions = (i) => {
+    ChatStore.setMsgs(msgs.map((mm, j) =>
+      j === i ? { ...mm, confirm: [], canceled: true } : mm));
   };
 
   const initial = data.profile?.initial || "?";
@@ -129,6 +169,33 @@ const ChatIA = () => {
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: m.me ? "flex-end" : "flex-start", maxWidth: "76%" }}>
                 <div className={`bubble ${m.me ? "me" : "ai"}`} style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+
+                {/* acciones ya aplicadas */}
+                {m.done?.length > 0 && (
+                  <div className="chat-acts">
+                    {m.done.map((r, k) => (
+                      <div key={k} className={`chat-act ${r.ok ? "ok" : "bad"}`}>
+                        <Icon name={r.ok ? "check" : "x"} size={13} /> {r.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* acciones destructivas pendientes de confirmar */}
+                {m.confirm?.length > 0 && (
+                  <div className="chat-confirm">
+                    <div className="chat-confirm-t"><Icon name="trash" size={14} /> ¿Confirmás?</div>
+                    {m.confirm.map((a, k) => (
+                      <div key={k} className="chat-confirm-i">{describeAction(a)}</div>
+                    ))}
+                    <div className="chat-confirm-btns">
+                      <button className="chat-confirm-yes" onClick={() => confirmActions(i)}>Sí, hacelo</button>
+                      <button className="chat-confirm-no" onClick={() => cancelActions(i)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+                {m.canceled && <div className="chat-act muted"><Icon name="x" size={13} /> Cancelado</div>}
+
                 <div className="mono" style={{ fontSize: 9.5, marginTop: 5 }}>{m.displayTime}</div>
               </div>
             </div>
