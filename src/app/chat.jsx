@@ -1,18 +1,19 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, getPomoWeekMins, ChatStore, useChatStore } from './store.jsx';
+import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
 import { APP_GUIDE } from './help-content.js';
 
 /* ============================================================
-   CHAT IA (Gemini via /api/chat) — "Hubby"
+   CHAT IA (Gemini via /api/chat) — "Hubby", tu organizador in-app
+   Dos funciones: (1) entender/usar la app, (2) organizarte y ejecutar.
    ============================================================ */
 const SUGGESTIONS = [
-  ["list",     "Plan del día"],
-  ["flag",     "Priorizar tareas"],
-  ["fileText", "Resumen pendientes"],
-  ["target",   "Estrategia de repaso"],
+  ["calendar", "Organizá mi semana"],
+  ["flag",     "¿Qué priorizo hoy?"],
+  ["target",   "¿Cómo voy con mis materias?"],
+  ["info",     "¿Cómo uso la app?"],
 ];
 
 const buildSystemPrompt = (data) => {
@@ -20,23 +21,25 @@ const buildSystemPrompt = (data) => {
   const tasks    = data.tasks   || [];
   const subjects = data.subjects|| [];
   const events   = data.events  || [];
-  const weekMins = getPomoWeekMins();
 
   const pending  = tasks.filter(t => !t.done);
   const urgent   = pending.filter(t => t.prio === "alta");
   const today    = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
 
   const lines = [
-    `Sos Hubby, el asistente de productividad universitaria de ${profile.name || "el usuario"}.`,
+    `Sos Hubby, el ORGANIZADOR PERSONAL de ${profile.name || "el usuario"} dentro de la app StudyHub (organización para la facultad).`,
+    `Tu trabajo son DOS cosas y nada más:`,
+    `1) AYUDARLO A ENTENDER Y USAR LA APP: si pregunta "cómo hago X" o "dónde está Y", explicáselo con el manual de abajo, paso a paso.`,
+    `2) ORGANIZARLO Y ACONSEJARLO usando SUS datos reales: planificá su semana, decile qué priorizar, cómo va, si le da el tiempo para un parcial. Consejos concretos y a su medida.`,
+    `IMPORTANTE: NO expliques temas académicos ni des clases del contenido de las materias (para eso el usuario usa otras IAs). Si te piden explicar un tema, decí amablemente que para eso mejor use otra IA, y ofrecé ayudarlo a ORGANIZAR el estudio de ese tema.`,
     `Hoy es ${today}. Hora: ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,"0")}.`,
-    profile.career ? `El usuario estudia ${profile.career}${profile.uni ? " en " + profile.uni : ""}, cursando ${profile.year}° año.` : "",
-    subjects.length ? `Materias activas: ${subjects.map(s => s.name).join(", ")}.` : "Sin materias cargadas aún.",
+    profile.career ? `Estudia ${profile.career}${profile.uni ? " en " + profile.uni : ""}, cursando ${profile.year}° año.` : "",
+    subjects.length ? `Materias: ${subjects.map(s => s.name).join(", ")}.` : "Todavía no cargó materias.",
     pending.length
-      ? `Tareas pendientes (${pending.length}, ${urgent.length} urgentes):\n${pending.slice(0, 10).map(t => `- "${t.t}"${t.prio === "alta" ? " 🔴" : t.prio === "media" ? " 🟡" : ""}${t.date ? " — vence " + t.date : ""}${t.subject ? " [" + t.subject + "]" : ""}`).join("\n")}`
-      : "No hay tareas pendientes.",
-    events.length ? `Próximos eventos: ${events.slice(0,4).map(e => e.title).join(", ")}.` : "",
-    weekMins > 0 ? `Esta semana estudió ${Math.round(weekMins)} minutos con Pomodoro.` : "",
-    `Respondé en español, sé directo y práctico. Si tenés que hacer una lista, usá puntos. Máximo 4 párrafos cortos.`,
+      ? `Tareas pendientes (${pending.length}, ${urgent.length} urgentes):\n${pending.slice(0, 12).map(t => `- "${t.t}"${t.prio === "alta" ? " 🔴" : t.prio === "media" ? " 🟡" : ""}${t.due && t.due !== "—" ? " — vence " + t.due : ""}`).join("\n")}`
+      : "No tiene tareas pendientes.",
+    events.length ? `Próximos eventos/parciales: ${events.slice(0,6).map(e => `${e.title}${e.date ? " (" + e.date + ")" : ""}`).join(", ")}.` : "",
+    `Respondé en español (Argentina), directo y práctico. Usá puntos para las listas. Máximo 4 párrafos cortos. Podés hacer preguntas para afinar el plan.`,
     APP_GUIDE,
   ].filter(Boolean);
 
@@ -89,7 +92,7 @@ const ChatIA = () => {
 
   return (
     <div className="page page-wide chat-page" style={{ height: "100%", display: "flex", flexDirection: "column", paddingBottom: 32 }}>
-      <PageHead title="Hubby" meta="Planificá tu día, priorizá tareas, pedí ayuda." />
+      <PageHead title="Hubby" meta="Tu organizador: te ayudo a usar la app y a organizarte con tus datos." />
       <div className="card card-flush chat-shell" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div className="chat-sugg" style={{ display: "flex", gap: 10, padding: 16, borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
           {SUGGESTIONS.map(([ic, l]) => (
@@ -101,10 +104,22 @@ const ChatIA = () => {
 
         <div ref={endRef} style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
           {msgs.length === 0 && (
-            <div style={{ margin: "auto", textAlign: "center" }}>
-              <Hubby pose="saluda" size={110} className="hubby-float" style={{ margin: "0 auto" }} />
-              <div className="h3" style={{ marginTop: 8 }}>¡Hola! Soy Hubby</div>
-              <div className="small" style={{ marginTop: 6 }}>Preguntame lo que necesites o usá un atajo arriba.</div>
+            <div style={{ margin: "auto", width: "100%", maxWidth: 440 }}>
+              <div style={{ textAlign: "center" }}>
+                <Hubby pose="saluda" size={92} className="hubby-float" style={{ margin: "0 auto" }} />
+                <div className="h3" style={{ marginTop: 6 }}>¡Hola! Soy Hubby</div>
+                <div className="small" style={{ marginTop: 6, marginBottom: 18 }}>Tu organizador dentro de la app. Te doy una mano con dos cosas:</div>
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <button className="chat-fn" onClick={() => send("¿Cómo uso la app? Explicame las funciones principales")}>
+                  <span className="chat-fn-ic"><Icon name="info" size={19} /></span>
+                  <div><div className="chat-fn-t">Entender y usar la app</div><div className="chat-fn-s">Te explico cómo se hace algo, o te lo agrego yo si a mano cuesta.</div></div>
+                </button>
+                <button className="chat-fn" onClick={() => send("Organizá mi semana con lo que tengo pendiente")}>
+                  <span className="chat-fn-ic"><Icon name="target" size={19} /></span>
+                  <div><div className="chat-fn-t">Organizarte y ejecutar</div><div className="chat-fn-s">Planifico, priorizo y te aconsejo con tus datos — y lo hago por vos.</div></div>
+                </button>
+              </div>
             </div>
           )}
           {msgs.map((m, i) => (
