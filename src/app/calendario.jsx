@@ -3,7 +3,7 @@ import React from 'react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, COLORS } from './store.jsx';
+import { useStore, uid, toast, COLORS, isSubjectDone } from './store.jsx';
 import { Btn, Modal, Field, Seg } from './ui.jsx';
 import { cleanupPastEvents, syncEventToTask } from './syncEngine.js';
 
@@ -189,7 +189,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
           <Field label="Materia" hint="opcional">
             <select className="input" value={f.subjectId || ""} onChange={e => up("subjectId", e.target.value || null)}>
               <option value="">— sin materia —</option>
-              {data.subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {data.subjects.filter(s => !isSubjectDone(s) || s.id === f.subjectId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </Field>
         )}

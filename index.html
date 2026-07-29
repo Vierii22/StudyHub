@@ -916,6 +916,38 @@ a{ color:inherit; text-decoration:none; }
 .swatch:hover{ transform:scale(1.12); }
 .swatch.sel{ border-color:#fff; box-shadow:0 0 0 2px var(--bg),0 0 0 4px rgba(255,255,255,.5); }
 
+/* date picker — calendario clickeable */
+.dp{ position:relative; }
+.dp-trigger{ display:flex; align-items:center; gap:9px; width:100%; padding:11px 13px; border-radius:11px; background:var(--field); border:1px solid var(--line); cursor:pointer; font-family:var(--font-body); font-size:14px; color:var(--tx-3); text-align:left; transition:border-color .12s ease, background .12s ease; }
+.dp-trigger:hover{ border-color:var(--org); }
+.dp-trigger.has{ color:var(--ink); font-weight:600; }
+.dp-trigger .dp-val{ flex:1; }
+.dp-trigger svg{ flex:0 0 auto; color:var(--tx-3); }
+.dp-trigger.has svg:first-child{ color:var(--org); }
+.dp-clear{ display:grid; place-items:center; width:22px; height:22px; border-radius:7px; color:var(--tx-3); transition:background .12s ease, color .12s ease; }
+.dp-clear:hover{ background:var(--org); color:#fff; }
+.dp-pop{ margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:13px; padding:12px; box-shadow:0 8px 24px -12px rgba(58,51,43,.4); }
+.dp-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.dp-month{ font-weight:700; font-size:14px; color:var(--ink); text-transform:capitalize; }
+.dp-nav{ display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:var(--field); border:1px solid var(--line); cursor:pointer; color:var(--ink); }
+.dp-nav:hover{ background:var(--org); color:#fff; border-color:var(--org); }
+.dp-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.dp-dow{ margin-bottom:5px; }
+.dp-dow span{ text-align:center; font-size:10px; font-weight:700; color:var(--tx-3); font-family:var(--font-mono); padding:3px 0; }
+.dp-day{ aspect-ratio:1; display:grid; place-items:center; border:none; background:transparent; border-radius:9px; cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--ink); transition:background .1s ease, color .1s ease; }
+.dp-day:hover{ background:var(--field); }
+.dp-day.today{ box-shadow:inset 0 0 0 1.5px var(--org); color:var(--org-deep); }
+.dp-day.sel{ background:var(--org); color:#fff; }
+.dp-foot{ display:flex; gap:8px; margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
+.dp-foot-btn{ flex:1; padding:7px 10px; border-radius:9px; background:var(--field); border:1px solid var(--line); cursor:pointer; font-family:var(--font-body); font-size:12.5px; font-weight:700; color:var(--ink); }
+.dp-foot-btn:hover{ background:var(--org); color:#fff; border-color:var(--org); }
+.dp-foot-btn.ghost{ background:transparent; color:var(--tx-3); font-weight:600; }
+.dp-foot-btn.ghost:hover{ background:var(--field); color:var(--ink); border-color:var(--line); }
+
+/* Facultad — sección de materias terminadas (abajo, apagadas) */
+.subj-done-sec{ margin-top:34px; }
+.subj-done-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+
 /* chips de fechas (evento en varios días a la vez) */
 .date-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
 .date-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--field); border:1px solid var(--line); border-radius:9px; padding:5px 5px 5px 11px; font-size:12.5px; font-weight:700; color:var(--ink); font-family:var(--font-body); }

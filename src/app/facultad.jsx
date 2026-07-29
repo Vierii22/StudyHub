@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio } from './store.jsx';
+import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio, isSubjectDone } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
 import { supabase } from '../supabase.js';
 
@@ -287,21 +287,46 @@ const SubjectGridCard = ({ s, idx, onOpen, onEdit, onDelete }) => {
 const Facultad = ({ onOpenSubject, onNav }) => {
   const [data, set] = useStore();
   const [modal, setModal] = React.useState(null); // 'new' | subject
+  const subjects = data.subjects || [];
+  const activas     = subjects.filter(s => !isSubjectDone(s));
+  const terminadas  = subjects.filter(s =>  isSubjectDone(s));
+  const gridCols = { gridTemplateColumns: "repeat(auto-fill, minmax(300px,1fr))", gap: 16 };
+  const delSubject = (s) => { set(st => st.subjects = st.subjects.filter(x => x.id !== s.id)); toast("Materia eliminada"); };
+
   return (
     <div className="page page-cozy">
-      <PageHead title="Mis materias" meta={`${data.subjects.length} materias · cuatrimestre en curso`} />
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px,1fr))", gap: 16 }}>
-        {data.subjects.map((s, i) => (
+      <PageHead title="Mis materias" meta={`${activas.length} en curso${terminadas.length ? ` · ${terminadas.length} terminada${terminadas.length !== 1 ? "s" : ""}` : ""}`} />
+      <div className="grid" style={gridCols}>
+        {activas.map((s, i) => (
           <SubjectGridCard key={s.id} s={s} idx={i}
             onOpen={() => onOpenSubject(s.id)}
             onEdit={() => setModal(s)}
-            onDelete={() => { set(st => st.subjects = st.subjects.filter(x => x.id !== s.id)); toast("Materia eliminada"); }} />
+            onDelete={() => delSubject(s)} />
         ))}
         <div className="subj-new" onClick={() => setModal("new")}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--card)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--org)", boxShadow: "0 2px 0 #e0d5c3" }}><Icon name="plus" size={20} /></span>
           <span style={{ fontWeight: 600, fontSize: 14 }}>Nueva materia</span>
         </div>
       </div>
+
+      {terminadas.length > 0 && (
+        <div className="subj-done-sec">
+          <div className="subj-done-head">
+            <span className="mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--tx-3)" }}>TERMINADAS</span>
+            <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+            <span className="mono" style={{ fontSize: 11, color: "var(--tx-3)" }}>{terminadas.length}</span>
+          </div>
+          <div className="grid" style={gridCols}>
+            {terminadas.map((s, i) => (
+              <SubjectGridCard key={s.id} s={s} idx={i}
+                onOpen={() => onOpenSubject(s.id)}
+                onEdit={() => setModal(s)}
+                onDelete={() => delSubject(s)} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {modal && <SubjectModal subject={modal === "new" ? null : modal} onClose={() => setModal(null)} />}
     </div>
   );

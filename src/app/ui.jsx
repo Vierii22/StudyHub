@@ -172,6 +172,64 @@ const SubjectDot = ({ s, size = 46 }) => (
   <div className="subject-icon" style={{ background: s.color, width: size, height: size, fontSize: size * 0.42, borderRadius: size * 0.26 }}>{s.name[0]}</div>
 );
 
+/* ---------- DATE PICKER — calendario clickeable (sin tipear) ---------- */
+const DP_MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DP_DOW    = ["L","M","M","J","V","S","D"];
+const dpISO   = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const dpParse = (iso) => { if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null; const [y, m, d] = iso.split("-").map(Number); return { y, m: m - 1, d }; };
+const dpFmt   = (iso) => { const p = dpParse(iso); return p ? `${p.d} de ${DP_MONTHS[p.m].toLowerCase()} ${p.y}` : ""; };
+
+const DatePicker = ({ value, onChange, placeholder = "Elegir fecha", allowClear = true }) => {
+  const [open, setOpen] = React.useState(false);
+  const sel = dpParse(value);
+  const today = new Date();
+  const todayISO = dpISO(today.getFullYear(), today.getMonth(), today.getDate());
+  const [view, setView] = React.useState(() => sel ? { y: sel.y, m: sel.m } : { y: today.getFullYear(), m: today.getMonth() });
+
+  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
+  const offset = (new Date(view.y, view.m, 1).getDay() + 6) % 7; /* lunes primero */
+  const prevM = () => setView(v => v.m === 0  ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 });
+  const nextM = () => setView(v => v.m === 11 ? { y: v.y + 1, m: 0  } : { y: v.y, m: v.m + 1 });
+  const pick  = (d) => { onChange(dpISO(view.y, view.m, d)); setOpen(false); };
+
+  return (
+    <div className="dp">
+      <button type="button" className={`dp-trigger${value ? " has" : ""}`} onClick={() => setOpen(o => !o)}>
+        <Icon name="calendar" size={15} />
+        <span className="dp-val">{value ? dpFmt(value) : placeholder}</span>
+        {value && allowClear
+          ? <span className="dp-clear" title="Quitar fecha" onClick={e => { e.stopPropagation(); onChange(""); }}><Icon name="x" size={13} /></span>
+          : <Icon name="chevron" size={14} />}
+      </button>
+      {open && (
+        <div className="dp-pop">
+          <div className="dp-head">
+            <button type="button" className="dp-nav" onClick={prevM}><Icon name="chevL" size={16} /></button>
+            <span className="dp-month">{DP_MONTHS[view.m]} {view.y}</span>
+            <button type="button" className="dp-nav" onClick={nextM}><Icon name="chevR" size={16} /></button>
+          </div>
+          <div className="dp-grid dp-dow">{DP_DOW.map((d, i) => <span key={i}>{d}</span>)}</div>
+          <div className="dp-grid">
+            {Array.from({ length: offset }).map((_, i) => <span key={"b" + i} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+              const iso = dpISO(view.y, view.m, d);
+              return (
+                <button type="button" key={d}
+                  className={`dp-day${value === iso ? " sel" : ""}${todayISO === iso ? " today" : ""}`}
+                  onClick={() => pick(d)}>{d}</button>
+              );
+            })}
+          </div>
+          <div className="dp-foot">
+            <button type="button" className="dp-foot-btn" onClick={() => { onChange(todayISO); setOpen(false); }}>Hoy</button>
+            {allowClear && value && <button type="button" className="dp-foot-btn ghost" onClick={() => { onChange(""); setOpen(false); }}>Sin fecha</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ---------- HUBBY CHAT FAB — entrada al chat, abajo a la izquierda ---------- */
 const HubbyChatFab = ({ section, onNav }) => {
   if (section === "chat") return null; /* ya estás en el chat */
@@ -185,5 +243,5 @@ const HubbyChatFab = ({ section, onNav }) => {
 export {
   TerminalCorners, Btn, Chip, MonoLabel, Hubby, HubbyChatFab,
   Header, MobileMenu, PageHead, Seg, Field,
-  Modal, Toggle, Empty, SubjectDot,
+  Modal, Toggle, Empty, SubjectDot, DatePicker,
 };

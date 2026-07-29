@@ -53,6 +53,12 @@ function deriveEstado(s) {
   return "cursando";
 }
 
+/* materia "terminada": aprobada o promocionada (se apaga y sale de los selectores) */
+function isSubjectDone(s) {
+  const e = deriveEstado(s);
+  return e === "aprobada" || e === "promocionada";
+}
+
 /* ── Mapa de correlatividades (Fase 10, BETA) ──────────────
    Estado base de cada materia del plan: aprobada | regularizada
    (falta final) | cursando | no_cursada. El estado que se ve en
@@ -631,7 +637,7 @@ export {
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
   getStreak, getAllTasks, todayLocal,
-  DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, deriveCourseStatus,
+  DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, deriveCourseStatus, isSubjectDone,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,
 };

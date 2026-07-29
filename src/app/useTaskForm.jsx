@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { useStore, uid, toast } from './store.jsx';
-import { Modal, Btn, Field } from './ui.jsx';
+import { useStore, uid, toast, isSubjectDone } from './store.jsx';
+import { Modal, Btn, Field, DatePicker } from './ui.jsx';
 import { syncTaskToCalendar } from './syncEngine.js';
 
 /* ============================================================
@@ -163,17 +163,11 @@ export function TaskFormModal({ hook }) {
             onChange={e => update("subject", e.target.value || null)}
           >
             <option value="">Sin materia</option>
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {subjects.filter(s => !isSubjectDone(s) || s.id === form.subject).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </Field>
         <Field label="Fecha límite">
-          <input
-            className="input"
-            type="date"
-            value={form.dueDate || ""}
-            onChange={e => handleDateChange(e.target.value)}
-            style={{ colorScheme: "dark" }}
-          />
+          <DatePicker value={form.dueDate || ""} onChange={handleDateChange} placeholder="Sin fecha" />
           {form.due && form.due !== "—" && form.due !== "" && (
             <div className="mono" style={{ fontSize: 10, marginTop: 5, color: "var(--violet-hi)" }}>
               🗓 Se va a crear un evento en el Calendario
