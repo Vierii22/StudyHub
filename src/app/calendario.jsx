@@ -100,17 +100,35 @@ const EventModal = ({ day, month, year, event, onClose }) => {
   const [syncTask, setSyncTask] = React.useState(false);
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
 
+  /* eventos NUEVOS: se pueden elegir varias fechas a la vez (una ocurrencia por día) */
+  const [dates, setDates] = React.useState(event ? [] : [defaultDate]);
+  const addDate    = (iso) => { if (iso) setDates(ds => ds.includes(iso) ? ds : [...ds, iso].sort()); };
+  const removeDate = (iso) => setDates(ds => ds.filter(d => d !== iso));
+  const fmtChip    = (iso) => { const p = parseDate(iso); return p ? `${p.day} ${MONTHS_ES[p.month].slice(0, 3).toLowerCase()}` : iso; };
+
   const existingTaskId = event && Object.keys(data.taskCalendarMap || {}).find(k => data.taskCalendarMap[k] === event.id);
   const hasLinkedTask = !!existingTaskId;
 
   const save = () => {
     if (!f.title.trim()) return toast("Poné un título");
-    if (!f.date) return toast("Elegí una fecha");
-    const savedId = event?.id || uid();
-    const ev = { ...f, id: savedId, day: parseInt(f.date.slice(8, 10)) };
-    set(s => { if (event) Object.assign(s.events.find(e => e.id === event.id), ev); else s.events.push(ev); });
-    toast("Evento guardado");
-    if (syncTask && !hasLinkedTask) { syncEventToTask(ev, data, set); toast("Tarea creada desde el evento ✓"); }
+
+    /* edición: sigue siendo una sola fecha (esta ocurrencia) */
+    if (event) {
+      if (!f.date) return toast("Elegí una fecha");
+      const ev = { ...f, id: event.id, day: parseInt(f.date.slice(8, 10)) };
+      set(s => Object.assign(s.events.find(e => e.id === event.id), ev));
+      toast("Evento guardado");
+      onClose();
+      return;
+    }
+
+    /* nuevo: una o varias fechas → un evento por día */
+    const ds = dates.length ? dates : (f.date ? [f.date] : []);
+    if (!ds.length) return toast("Elegí al menos una fecha");
+    const created = ds.map(date => ({ ...f, date, id: uid(), day: parseInt(date.slice(8, 10)) }));
+    set(s => { if (!s.events) s.events = []; s.events.push(...created); });
+    if (syncTask) created.forEach(ev => syncEventToTask(ev, data, set));
+    toast(created.length === 1 ? "Evento guardado" : `${created.length} eventos creados ✓`);
     onClose();
   };
   const del = () => {
@@ -129,11 +147,33 @@ const EventModal = ({ day, month, year, event, onClose }) => {
       footer={<><span className="link" style={{ color: event ? "var(--org-deep)" : "var(--tx-3)" }} onClick={del}>{event ? "Eliminar" : "Cancelar"}</span><Btn variant="primary" onClick={save}>Guardar evento</Btn></>}>
       <div style={{ display: "grid", gap: 14 }}>
         <Field label="Título *"><input className="input" value={f.title} onChange={e => up("title", e.target.value)} autoFocus /></Field>
-        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
-          <Field label="Fecha"><input className="input" type="date" value={f.date || ""} onChange={e => up("date", e.target.value)} /></Field>
-          <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
-          <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
-        </div>
+        {event ? (
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <Field label="Fecha"><input className="input" type="date" value={f.date || ""} onChange={e => up("date", e.target.value)} /></Field>
+            <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
+            <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
+          </div>
+        ) : (
+          <>
+            <Field label="Fechas" hint={dates.length > 1 ? `${dates.length} días` : "podés elegir varias"}>
+              <input className="input" type="date" value="" onChange={e => { addDate(e.target.value); e.target.value = ""; }} />
+              {dates.length > 0 && (
+                <div className="date-chips">
+                  {dates.map(d => (
+                    <span key={d} className="date-chip">
+                      {fmtChip(d)}
+                      <button type="button" title="Quitar" onClick={() => removeDate(d)}><Icon name="x" size={12} /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Field>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
+              <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
+            </div>
+          </>
+        )}
         <Field label="Tipo">
           <Seg opts={[{ id: "evento", label: "Evento" }, { id: "clase", label: "Clase" }, { id: "estudio", label: "Estudiar" }, { id: "parcial", label: "Parcial" }, { id: "entrega", label: "Entrega" }]}
             value={f.kind || "evento"} onChange={v => up("kind", v)} />
@@ -159,7 +199,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
             <div className={`cbox${syncTask ? " on" : ""}`} style={{ flexShrink: 0 }}>{syncTask && <Icon name="check" size={13} color="#fff" />}</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 500 }}>Agregar también a Tareas</div>
-              <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>Se crea una tarea vinculada a este evento</div>
+              <div className="mono" style={{ fontSize: 10, marginTop: 2, color: "var(--tx-3)" }}>{dates.length > 1 ? "Se crea una tarea por cada fecha elegida" : "Se crea una tarea vinculada a este evento"}</div>
             </div>
           </div>
         )}
