@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, todayLocal } from './store.jsx';
 import { SubjectModal, SubjectFiles } from './facultad.jsx';
+import { DatePicker } from './ui.jsx';
 
 /* ============================================================
    INTERIOR DE UNA MATERIA — rediseño cálido (mockup v5)
@@ -225,6 +226,49 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   );
 };
 
+/* ============================================================
+   DIARIO DE CLASES — un "cuaderno" por clase: Clase 1, 2, 3…
+   con su fecha y el tema dado, y adentro texto libre.
+   ============================================================ */
+const claseFmt = (iso) => { if (!iso) return "sin fecha"; const [y, m, d] = iso.split("-"); return `${parseInt(d)}/${parseInt(m)}/${String(y).slice(2)}`; };
+const ClasesCard = ({ clases, onChange }) => {
+  const [open, setOpen] = React.useState(null); /* id de la clase abierta */
+  const add = () => { const id = uid(); onChange([...clases, { id, date: todayLocal(), tema: "", texto: "" }]); setOpen(id); };
+  const up  = (id, patch) => onChange(clases.map(c => c.id === id ? { ...c, ...patch } : c));
+  const del = (id) => { onChange(clases.filter(c => c.id !== id)); if (open === id) setOpen(null); };
+  return (
+    <Card style={{ marginBottom: 14 }}>
+      <CardTitle icon="book" right={<button className="btn-soft" onClick={add}><Icon name="plus" size={14} /> Nueva clase</button>}>Diario de clases</CardTitle>
+      <div style={{ fontSize: 11.5, color: "var(--tx-3)", marginBottom: 10 }}>Registrá qué se dio en cada clase: la fecha y el tema, y adentro lo que quieras (como un cuaderno).</div>
+      {clases.length === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin clases registradas todavía. Agregá la primera con "Nueva clase".</div>}
+      {clases.map((c, i) => {
+        const isOpen = open === c.id;
+        return (
+          <div key={c.id} className="clase-block">
+            <div className="clase-head" onClick={() => setOpen(o => o === c.id ? null : c.id)}>
+              <span className="clase-caret" style={{ transform: isOpen ? "none" : "rotate(-90deg)" }}><Icon name="chevron" size={15} /></span>
+              <span className="clase-n">Clase {i + 1}</span>
+              <span className="clase-meta">{c.tema ? c.tema : <span style={{ color: "var(--tx-3)", fontStyle: "italic" }}>sin tema todavía</span>}</span>
+              <span className="clase-date">{claseFmt(c.date)}</span>
+              <span className="clase-del" title="Eliminar clase" onClick={e => { e.stopPropagation(); del(c.id); }}><Icon name="trash" size={14} /></span>
+            </div>
+            {isOpen && (
+              <div className="clase-body">
+                <div className="grid" style={{ gridTemplateColumns: "160px 1fr", gap: 10, marginTop: 12, alignItems: "center" }}>
+                  <DatePicker value={c.date || ""} onChange={v => up(c.id, { date: v })} allowClear={false} />
+                  <input className="clase-tema-in" value={c.tema || ""} onChange={e => up(c.id, { tema: e.target.value })} placeholder="Tema de la clase…" />
+                </div>
+                <textarea value={c.texto || ""} onChange={e => up(c.id, { texto: e.target.value })} rows={6}
+                  placeholder="Anotá lo que se dio en esta clase, ejemplos, dudas, lo que quieras…" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </Card>
+  );
+};
+
 const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) => {
   const [data, set] = useStore();
   const s = data.subjects.find(x => x.id === subjectId);
@@ -267,6 +311,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const temas = lists.temas || [];
   const tareas = lists.tareas || [];
   const notas = lists.notas || [];
+  const clases = lists.clases || [];
   const fechas = lists.fechas || [];
   const tps = lists.tps || [];
   const files = s.files || [];
@@ -461,6 +506,9 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
           <span style={{ color: "var(--org)", display: "flex" }}><Icon name="plus" size={16} /></span> Agregar unidad
         </div>
       </Card>
+
+      {/* ── diario de clases (Clase 1, 2, 3… con fecha y tema) ── */}
+      <ClasesCard clases={clases} onChange={v => setList("clases", v)} />
 
       {/* ── fila 3: parciales/tps + archivos ── */}
       <div className="subj-row" style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 14 }}>

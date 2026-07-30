@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { useStore, toast, DEFAULT_EVAL, subjectPromedio, deriveEstado } from './store.jsx';
+import { useStore, toast, DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, isSubjectDone } from './store.jsx';
 import { Modal, Field, Seg, Toggle, Hubby } from './ui.jsx';
 
 /* ============================================================
@@ -48,6 +48,16 @@ const EvalConfigModal = ({ subject, onClose, onSave }) => {
       <Field label="Parciales">
         <Seg opts={[{ id: 1, label: "1" }, { id: 2, label: "2" }, { id: 3, label: "3" }]} value={ev.parciales} onChange={v => up("parciales", Number(v))} />
       </Field>
+      {ev.parciales >= 2 && (
+        <Field label="Para aprobar la cursada" hint="cómo cuentan los parciales">
+          <Seg opts={[{ id: "ambos", label: "Aprobar los 2" }, { id: "promedio", label: "Promediando" }]} value={ev.aprobaModo || "ambos"} onChange={v => up("aprobaModo", v)} />
+          <div className="small" style={{ color: "var(--tx-3)", marginTop: 8, lineHeight: 1.45 }}>
+            {(ev.aprobaModo || "ambos") === "promedio"
+              ? `El promedio de los parciales tiene que dar ${PASSING} o más — podés compensar uno bajo con otro alto.`
+              : `Cada parcial tiene que ser ${PASSING} o más por separado.`}
+          </div>
+        </Field>
+      )}
       <Field label="Coloquio">
         <div className="row between"><span className="small">¿Esta materia tiene coloquio?</span><Toggle on={ev.coloquio} onChange={v => up("coloquio", v)} /></div>
       </Field>
@@ -75,6 +85,8 @@ const EvalConfigModal = ({ subject, onClose, onSave }) => {
 };
 
 /* ---------- tarjeta de una materia ---------- */
+const GRADE_INPUT_STYLE = { background: "var(--field)", border: "1px solid var(--line)", borderRadius: 9, padding: "8px 10px", color: "var(--soft)", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, width: "100%" };
+
 const SubjectNoteCard = ({ s, onGrade, onPromoManual, onOpenConfig }) => {
   const ev = s.eval || DEFAULT_EVAL;
   const estado = deriveEstado(s);
@@ -82,6 +94,7 @@ const SubjectNoteCard = ({ s, onGrade, onPromoManual, onOpenConfig }) => {
   const keys = gradeKeys(ev);
   const promedio = ev.promedioOn ? subjectPromedio(s) : null;
   const showPromedioBadge = promedio != null && (estado === "aprobada" || estado === "promocionada");
+  const [openRec, setOpenRec] = React.useState({}); /* qué parciales muestran su recuperatorio */
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -103,15 +116,35 @@ const SubjectNoteCard = ({ s, onGrade, onPromoManual, onOpenConfig }) => {
         ? <div className="small" style={{ color: "var(--tx-3)" }}>Sin evaluaciones configuradas — abrí el ⚙️ para definir el esquema.</div>
         : (
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {keys.map(({ k, label }) => (
-              <label key={k} style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 80px", minWidth: 80 }}>
-                <span className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)" }}>{label.toUpperCase()}</span>
-                <input type="number" min="1" max="10" step="0.5" placeholder="—"
-                  value={s.grades?.[k] ?? ""}
-                  onChange={e => onGrade(k, e.target.value === "" ? null : Number(e.target.value))}
-                  style={{ background: "var(--field)", border: "1px solid var(--line)", borderRadius: 9, padding: "8px 10px", color: "var(--soft)", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, width: "100%" }} />
-              </label>
-            ))}
+            {keys.map(({ k, label }) => {
+              const isParcial = /^p\d+$/.test(k);
+              const recKey  = k + "r";
+              const baseVal = s.grades?.[k];
+              const recVal  = s.grades?.[recKey];
+              const failed  = baseVal != null && baseVal !== "" && Number(baseVal) < PASSING;
+              const showRec = isParcial && (openRec[k] || (recVal != null && recVal !== "") || failed);
+              return (
+                <div key={k} style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 90px", minWidth: 90 }}>
+                  <span className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)" }}>{label.toUpperCase()}</span>
+                  <input type="number" min="1" max="10" step="0.5" placeholder="—"
+                    value={baseVal ?? ""}
+                    onChange={e => onGrade(k, e.target.value === "" ? null : Number(e.target.value))}
+                    style={GRADE_INPUT_STYLE} />
+                  {isParcial && !showRec && (
+                    <button type="button" className="recu-add" onClick={() => setOpenRec(o => ({ ...o, [k]: true }))}>+ recuperatorio</button>
+                  )}
+                  {showRec && (
+                    <div className="recu-row">
+                      <span className="mono recu-lbl">RECU</span>
+                      <input type="number" min="1" max="10" step="0.5" placeholder="—"
+                        value={recVal ?? ""}
+                        onChange={e => onGrade(recKey, e.target.value === "" ? null : Number(e.target.value))}
+                        style={{ ...GRADE_INPUT_STYLE, padding: "6px 9px", fontSize: 13 }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -237,19 +270,32 @@ const Notas = ({ onNav }) => {
 
       {subjects.length === 0 ? (
         <div className="empty"><div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}><Hubby pose="idle" size={92} /><div className="h3" style={{ marginTop: 10 }}>Todavía no tenés materias</div><div className="small" style={{ marginTop: 6 }}>Creá tu primera materia desde Facultad.</div></div></div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-          {subjects.map(s => (
-            <SubjectNoteCard
-              key={s.id}
-              s={s}
-              onGrade={(k, v) => setGrade(s, k, v)}
-              onPromoManual={v => setPromoManual(s, v)}
-              onOpenConfig={() => setConfigFor(s)}
-            />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const activas    = subjects.filter(s => !isSubjectDone(s));
+        const terminadas = subjects.filter(s =>  isSubjectDone(s));
+        const gridCols = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 };
+        const renderCard = (s) => (
+          <SubjectNoteCard key={s.id} s={s}
+            onGrade={(k, v) => setGrade(s, k, v)}
+            onPromoManual={v => setPromoManual(s, v)}
+            onOpenConfig={() => setConfigFor(s)} />
+        );
+        return (
+          <>
+            <div style={gridCols}>{activas.map(renderCard)}</div>
+            {terminadas.length > 0 && (
+              <div className="subj-done-sec">
+                <div className="subj-done-head">
+                  <span className="mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--tx-3)" }}>TERMINADAS</span>
+                  <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+                  <span className="mono" style={{ fontSize: 11, color: "var(--tx-3)" }}>{terminadas.length}</span>
+                </div>
+                <div style={gridCols}>{terminadas.map(renderCard)}</div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {configFor && <EvalConfigModal subject={configFor} onClose={() => setConfigFor(null)} onSave={ev => saveEval(configFor, ev)} />}
 

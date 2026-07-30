@@ -17,16 +17,25 @@ const PRIO   = { alta: "#B8461A", media: "#C68A2E", baja: "#7E8A4F" };
 const STATUS = { pendiente: "Pendiente", progreso: "En progreso", lista: "Lista" };
 
 /* ── esquema de evaluación / notas del cuatrimestre ──────── */
-const DEFAULT_EVAL = { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "promedio", threshold: 7 }, promedioOn: true };
+/* aprobaModo: "ambos" = cada parcial ≥ 4 por separado · "promedio" = el promedio de los parciales ≥ 4 (se puede compensar) */
+const DEFAULT_EVAL = { parciales: 2, coloquio: false, final: true, aprobaModo: "ambos", promo: { on: true, mode: "promedio", threshold: 7 }, promedioOn: true };
 const PASSING = 4; /* nota mínima para aprobar (escala 1-10) */
 
-/* nota promedio de lo cargado (parciales + coloquio + final configurados) */
+/* nota efectiva de un parcial: si tiene recuperatorio cargado (clave "pNr"), ese reemplaza al original */
+function parcialGrade(g, i) {
+  const r = g["p" + i + "r"], p = g["p" + i];
+  const v = (r != null && r !== "") ? r : p;
+  return (v != null && v !== "") ? Number(v) : null;
+}
+
+/* nota promedio de lo cargado (parciales con recuperatorio + coloquio + final configurados) */
 function subjectPromedio(s) {
   const ev = s.eval || DEFAULT_EVAL, g = s.grades || {};
-  const keys = [...Array.from({ length: ev.parciales || 0 }, (_, i) => "p" + (i + 1)), ...(ev.coloquio ? ["coloquio"] : []), ...(ev.final ? ["final"] : [])];
-  const vals = keys.map(k => g[k]).filter(v => v != null && v !== "");
+  const parc = Array.from({ length: ev.parciales || 0 }, (_, i) => parcialGrade(g, i + 1)).filter(v => v != null);
+  const extra = [...(ev.coloquio ? [g.coloquio] : []), ...(ev.final ? [g.final] : [])].filter(v => v != null && v !== "").map(Number);
+  const vals = [...parc, ...extra];
   if (!vals.length) return null;
-  return Math.round((vals.reduce((a, b) => a + Number(b), 0) / vals.length) * 10) / 10;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
 }
 
 /* estado derivado de la materia: cursando | regular | recuperar | aprobada | promocionada */
@@ -34,22 +43,28 @@ function deriveEstado(s) {
   if (s.promoManual) return "promocionada";
   const ev = s.eval || DEFAULT_EVAL, g = s.grades || {};
   const promo = ev.promo || {};
-  const parcialVals = Array.from({ length: ev.parciales || 0 }, (_, i) => g["p" + (i + 1)]).filter(v => v != null && v !== "").map(Number);
-  const allParciales = (ev.parciales || 0) > 0 && parcialVals.length === ev.parciales;
+  const n = ev.parciales || 0;
+  const aprobaModo = ev.aprobaModo || "ambos";
+  const parcialVals = Array.from({ length: n }, (_, i) => parcialGrade(g, i + 1)).filter(v => v != null);
+  const allParciales = n > 0 && parcialVals.length === n;
+  const avg = parcialVals.length ? parcialVals.reduce((a, b) => a + b, 0) / parcialVals.length : null;
   const anyFail = parcialVals.some(v => v < PASSING);
+  /* ¿aprobó la cursada (regularizó)? según modo: los 2 sí o sí, o promediando */
+  const cursadaOK = allParciales && (aprobaModo === "promedio" ? avg >= PASSING : parcialVals.every(v => v >= PASSING));
 
-  if (promo.on && promo.mode !== "manual" && allParciales && !anyFail) {
+  if (promo.on && promo.mode !== "manual" && cursadaOK) {
     const thr = promo.threshold ?? 7;
-    const meets = promo.mode === "parciales"
-      ? parcialVals.every(v => v >= thr)
-      : (parcialVals.reduce((a, b) => a + b, 0) / parcialVals.length) >= thr;
+    const meets = promo.mode === "parciales" ? parcialVals.every(v => v >= thr) : avg >= thr;
     if (meets) return "promocionada";
   }
 
   const finalVal = ev.final ? g.final : (ev.coloquio ? g.coloquio : null);
   if (finalVal != null && finalVal !== "") return Number(finalVal) >= PASSING ? "aprobada" : "recuperar";
-  if (anyFail) return "recuperar";
-  if (allParciales) return "regular";
+
+  if (allParciales) return cursadaOK ? "regular" : "recuperar";
+  /* si falta rendir algún parcial: en modo "ambos" un desaprobado ya manda a recuperar;
+     en modo "promedio" se espera a tener todos para juzgar por promedio */
+  if (anyFail && aprobaModo === "ambos") return "recuperar";
   return "cursando";
 }
 

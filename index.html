@@ -948,6 +948,40 @@ a{ color:inherit; text-decoration:none; }
 .subj-done-sec{ margin-top:34px; }
 .subj-done-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
 
+/* recuperatorio de parcial (Progreso) */
+.recu-add{ background:transparent; border:none; padding:2px 0 0; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:10.5px; font-weight:600; color:var(--tx-3); }
+.recu-add:hover{ color:var(--org-deep); }
+.recu-row{ display:flex; align-items:center; gap:6px; }
+.recu-lbl{ font-size:9px; font-weight:700; color:var(--org-deep); letter-spacing:.04em; flex:0 0 auto; }
+
+/* diario de clases (dentro de una materia) */
+.clase-block{ border:1px solid var(--line); border-radius:12px; margin-bottom:9px; overflow:hidden; background:var(--card); }
+.clase-head{ display:flex; align-items:center; gap:9px; padding:11px 13px; cursor:pointer; }
+.clase-head:hover{ background:var(--field); }
+.clase-caret{ display:flex; color:var(--tx-3); transition:transform .18s ease; flex:0 0 auto; }
+.clase-n{ font-weight:800; font-size:13px; color:var(--org); font-family:var(--font-mono); flex:0 0 auto; }
+.clase-meta{ flex:1; min-width:0; font-size:12.5px; color:var(--tx-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.clase-date{ font-family:var(--font-mono); font-size:11px; color:var(--tx-3); flex:0 0 auto; }
+.clase-del{ display:flex; color:var(--tx-3); cursor:pointer; flex:0 0 auto; }
+.clase-del:hover{ color:var(--org-deep); }
+.clase-body{ padding:0 13px 13px; border-top:1px solid var(--line); }
+.clase-body textarea{ width:100%; background:var(--field); border:1px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14px; color:var(--soft); font-family:var(--font-body); line-height:1.6; resize:vertical; margin-top:11px; }
+.clase-tema-in{ flex:1; min-width:0; background:var(--field); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13.5px; color:var(--ink); font-family:var(--font-body); font-weight:600; }
+
+/* repetir semanal (evento todos los martes/jueves…) */
+.rep{ border:1px solid var(--line); border-radius:12px; background:var(--card); overflow:hidden; }
+.rep-head{ display:flex; align-items:center; gap:9px; width:100%; padding:12px 14px; background:transparent; border:none; cursor:pointer; font-family:var(--font-body); font-size:13.5px; font-weight:600; color:var(--ink); }
+.rep-head svg:first-child{ color:var(--org); }
+.rep-head svg:last-child{ color:var(--tx-3); transition:transform .16s ease; }
+.rep-head.open svg:last-child{ transform:rotate(180deg); }
+.rep-body{ padding:0 14px 14px; border-top:1px solid var(--line); }
+.rep-days{ display:flex; flex-wrap:wrap; gap:6px; }
+.rep-day{ flex:1; min-width:40px; padding:9px 4px; border-radius:9px; background:var(--field); border:1px solid var(--line); cursor:pointer; font-family:var(--font-body); font-size:12.5px; font-weight:700; color:var(--tx-2); transition:background .12s ease, color .12s ease, border-color .12s ease; }
+.rep-day.on{ background:var(--org); color:#fff; border-color:var(--org); }
+.rep-day:hover{ border-color:var(--org); }
+.rep-add{ display:flex; align-items:center; justify-content:center; gap:7px; width:100%; margin-top:4px; padding:10px; border-radius:10px; background:var(--ink); color:#fff; border:none; cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:700; }
+.rep-add:hover{ filter:brightness(1.08); }
+
 /* chips de fechas (evento en varios días a la vez) */
 .date-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
 .date-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--field); border:1px solid var(--line); border-radius:9px; padding:5px 5px 5px 11px; font-size:12.5px; font-weight:700; color:var(--ink); font-family:var(--font-body); }
