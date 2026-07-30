@@ -334,8 +334,14 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       temas: (sub.lists?.temas || []).filter(t => t.unidadId !== id),
     };
   });
-  const addTema = (unidadId, t) => setList("temas", [...temas, { id: uid(), t, unidadId, resumido: false, estudiado: false, repasos: 0 }]);
+  const addTema = (unidadId, t) => setList("temas", [...temas, { id: uid(), t, unidadId, resumido: false, estudiado: false, repasos: 0, subtemas: [] }]);
   const delTema = (id) => setList("temas", temas.filter(t => t.id !== id));
+
+  /* ── subtemas dentro de cada tema ── */
+  const [openSub, setOpenSub] = React.useState({});
+  const addSubtema = (temaId, t) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: [...(tm?.subtemas || []), { id: uid(), t, done: false }] }); setOpenSub(o => ({ ...o, [temaId]: true })); };
+  const upSubtema  = (temaId, subId, patch) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: (tm?.subtemas || []).map(s => s.id === subId ? { ...s, ...patch } : s) }); };
+  const delSubtema = (temaId, subId) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: (tm?.subtemas || []).filter(s => s.id !== subId) }); };
   /* marca/desmarca resumido|estudiado en TODA la unidad (propaga a sus temas) */
   const toggleUnidadState = (unidadId, key) => {
     const unitTemas = temas.filter(t => t.unidadId === unidadId);
@@ -480,21 +486,42 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
               {/* cuerpo colapsable */}
               <div className={`unidad-body${u.collapsed ? " collapsed" : ""}`}>
                 <div>
-                  {unitTemas.map((it, ti) => (
-                    <div key={it.id} className="tema-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: "1px solid #eee4d4", animationDelay: `${ti * 40}ms` }}>
-                      <span onClick={() => setPlannerOpen(true)} title="Planificar" style={{ cursor: "grab", color: "var(--tx-3)", display: "flex", flex: "0 0 auto" }}><Icon name="dots" size={13} /></span>
-                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
-                      <span onClick={() => setOpenTemaId(it.id)} style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)", cursor: "pointer" }}>{it.t}</span>
-                      <span className="ms" style={it.resumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => upTemaById(it.id, { resumido: !it.resumido })}>resumido</span>
-                      <span className="ms" style={it.estudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => upTemaById(it.id, { estudiado: !it.estudiado })}>estudiado</span>
-                      <span className="rep" style={(it.repasos > 0) ? { background: "#E4EEDB", color: "#3B6D11" } : undefined}>
-                        <b onClick={() => upTemaById(it.id, { repasos: Math.max(0, (it.repasos || 0) - 1) })}>−</b>
-                        <Icon name="refresh" size={12} /> {it.repasos || 0}
-                        <b onClick={() => upTemaById(it.id, { repasos: (it.repasos || 0) + 1, estudiado: true })}>+</b>
-                      </span>
-                      <span onClick={() => delTema(it.id)} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={14} /></span>
-                    </div>
-                  ))}
+                  {unitTemas.map((it, ti) => {
+                    const subs = it.subtemas || [];
+                    const subOpen = !!openSub[it.id];
+                    const subDone = subs.filter(x => x.done).length;
+                    return (
+                      <div key={it.id} className="tema-wrap" style={{ animationDelay: `${ti * 40}ms` }}>
+                        <div className="tema-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 0", borderBottom: subOpen ? "none" : "1px solid #eee4d4" }}>
+                          <span className="tema-caret" onClick={() => setOpenSub(o => ({ ...o, [it.id]: !o[it.id] }))} title="Subtemas" style={{ cursor: "pointer", color: subs.length ? "var(--org)" : "var(--tx-3)", display: "flex", flex: "0 0 auto", transform: subOpen ? "none" : "rotate(-90deg)", transition: "transform .2s ease" }}><Icon name="chevron" size={14} /></span>
+                          <span onClick={() => setPlannerOpen(true)} title="Planificar" style={{ cursor: "grab", color: "var(--tx-3)", display: "flex", flex: "0 0 auto" }}><Icon name="dots" size={13} /></span>
+                          <span style={{ width: 9, height: 9, borderRadius: "50%", background: stateColor(it), flex: "0 0 auto" }} />
+                          <span onClick={() => setOpenTemaId(it.id)} style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: "var(--ink)", cursor: "pointer" }}>{it.t}</span>
+                          {subs.length > 0 && <span className="subt-count" onClick={() => setOpenSub(o => ({ ...o, [it.id]: !o[it.id] }))}>{subDone}/{subs.length}</span>}
+                          <span className="ms" style={it.resumido ? { background: "#F7E4D3", color: "var(--org-deep)", borderColor: "#F7E4D3" } : undefined} onClick={() => upTemaById(it.id, { resumido: !it.resumido })}>resumido</span>
+                          <span className="ms" style={it.estudiado ? { background: "var(--ink)", color: "#F4EDE0", borderColor: "var(--ink)" } : undefined} onClick={() => upTemaById(it.id, { estudiado: !it.estudiado })}>estudiado</span>
+                          <span className="rep" style={(it.repasos > 0) ? { background: "#E4EEDB", color: "#3B6D11" } : undefined}>
+                            <b onClick={() => upTemaById(it.id, { repasos: Math.max(0, (it.repasos || 0) - 1) })}>−</b>
+                            <Icon name="refresh" size={12} /> {it.repasos || 0}
+                            <b onClick={() => upTemaById(it.id, { repasos: (it.repasos || 0) + 1, estudiado: true })}>+</b>
+                          </span>
+                          <span onClick={() => delTema(it.id)} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={14} /></span>
+                        </div>
+                        {subOpen && (
+                          <div className="subt-panel">
+                            {subs.map(st => (
+                              <div key={st.id} className="subt-row">
+                                <span className="subt-check" onClick={() => upSubtema(it.id, st.id, { done: !st.done })} style={{ borderColor: st.done ? "#639922" : "#c3b7a3", background: st.done ? "#639922" : "transparent" }}>{st.done && <Icon name="check" size={10} color="#fff" />}</span>
+                                <span className="subt-name" style={{ textDecoration: st.done ? "line-through" : "none", color: st.done ? "var(--tx-3)" : "var(--soft)" }}>{st.t}</span>
+                                <span className="subt-del" onClick={() => delSubtema(it.id, st.id)}><Icon name="x" size={12} /></span>
+                              </div>
+                            ))}
+                            <AddInput placeholder="Agregar subtema…" onAdd={t => addSubtema(it.id, t)} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   <AddInput placeholder="Agregar tema a esta unidad…" onAdd={t => addTema(u.id, t)} />
                 </div>
               </div>

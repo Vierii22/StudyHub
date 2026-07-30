@@ -968,6 +968,16 @@ a{ color:inherit; text-decoration:none; }
 .clase-body textarea{ width:100%; background:var(--field); border:1px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14px; color:var(--soft); font-family:var(--font-body); line-height:1.6; resize:vertical; margin-top:11px; }
 .clase-tema-in{ flex:1; min-width:0; background:var(--field); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13.5px; color:var(--ink); font-family:var(--font-body); font-weight:600; }
 
+/* subtemas dentro de un tema */
+.subt-count{ font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--org-deep); background:#F7E4D3; padding:2px 7px; border-radius:20px; cursor:pointer; flex:0 0 auto; }
+.subt-panel{ margin:2px 0 9px 40px; padding:9px 12px 11px; background:var(--field); border:1px solid var(--line); border-radius:11px; border-bottom:1px solid #eee4d4; }
+.subt-row{ display:flex; align-items:center; gap:9px; padding:5px 0; }
+.subt-check{ width:16px; height:16px; border-radius:5px; border:2px solid #c3b7a3; display:grid; place-items:center; cursor:pointer; flex:0 0 auto; transition:background .12s ease, border-color .12s ease; }
+.subt-name{ flex:1; min-width:0; font-size:13px; line-height:1.4; }
+.subt-del{ cursor:pointer; color:var(--tx-3); flex:0 0 auto; display:flex; }
+.subt-del:hover{ color:var(--org-deep); }
+.subt-panel form{ margin-top:7px !important; }
+
 /* repetir semanal (evento todos los martes/jueves…) */
 .rep{ border:1px solid var(--line); border-radius:12px; background:var(--card); overflow:hidden; }
 .rep-head{ display:flex; align-items:center; gap:9px; width:100%; padding:12px 14px; background:transparent; border:none; cursor:pointer; font-family:var(--font-body); font-size:13.5px; font-weight:600; color:var(--ink); }
