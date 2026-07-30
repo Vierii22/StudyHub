@@ -108,22 +108,30 @@ const EventModal = ({ day, month, year, event, onClose }) => {
 
   /* repetir semanalmente: "todos los martes/jueves…" hasta una fecha → rellena los chips */
   const WEEKDAYS = [{ lbl: "Lun", dow: 1 }, { lbl: "Mar", dow: 2 }, { lbl: "Mié", dow: 3 }, { lbl: "Jue", dow: 4 }, { lbl: "Vie", dow: 5 }, { lbl: "Sáb", dow: 6 }, { lbl: "Dom", dow: 0 }];
-  const [repOpen, setRepOpen] = React.useState(false);
+  const isoLocal  = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  /* "Hasta" por defecto: 4 meses después del día del evento (≈ fin de cuatrimestre) */
+  const defaultHasta = (() => { const d = new Date(defaultDate + "T00:00:00"); d.setMonth(d.getMonth() + 4); return isoLocal(d); })();
   const [repDows, setRepDows] = React.useState([]);
   const [repFrom, setRepFrom] = React.useState(defaultDate);
-  const [repTo,   setRepTo]   = React.useState("");
+  const [repTo,   setRepTo]   = React.useState(defaultHasta);
   const toggleDow = (dow) => setRepDows(ds => ds.includes(dow) ? ds.filter(x => x !== dow) : [...ds, dow]);
-  const isoLocal  = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-  const addWeekly = () => {
-    if (!repDows.length) return toast("Elegí al menos un día de la semana");
-    if (!repTo) return toast("Elegí hasta qué fecha repetir");
+  /* cuántas fechas caerían con la selección actual (para el preview en vivo) */
+  const weeklyDates = () => {
+    if (!repDows.length || !repTo) return [];
     const from = repFrom || defaultDate;
-    if (repTo < from) return toast("La fecha 'hasta' es anterior a 'desde'");
+    if (repTo < from) return [];
     const wanted = new Set(repDows);
     const out = [];
     const d = new Date(from + "T00:00:00"), end = new Date(repTo + "T00:00:00");
     let guard = 0;
     while (d <= end && guard < 800) { if (wanted.has(d.getDay())) out.push(isoLocal(d)); d.setDate(d.getDate() + 1); guard++; }
+    return out;
+  };
+  const addWeekly = () => {
+    if (!repDows.length) return toast("Tocá al menos un día de la semana");
+    if (!repTo) return toast("Elegí hasta qué fecha repetir");
+    if (repTo < (repFrom || defaultDate)) return toast("La fecha 'hasta' es anterior a 'desde'");
+    const out = weeklyDates();
     if (!out.length) return toast("No hay días que coincidan en ese rango");
     setDates(ds => Array.from(new Set([...ds, ...out])).sort());
     toast(`${out.length} fecha${out.length !== 1 ? "s" : ""} agregada${out.length !== 1 ? "s" : ""} ✓`);
@@ -192,27 +200,25 @@ const EventModal = ({ day, month, year, event, onClose }) => {
               )}
             </Field>
 
-            {/* repetir semanalmente: todos los martes/jueves… */}
+            {/* repetir semanalmente: todos los martes/jueves… (siempre visible) */}
             <div className="rep">
-              <button type="button" className={`rep-head${repOpen ? " open" : ""}`} onClick={() => setRepOpen(o => !o)}>
-                <Icon name="refresh" size={15} />
-                <span style={{ flex: 1, textAlign: "left" }}>Repetir todas las semanas</span>
-                <Icon name="chevron" size={15} />
-              </button>
-              {repOpen && (
-                <div className="rep-body">
-                  <div className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginBottom: 9 }}>¿Qué días?</div>
-                  <div className="rep-days">
-                    {WEEKDAYS.map(w => (
-                      <button type="button" key={w.dow} className={`rep-day${repDows.includes(w.dow) ? " on" : ""}`} onClick={() => toggleDow(w.dow)}>{w.lbl}</button>
-                    ))}
-                  </div>
+              <div className="rep-title"><Icon name="refresh" size={15} /> <span style={{ flex: 1 }}>¿Se repite? Tocá los días</span><span className="rep-opt">opcional</span></div>
+              <div className="rep-days">
+                {WEEKDAYS.map(w => (
+                  <button type="button" key={w.dow} className={`rep-day${repDows.includes(w.dow) ? " on" : ""}`} onClick={() => toggleDow(w.dow)}>{w.lbl}</button>
+                ))}
+              </div>
+              {repDows.length > 0 && (
+                <>
                   <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
                     <Field label="Desde"><DatePicker value={repFrom} onChange={setRepFrom} allowClear={false} /></Field>
-                    <Field label="Hasta"><DatePicker value={repTo} onChange={setRepTo} placeholder="Fin del cuatri" /></Field>
+                    <Field label="Hasta"><DatePicker value={repTo} onChange={setRepTo} allowClear={false} placeholder="Fecha final" /></Field>
                   </div>
+                  {(() => { const n = weeklyDates().length; return (
+                    <div className="rep-hint">{n > 0 ? `Se van a agregar ${n} fecha${n !== 1 ? "s" : ""} 👇` : "Elegí un rango de fechas válido"}</div>
+                  ); })()}
                   <button type="button" className="rep-add" onClick={addWeekly}><Icon name="plus" size={14} /> Agregar esos días</button>
-                </div>
+                </>
               )}
             </div>
 
