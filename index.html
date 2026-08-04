@@ -1671,9 +1671,19 @@ a{ color:inherit; text-decoration:none; }
 .auth-root{
   position: fixed; inset: 0; z-index: 0;
   background: var(--bg);
-  overflow: hidden;
+  overflow-y: auto;               /* permite scrollear si el form es más alto que la pantalla (celu) */
+  -webkit-overflow-scrolling: touch;
 }
-.auth-orbs{ position: absolute; inset: 0; pointer-events: none; }
+/* centra la tarjeta con margin:auto → cuando el contenido es más alto que la
+   pantalla NO recorta arriba y se puede scrollear (fix del bug de centrado en iPhone) */
+.auth-wrap{
+  position: relative; z-index: 1;
+  min-height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px; box-sizing: border-box;
+}
+.auth-wrap > *{ margin: auto 0; }
+.auth-orbs{ position: fixed; inset: 0; pointer-events: none; }
 .auth-orb{
   position: absolute; border-radius: 50%; filter: blur(85px);
   will-change: transform; animation: blob-idle 9s ease-in-out infinite alternate;

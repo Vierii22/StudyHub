@@ -123,7 +123,7 @@ const Login = ({ onEnter, onRegister }) => {
   return (
     <div className="auth-root">
       <AuthOrbs />
-      <div style={{ position: "relative", zIndex: 1, height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="auth-wrap">
         <TiltCard style={{ width: "min(420px, calc(100vw - 48px))", padding: "40px 38px", textAlign: "center" }}>
           <AuthLogo />
           <div className="auth-wordmark"><span className="w1">study</span><span className="w2">hub</span><span className="w3">.</span></div>
@@ -271,7 +271,7 @@ const Onboarding = ({ onDone }) => {
   return (
     <div className="auth-root">
       <AuthOrbs />
-      <div style={{ position: "relative", zIndex: 1, minHeight: "100%", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="auth-wrap">
         <div className="auth-card fade-in" style={{ width: "min(560px, calc(100vw - 48px))", padding: 36 }}>
           {/* progress dots */}
           <div className="row" style={{ gap: 0, marginBottom: 28, justifyContent: "center" }}>
@@ -409,7 +409,7 @@ const ConfirmEmail = ({ email }) => {
   return (
     <div className="auth-root">
       <AuthOrbs />
-      <div style={{ position: "relative", zIndex: 1, height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="auth-wrap">
         <div className="auth-card fade-in" style={{ width: "min(460px, calc(100vw - 48px))", padding: "40px 38px", textAlign: "center" }}>
           <div style={{ width: 68, height: 68, borderRadius: 18, background: "var(--field)", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
             <Icon name="send" size={30} color="var(--org)" />
