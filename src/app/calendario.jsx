@@ -201,7 +201,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
             </Field>
 
             {/* repetir semanalmente: todos los martes/jueves… (siempre visible) */}
-            <div className="rep">
+            <div className="rep-panel">
               <div className="rep-title"><Icon name="refresh" size={15} /> <span style={{ flex: 1 }}>¿Se repite? Tocá los días</span><span className="rep-opt">opcional</span></div>
               <div className="rep-days">
                 {WEEKDAYS.map(w => (

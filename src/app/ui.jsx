@@ -30,7 +30,7 @@ const MonoLabel = ({ children, accent }) => (
 );
 
 const Field = ({ label, hint, children }) => (
-  <div style={{ marginBottom: 18 }}>
+  <div style={{ marginBottom: 18, minWidth: 0 }}>
     <div className="row between" style={{ marginBottom: 9 }}>
       <div className="mono">{label}</div>
       {hint && <div style={{ fontSize: 11, color: "var(--tx-3)" }}>{hint}</div>}
