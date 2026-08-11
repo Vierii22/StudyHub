@@ -1,8 +1,9 @@
 import React from 'react';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, getAllTasks, todayLocal } from './store.jsx';
-import { parseCapture } from './palette.jsx';
+import { getAllTasks, todayLocal } from './store.jsx';
 import { Hubby } from './ui.jsx';
+import { buildSystemPrompt } from './aiPrompt.js';
+import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 
 const COACH_POSE = { alta: "vamos", media: "vamos", baja: "idea", cero: "contento" };
 
@@ -166,59 +167,100 @@ const CoachCard = ({ data, onNav }) => {
 };
 
 /* ============================================================
-   CAPTURE BAR — captura universal embebida en el dashboard
+   CAPTURE BAR — captura universal embebida en el dashboard.
+   Escribís una frase suelta y Hubby (IA real, mismo cerebro que
+   el chat completo — aiPrompt.js) la entiende y la ejecuta directo:
+   crea la tarea/evento con fecha real, o hace la pregunta que sea.
    ============================================================ */
 const PLACEHOLDERS = [
   'Probá: "tarea: terminar TP de redes para el viernes"',
   'Probá: "parcial de álgebra el 24"',
-  "Escribí cualquier cosa y se organiza sola…",
+  'Probá: "todos los miércoles tengo clase de redes"',
 ];
 
-const TYPE_STYLE = {
-  "create-task":  { label: "→ Tarea",  color: "var(--green)" },
-  "create-event": { label: "→ Evento", color: "var(--org)" },
-};
-
-const CaptureBar = ({ data, set, onOpen }) => {
+const CaptureBar = ({ data }) => {
   const [text, setText] = React.useState("");
   const [phIdx, setPhIdx] = React.useState(0);
+  const [busy, setBusy] = React.useState(false);
+  const [result, setResult] = React.useState(null); /* { text, done, confirm, canceled } */
 
   React.useEffect(() => {
     const t = setInterval(() => setPhIdx(i => (i + 1) % PLACEHOLDERS.length), 4000);
     return () => clearInterval(t);
   }, []);
 
-  const parsed = text.trim() ? parseCapture(text, data.subjects || []) : null;
-  const style = parsed ? TYPE_STYLE[parsed.type] : null;
-
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!parsed) return;
-    if (parsed.type === "create-task") {
-      set(s => s.tasks.push({ id: uid(), desc: "", subject: null, due: "—", ...parsed.payload }));
-      toast(`Tarea creada: ${parsed.payload.t}`);
-    } else if (parsed.type === "create-event") {
-      toast("Abrí el calendario para completar el evento");
-      onOpen && onOpen("calendario");
+    const q = text.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systemPrompt: buildSystemPrompt(data, "quick"), messages: [{ role: "user", content: q }] }),
+      });
+      const json  = await resp.json();
+      const reply = json.text || "No pude entenderlo. Probá desde el chat completo.";
+      const { text: replyText, actions } = parseActions(reply);
+      const confirm = actions.filter(needsConfirm);
+      const safe    = actions.filter(a => !needsConfirm(a));
+      const done    = safe.length ? applyActions(safe) : [];
+      setResult({ text: replyText, done, confirm });
+      setText("");
+    } catch {
+      setResult({ text: "Error de conexión — probá de nuevo.", done: [], confirm: [] });
     }
-    setText("");
+    setBusy(false);
   };
 
+  const confirmPending = () => {
+    if (!result?.confirm?.length) return;
+    const done = applyActions(result.confirm);
+    setResult(r => ({ ...r, confirm: [], done: [...(r.done || []), ...done] }));
+  };
+  const cancelPending = () => setResult(r => ({ ...r, confirm: [], canceled: true }));
+
   return (
-    <form className="capture-bar" onSubmit={submit}>
-      <Icon name="plus" size={17} color="var(--violet-hi)" />
-      <input
-        value={text}
-        onChange={e => setText(e.target.value)}
-        placeholder={PLACEHOLDERS[phIdx]}
-      />
-      {style && (
-        <span className="capture-chip" style={{ color: style.color, border: `1px solid ${style.color}55`, background: `${style.color}15` }}>
-          {style.label}
-        </span>
+    <div>
+      <form className="capture-bar" onSubmit={submit}>
+        <Icon name={busy ? "sparkles" : "plus"} size={17} color="var(--org)" className={busy ? "capture-spin" : ""} />
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder={busy ? "Pensando…" : PLACEHOLDERS[phIdx]}
+          disabled={busy}
+        />
+        <span className="kbd" style={{ flex: "0 0 auto" }}>↵</span>
+      </form>
+
+      {result && (
+        <div className="capture-result">
+          <div className="capture-result-text">{result.text}</div>
+          {result.done?.length > 0 && (
+            <div className="chat-acts" style={{ marginTop: 6 }}>
+              {result.done.map((r, k) => (
+                <div key={k} className={`chat-act ${r.ok ? "ok" : "bad"}`}>
+                  <Icon name={r.ok ? "check" : "x"} size={13} /> {r.label}
+                </div>
+              ))}
+            </div>
+          )}
+          {result.confirm?.length > 0 && (
+            <div className="chat-confirm" style={{ marginTop: 8 }}>
+              <div className="chat-confirm-t"><Icon name="trash" size={14} /> ¿Confirmás?</div>
+              {result.confirm.map((a, k) => <div key={k} className="chat-confirm-i">{describeAction(a)}</div>)}
+              <div className="chat-confirm-btns">
+                <button className="chat-confirm-yes" onClick={confirmPending}>Sí, hacelo</button>
+                <button className="chat-confirm-no" onClick={cancelPending}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {result.canceled && <div className="chat-act muted" style={{ marginTop: 6 }}><Icon name="x" size={13} /> Cancelado</div>}
+        </div>
       )}
-      <span className="kbd" style={{ flex: "0 0 auto" }}>↵</span>
-    </form>
+    </div>
   );
 };
 

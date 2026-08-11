@@ -3,12 +3,15 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
-import { APP_GUIDE } from './help-content.js';
+import { buildSystemPrompt } from './aiPrompt.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 
 /* ============================================================
    CHAT IA (Gemini via /api/chat) — "Hubby", tu organizador in-app
    Dos funciones: (1) entender/usar la app, (2) organizarte y ejecutar.
+   El prompt (manual de la app + protocolo de acciones) vive en
+   aiPrompt.js, COMPARTIDO con la captura rápida del dashboard —
+   mismo cerebro en los dos lugares.
    ============================================================ */
 const SUGGESTIONS = [
   ["calendar", "Organizá mi semana"],
@@ -16,58 +19,6 @@ const SUGGESTIONS = [
   ["target",   "¿Cómo voy con mis materias?"],
   ["info",     "¿Cómo uso la app?"],
 ];
-
-/* Protocolo para que Hubby EJECUTE acciones (Fase 2). Si el usuario pide
-   agregar/editar/completar/borrar algo, además de responder en texto,
-   termina con el marcador y un array JSON de acciones. */
-const ACTION_PROTOCOL = (todayISO, subjNames) => [
-  `── CÓMO EJECUTAR ACCIONES ──`,
-  `Además de aconsejar, PODÉS HACER cambios en la app por el usuario: crear/editar/completar/borrar tareas, agregar/borrar eventos del calendario y anotar en materias.`,
-  `Cuando el usuario te pida hacer algo (o aceptes un plan que armaste), respondé normal en texto Y AL FINAL agregá una línea con el marcador exacto @@ACTIONS@@ seguido de un array JSON con las acciones. Ejemplo:`,
-  `Listo, te agrego eso.\n@@ACTIONS@@\n[{"type":"add_task","t":"Leer capítulo 3","prio":"media","due":"${todayISO}"}]`,
-  `Tipos de acción válidos (usá EXACTAMENTE estos campos):`,
-  `- {"type":"add_task","t":"título","prio":"alta|media|baja","due":"YYYY-MM-DD","subject":"nombre materia opcional"}`,
-  `- {"type":"complete_task","match":"parte del título de la tarea"}`,
-  `- {"type":"edit_task","match":"título actual","t":"nuevo título opcional","prio":"...","due":"YYYY-MM-DD"}`,
-  `- {"type":"delete_task","match":"parte del título"}`,
-  `- {"type":"add_event","title":"...","date":"YYYY-MM-DD","time":"HH:MM opcional","kind":"parcial|entrega|evento","subject":"nombre materia opcional"}`,
-  `- {"type":"delete_event","match":"parte del título del evento"}`,
-  `- {"type":"note_subject","subject":"nombre de materia","text":"la anotación"}`,
-  `REGLAS: Las fechas SIEMPRE en formato YYYY-MM-DD calculadas desde hoy (${todayISO}). Si el usuario dice "mañana", "el viernes", etc., convertilo vos a la fecha exacta. Podés poner varias acciones en el array (ej: organizar la semana = varias add_task). Solo emití acciones que el usuario pidió o aprobó explícitamente — NO inventes. Si NO hay nada que ejecutar (solo pregunta o consejo), NO pongas el marcador. Para borrar, igual emití la acción delete_*: la app le va a pedir confirmación al usuario antes de aplicarla, así que en el texto podés decir algo como "¿Confirmás que borre X?". ${subjNames.length ? `Materias del usuario (usá estos nombres): ${subjNames.join(", ")}.` : ""}`,
-].join("\n");
-
-const buildSystemPrompt = (data) => {
-  const profile  = data.profile || {};
-  const tasks    = data.tasks   || [];
-  const subjects = data.subjects|| [];
-  const events   = data.events  || [];
-
-  const pending  = tasks.filter(t => !t.done);
-  const urgent   = pending.filter(t => t.prio === "alta");
-  const today    = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const subjNames = subjects.map(s => s.name).filter(Boolean);
-
-  const lines = [
-    `Sos Hubby, el ORGANIZADOR PERSONAL de ${profile.name || "el usuario"} dentro de la app StudyHub (organización para la facultad).`,
-    `Tu trabajo son DOS cosas y nada más:`,
-    `1) AYUDARLO A ENTENDER Y USAR LA APP: si pregunta "cómo hago X" o "dónde está Y", explicáselo con el manual de abajo, paso a paso.`,
-    `2) ORGANIZARLO Y ACONSEJARLO usando SUS datos reales: planificá su semana, decile qué priorizar, cómo va, si le da el tiempo para un parcial. Consejos concretos y a su medida.`,
-    `IMPORTANTE: NO expliques temas académicos ni des clases del contenido de las materias (para eso el usuario usa otras IAs). Si te piden explicar un tema, decí amablemente que para eso mejor use otra IA, y ofrecé ayudarlo a ORGANIZAR el estudio de ese tema.`,
-    `Hoy es ${today}. Hora: ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,"0")}.`,
-    profile.career ? `Estudia ${profile.career}${profile.uni ? " en " + profile.uni : ""}, cursando ${profile.year}° año.` : "",
-    subjects.length ? `Materias: ${subjects.map(s => s.name).join(", ")}.` : "Todavía no cargó materias.",
-    pending.length
-      ? `Tareas pendientes (${pending.length}, ${urgent.length} urgentes):\n${pending.slice(0, 12).map(t => `- "${t.t}"${t.prio === "alta" ? " 🔴" : t.prio === "media" ? " 🟡" : ""}${t.due && t.due !== "—" ? " — vence " + t.due : ""}`).join("\n")}`
-      : "No tiene tareas pendientes.",
-    events.length ? `Próximos eventos/parciales: ${events.slice(0,6).map(e => `${e.title}${e.date ? " (" + e.date + ")" : ""}`).join(", ")}.` : "",
-    `Respondé en español (Argentina), directo y práctico. Usá puntos para las listas. Máximo 4 párrafos cortos. Podés hacer preguntas para afinar el plan.`,
-    ACTION_PROTOCOL(todayISO, subjNames),
-    APP_GUIDE,
-  ].filter(Boolean);
-
-  return lines.join("\n");
-};
 
 const ChatIA = () => {
   const [data] = useStore();

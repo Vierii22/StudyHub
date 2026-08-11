@@ -42,7 +42,7 @@ function bestMatch(list, field, query) {
 }
 
 /* qué acciones necesitan confirmación antes de aplicarse */
-const DESTRUCTIVE = new Set(["delete_task", "delete_event", "delete_note"]);
+const DESTRUCTIVE = new Set(["delete_task", "delete_event", "delete_recurring_event", "delete_note"]);
 export const needsConfirm = (a) => DESTRUCTIVE.has(a?.type);
 
 /* ── parseo: separa el texto visible de las acciones ─────── */
@@ -76,6 +76,8 @@ export function describeAction(a) {
     case "delete_task":   return `Borrar tarea “${a.match}”`;
     case "add_event":     return `Agregar al calendario “${a.title}”${a.date ? ` (${a.date})` : ""}`;
     case "delete_event":  return `Borrar del calendario “${a.match}”`;
+    case "add_recurring_event": return `Repetir “${a.title}” cada semana`;
+    case "delete_recurring_event": return `Borrar la repetición “${a.match}” (todas las fechas)`;
     case "note_subject":  return `Anotar en ${a.subject}: “${a.text}”`;
     case "delete_note":   return `Borrar anotación “${a.match}”`;
     default:              return a.type;
@@ -173,6 +175,33 @@ export function applyAction(a) {
           }
         });
         return { ok: true, label: `Evento “${hit.title}” borrado` };
+      }
+
+      case "add_recurring_event": {
+        const title = String(a.title || "").trim();
+        if (!title) return { ok: false, label: "No entendí qué evento repetir" };
+        const dows = Array.isArray(a.dows) ? a.dows.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) : [];
+        if (!dows.length) return { ok: false, label: "No entendí qué días de la semana" };
+        const from = /^\d{4}-\d{2}-\d{2}$/.test(a.from || "") ? a.from : "";
+        if (!from) return { ok: false, label: `Falta desde cuándo repetir "${title}"` };
+        let until = /^\d{4}-\d{2}-\d{2}$/.test(a.until || "") ? a.until : "";
+        if (!until) { const d = new Date(from + "T00:00:00"); d.setMonth(d.getMonth() + 4); until = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+        const subj = a.subject ? bestMatch(data.subjects, "name", a.subject) : null;
+        const kind = ["parcial","entrega","clase","estudio","evento"].includes(a.kind) ? a.kind : "evento";
+        const rec = {
+          id: uid(), title, time: /^\d{1,2}:\d{2}$/.test(a.time || "") ? a.time : "",
+          kind, color: subj?.color || "#D9551F", subjectId: subj?.id || null,
+          desc: "", important: false, dows, from, until,
+        };
+        Store.set(s => { if (!s.recurringEvents) s.recurringEvents = []; s.recurringEvents.push(rec); });
+        return { ok: true, label: `“${title}” agregado, se repite cada semana` };
+      }
+
+      case "delete_recurring_event": {
+        const hit = bestMatch(data.recurringEvents, "title", a.match);
+        if (!hit) return { ok: false, label: `No encontré la repetición “${a.match}”` };
+        Store.set(s => { s.recurringEvents = (s.recurringEvents || []).filter(r => r.id !== hit.id); });
+        return { ok: true, label: `Repetición “${hit.title}” eliminada (todas las fechas)` };
       }
 
       /* ── ANOTACIONES EN MATERIA ─────────────────────── */
