@@ -773,8 +773,8 @@ a{ color:inherit; text-decoration:none; }
   background:var(--surface-2); color:var(--tx-1); font-size:13.5px; font-weight:500; cursor:pointer; font-family:var(--font-body);
   transition:all .14s ease;
 }
-.addbtn:hover{ border-color:var(--violet-line); background:var(--violet-soft); }
-.addbtn svg{ color:var(--violet-hi); }
+.addbtn:hover{ border-color:var(--org); background:var(--field); }
+.addbtn svg{ color:var(--org); }
 .addmini{
   display:flex; align-items:center; gap:8px; padding:9px 10px;
   border-radius:9px; border:1px solid var(--line); background:var(--surface-2);
@@ -1149,11 +1149,20 @@ a{ color:inherit; text-decoration:none; }
 
 /* onboarding */
 .ob-step-dot{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-family:var(--font-mono); font-weight:600; font-size:13px; border:1.5px solid var(--line-2); color:var(--tx-3); }
-.ob-step-dot.on{ background:var(--violet); border-color:var(--violet); color:#fff; }
-.ob-step-dot.done{ border-color:var(--violet); color:var(--violet-hi); }
+.ob-step-dot.on{ background:var(--org); border-color:var(--org); color:#fff; }
+.ob-step-dot.done{ border-color:var(--org-deep); color:var(--org-deep); }
 .pickcard{ border:1px solid var(--line-2); border-radius:var(--r-lg); padding:24px; cursor:pointer; transition:all .15s ease; background:var(--surface-1); }
-.pickcard:hover{ border-color:var(--violet-line); background:var(--surface-2); }
-.pickcard.sel{ border-color:var(--violet); background:var(--violet-soft); }
+.pickcard:hover{ border-color:var(--org); background:var(--field); }
+.pickcard.sel{ border-color:var(--org); background:#F7E4D3; }
+
+/* onboarding — fila de materia, numerada como el resto de la app (editorial) */
+.ob-subj-row{ display:flex; align-items:center; gap:9px; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:3px 6px 3px 14px; transition:border-color .12s ease; }
+.ob-subj-row:focus-within{ border-color:var(--org); }
+.ob-subj-num{ font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--org); flex:0 0 auto; }
+.ob-subj-in{ flex:1; min-width:0; background:transparent; border:none; outline:none; padding:10px 4px; font-family:var(--font-body); font-size:13.5px; color:var(--tx-1); }
+.ob-subj-in::placeholder{ color:var(--tx-3); }
+.ob-subj-del{ display:grid; place-items:center; width:32px; height:32px; border-radius:9px; background:transparent; border:none; cursor:pointer; color:var(--tx-3); flex:0 0 auto; transition:background .12s ease, color .12s ease; }
+.ob-subj-del:hover{ background:var(--card); color:var(--org-deep); }
 
 /* generic empty */
 .empty{ display:grid; place-items:center; padding:34px 18px; text-align:center; color:var(--tx-3); }

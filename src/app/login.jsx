@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
-import { Btn, Field } from './ui.jsx';
+import { Btn, Field, Seg } from './ui.jsx';
 import { supabase } from '../supabase.js';
 
 /* ============================================================
@@ -330,24 +330,23 @@ const Onboarding = ({ onDone }) => {
               {d.role === "work" ? (
                 <Field label="¿En qué trabajás?"><textarea className="input" rows={4} value={d.work} onChange={e => set("work", e.target.value)} placeholder="Describí tu trabajo…" /></Field>
               ) : (
-                <div style={{ display: "grid", gap: 14 }}>
+                <div style={{ display: "grid", gap: 16 }}>
                   <Field label="Facultad / universidad">
-                    <input className="input" value={d.place} onChange={e => set("place", e.target.value)} placeholder="Ej: UTN FRBA" />
+                    <input className="input" value={d.place} onChange={e => set("place", e.target.value)} placeholder="Ej: UTN FRBA" autoFocus />
                   </Field>
                   <Field label="Carrera">
                     <input className="input" value={d.career} onChange={e => set("career", e.target.value)} placeholder="Ej: Ing. en Sistemas" />
                   </Field>
                   <Field label="Año">
-                    <select className="input" style={{ width: "100%" }} value={d.year} onChange={e => set("year", e.target.value)}>
-                      {[1,2,3,4,5].map(y => <option key={y} value={y}>{y}° año</option>)}
-                    </select>
+                    <Seg opts={[1, 2, 3, 4, 5].map(y => ({ id: String(y), label: y < 5 ? `${y}°` : "5°+" }))} value={String(d.year)} onChange={v => set("year", v)} />
                   </Field>
-                  <Field label="Materias (podés agregar más después)">
+                  <Field label="Materias" hint="podés agregar más después">
                     <div style={{ display: "grid", gap: 8 }}>
                       {d.subjects.map((s, i) => (
-                        <div className="row" key={i} style={{ gap: 8 }}>
-                          <input className="input" value={s} placeholder={`Materia ${i + 1}`} onChange={e => set("subjects", d.subjects.map((x, j) => j === i ? e.target.value : x))} />
-                          {d.subjects.length > 1 && <div className="icon-btn" onClick={() => set("subjects", d.subjects.filter((_, j) => j !== i))}><Icon name="x" size={15} /></div>}
+                        <div className="ob-subj-row" key={i}>
+                          <span className="ob-subj-num">{String(i + 1).padStart(2, "0")}</span>
+                          <input className="ob-subj-in" value={s} placeholder={`Materia ${i + 1}`} onChange={e => set("subjects", d.subjects.map((x, j) => j === i ? e.target.value : x))} />
+                          {d.subjects.length > 1 && <button type="button" className="ob-subj-del" onClick={() => set("subjects", d.subjects.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button>}
                         </div>
                       ))}
                       <button className="addbtn" onClick={() => set("subjects", [...d.subjects, ""])}><Icon name="plus" size={15} /> Agregar materia</button>
