@@ -10,6 +10,7 @@ import { Facultad } from './facultad.jsx';
 import { SubjectView } from './facultad2.jsx';
 import { Tareas } from './tareas.jsx';
 import { Calendario } from './calendario.jsx';
+import { WeekPlanner } from './weekplanner.jsx';
 import { ChatIA } from './chat.jsx';
 import { Ocio } from './ocio.jsx';
 import { Notas } from './notas.jsx';
@@ -258,6 +259,7 @@ function App() {
       case "correlatividades": return <Correlatividades />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
       case "calendario": return <Calendario onOpenSubjectPlanner={openSubjectPlanner} />;
+      case "planner":    return <WeekPlanner onBack={() => nav("dashboard")} />;
       case "chat":       return <ChatIA />;
       case "ocio":       return <Ocio />;
       case "notas":      return <Notas onNav={nav} />;

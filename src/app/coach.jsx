@@ -140,7 +140,7 @@ function getNextAction(data) {
     icon: "star", urgency: "cero",
     title: "Todo al día ✨",
     reason: "No tenés tareas pendientes ni parciales cerca. Aprovechá: planificá la semana, o simplemente descansá — también es productivo.",
-    cta: { label: "Planear la semana", nav: "calendario" },
+    cta: { label: "Planear la semana", nav: "planner" },
     alt: { label: "Ver progreso", nav: "notas" },
   };
 }
@@ -240,8 +240,13 @@ const TodayTimeline = ({ data, set, onNav }) => {
 
   return (
     <div className="card" style={{ height: "100%" }}>
-      <div className="mono" style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-        <Icon name="calendar" size={13} /> HOY
+      <div className="row between" style={{ marginBottom: 12 }}>
+        <div className="mono" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="calendar" size={13} /> HOY
+        </div>
+        <button className="btn-soft" style={{ padding: "8px 12px", fontSize: 11.5, minHeight: 36 }} onClick={() => onNav("planner")}>
+          <Icon name="target" size={12} /> Organizar semana
+        </button>
       </div>
 
       {empty && (

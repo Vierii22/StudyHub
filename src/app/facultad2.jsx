@@ -586,4 +586,4 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   );
 };
 
-export { SubjectView };
+export { SubjectView, Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPlan };
