@@ -25,7 +25,34 @@
       if (window.caches) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
     } else {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+          /* Auto-actualización: cuando hay una versión nueva y toma el control,
+             recargamos solos (con un aviso breve) — así la app instalada en el
+             celu se pone al día sin que el usuario tenga que desinstalar/reinstalar. */
+          var hadController = !!navigator.serviceWorker.controller;
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (!hadController) { hadController = true; return; } /* primera instalación, no es una actualización */
+            try {
+              var t = document.createElement('div');
+              t.textContent = 'Actualizando StudyHub…';
+              t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+                'background:#3A332B;color:#F4EDE0;padding:11px 20px;border-radius:12px;' +
+                'font:600 13px/1.3 system-ui,sans-serif;z-index:999999;box-shadow:0 6px 20px rgba(0,0,0,.28)';
+              document.body.appendChild(t);
+            } catch (e) {}
+            setTimeout(function () { window.location.reload(); }, 700);
+          });
+
+          /* Un service worker instalado puede quedarse "dormido" días sin que el
+             navegador chequee solo si hay versión nueva. Lo revisamos nosotros:
+             cada vez que se vuelve a abrir la app (foreground) y cada 30 min
+             mientras sigue abierta. */
+          var checkForUpdate = function () { reg.update().catch(function () {}); };
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') checkForUpdate();
+          });
+          setInterval(checkForUpdate, 30 * 60 * 1000);
+        }).catch(function () {});
       });
     }
   }
