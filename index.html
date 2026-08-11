@@ -325,6 +325,9 @@ input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
 .mobmenu-hubby{ width:100%; display:flex; align-items:center; gap:12px; background:var(--ink); color:#F4EDE0; border:none;
   border-radius:14px; padding:15px 16px; font-family:var(--font-body); font-size:14.5px; font-weight:600; cursor:pointer; box-shadow:0 3px 0 var(--ink-2); }
 .mobmenu-hubby svg{ color:var(--org-2); }
+.mobmenu-install{ width:100%; display:flex; align-items:center; gap:12px; background:var(--card); color:var(--ink); border:1px solid var(--line);
+  border-radius:14px; padding:14px 16px; margin-top:9px; font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 2px 0 #e0d5c3; }
+.mobmenu-install svg{ color:var(--org); }
 .mobmenu-cfg{ width:100%; display:flex; align-items:center; gap:12px; background:none; border:none; color:var(--soft);
   padding:16px 4px 2px; font-family:var(--font-body); font-size:14px; cursor:pointer; }
 @media(prefers-reduced-motion:reduce){ .mobmenu{ animation:none; } }
@@ -941,7 +944,7 @@ a{ color:inherit; text-decoration:none; }
 .dp-pop{ margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:13px; padding:12px; box-shadow:0 8px 24px -12px rgba(58,51,43,.4); }
 .dp-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .dp-month{ font-weight:700; font-size:14px; color:var(--ink); text-transform:capitalize; }
-.dp-nav{ display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:var(--field); border:1px solid var(--line); cursor:pointer; color:var(--ink); }
+.dp-nav{ display:grid; place-items:center; width:34px; height:34px; border-radius:9px; background:var(--field); border:1px solid var(--line); cursor:pointer; color:var(--ink); }
 .dp-nav:hover{ background:var(--org); color:#fff; border-color:var(--org); }
 .dp-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
 .dp-dow{ margin-bottom:5px; }
@@ -961,7 +964,7 @@ a{ color:inherit; text-decoration:none; }
 .subj-done-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
 
 /* recuperatorio de parcial (Progreso) */
-.recu-add{ background:transparent; border:none; padding:2px 0 0; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:10.5px; font-weight:600; color:var(--tx-3); }
+.recu-add{ background:transparent; border:none; padding:8px 0 6px; margin-top:-6px; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:10.5px; font-weight:600; color:var(--tx-3); }
 .recu-add:hover{ color:var(--org-deep); }
 .recu-row{ display:flex; align-items:center; gap:6px; }
 .recu-lbl{ font-size:9px; font-weight:700; color:var(--org-deep); letter-spacing:.04em; flex:0 0 auto; }

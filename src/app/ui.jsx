@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
+import { usePWAInstall } from './pwaInstall.js';
 
 /* ============================================================
    UI PRIMITIVES
@@ -87,9 +88,33 @@ const MENU_SECTIONS = [
   { id: "notas",      label: "Progreso",   icon: "target" },
   { id: "ocio",       label: "Ocio",       icon: "film" },
 ];
+/* instrucciones para instalar cuando el navegador no tiene prompt nativo (iOS Safari u otros) */
+const InstallInstructionsModal = ({ ios, onClose }) => (
+  <Modal title="Instalar StudyHub" icon="download" onClose={onClose}
+    footer={<Btn variant="primary" onClick={onClose}>Entendido</Btn>}>
+    {ios ? (
+      <div style={{ display: "grid", gap: 14 }}>
+        <div className="small" style={{ lineHeight: 1.6 }}>En Safari, tocá el ícono de <b className="tx-1">Compartir</b> (el cuadrado con la flecha hacia arriba, abajo en el medio) y después <b className="tx-1">"Agregar a pantalla de inicio"</b>.</div>
+        <div className="row" style={{ gap: 12, padding: "12px 14px", background: "var(--field)", borderRadius: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--card)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flex: "0 0 auto", color: "var(--org)" }}><Icon name="send" size={17} /></div>
+          <div className="small" style={{ color: "var(--tx-2)" }}>Compartir → Agregar a pantalla de inicio → Agregar</div>
+        </div>
+      </div>
+    ) : (
+      <div className="small" style={{ lineHeight: 1.6 }}>Buscá la opción <b className="tx-1">"Instalar app"</b> o <b className="tx-1">"Agregar a pantalla de inicio"</b> en el menú de tu navegador (⋮ o ☰, según cuál uses).</div>
+    )}
+  </Modal>
+);
+
 const MobileMenu = ({ open, section, onNav, onClose }) => {
+  const pwa = usePWAInstall();
+  const [showInstructions, setShowInstructions] = React.useState(false);
   if (!open) return null;
   const go = (id) => { onNav(id); onClose(); };
+  const install = async () => {
+    if (pwa.canPrompt) { await pwa.promptInstall(); return; }
+    setShowInstructions(true);
+  };
   return (
     <div className="mobmenu" role="dialog" aria-modal="true">
       <div className="mobmenu-top">
@@ -105,8 +130,12 @@ const MobileMenu = ({ open, section, onNav, onClose }) => {
       </nav>
       <div className="mobmenu-foot">
         <button className="mobmenu-hubby" onClick={() => go("chat")}><Icon name="chat" size={20} /> Hablar con Hubby</button>
+        {!pwa.isStandalone && (
+          <button className="mobmenu-install" onClick={install}><Icon name="download" size={18} /> Instalar la app</button>
+        )}
         <button className="mobmenu-cfg" onClick={() => go("config")}><Icon name="gear" size={19} /> Configuración</button>
       </div>
+      {showInstructions && <InstallInstructionsModal ios={pwa.isIOS} onClose={() => setShowInstructions(false)} />}
     </div>
   );
 };
