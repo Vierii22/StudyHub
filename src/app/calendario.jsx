@@ -91,29 +91,41 @@ const todayISO = () => {
    guarda el horario; falta generarlas como eventos acá).
    ============================================================ */
 
-/* ---------- modal de evento (con hora, tipo y materia) ---------- */
-const EventModal = ({ day, month, year, event, onClose }) => {
+const WEEKDAYS = [{ lbl: "Lun", dow: 1 }, { lbl: "Mar", dow: 2 }, { lbl: "Mié", dow: 3 }, { lbl: "Jue", dow: 4 }, { lbl: "Vie", dow: 5 }, { lbl: "Sáb", dow: 6 }, { lbl: "Dom", dow: 0 }];
+const isoLocal = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+
+/* ---------- modal de evento (con hora, tipo, materia y repetición) ----------
+   Tres modos, según qué se pasa:
+   · series  → editando la SERIE de un evento que se repite (editar/borrar
+     acá afecta TODAS sus ocurrencias — es una sola tarea, no N sueltas).
+   · event   → editando UN evento puntual ya guardado (y acá también se le
+     puede activar la repetición: se convierte en serie al guardar).
+   · ninguno → evento nuevo (fechas sueltas y/o repetición semanal). */
+const EventModal = ({ day, month, year, event, series, onClose }) => {
   const [data, set] = useStore();
+  const isSeries = !!series;
+  const source = series || event;
   const defaultDate = event?.date ||
     (day && month != null && year ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : todayISO());
-  const [f, setF] = React.useState(event || { date: defaultDate, time: "", title: "", color: COLORS[0], desc: "", kind: "evento", subjectId: null });
+  const [f, setF] = React.useState({
+    title: source?.title || "", time: source?.time || "", color: source?.color || COLORS[0],
+    desc: source?.desc || "", kind: source?.kind || "evento", subjectId: source?.subjectId || null,
+    important: source?.important || false, date: event?.date || defaultDate,
+  });
   const [syncTask, setSyncTask] = React.useState(false);
   const up = (k, v) => setF(x => ({ ...x, [k]: v }));
 
-  /* eventos NUEVOS: se pueden elegir varias fechas a la vez (una ocurrencia por día) */
-  const [dates, setDates] = React.useState(event ? [] : [defaultDate]);
+  /* eventos NUEVOS: se pueden elegir varias fechas sueltas a la vez (una por día, sin repetición) */
+  const [dates, setDates] = React.useState(source ? [] : [defaultDate]);
   const addDate    = (iso) => { if (iso) setDates(ds => ds.includes(iso) ? ds : [...ds, iso].sort()); };
   const removeDate = (iso) => setDates(ds => ds.filter(d => d !== iso));
   const fmtChip    = (iso) => { const p = parseDate(iso); return p ? `${p.day} ${MONTHS_ES[p.month].slice(0, 3).toLowerCase()}` : iso; };
 
-  /* repetir semanalmente: "todos los martes/jueves…" hasta una fecha → rellena los chips */
-  const WEEKDAYS = [{ lbl: "Lun", dow: 1 }, { lbl: "Mar", dow: 2 }, { lbl: "Mié", dow: 3 }, { lbl: "Jue", dow: 4 }, { lbl: "Vie", dow: 5 }, { lbl: "Sáb", dow: 6 }, { lbl: "Dom", dow: 0 }];
-  const isoLocal  = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-  /* "Hasta" por defecto: 4 meses después del día del evento (≈ fin de cuatrimestre) */
-  const defaultHasta = (() => { const d = new Date(defaultDate + "T00:00:00"); d.setMonth(d.getMonth() + 4); return isoLocal(d); })();
-  const [repDows, setRepDows] = React.useState([]);
-  const [repFrom, setRepFrom] = React.useState(defaultDate);
-  const [repTo,   setRepTo]   = React.useState(defaultHasta);
+  /* repetir semanalmente: "todos los martes/jueves…" — UNA serie, no fechas sueltas */
+  const defaultHasta = (() => { const d = new Date(defaultDate + "T00:00:00"); d.setMonth(d.getMonth() + 4); return isoLocal(d); })(); /* ≈ fin de cuatrimestre */
+  const [repDows, setRepDows] = React.useState(series?.dows || []);
+  const [repFrom, setRepFrom] = React.useState(series?.from || defaultDate);
+  const [repTo,   setRepTo]   = React.useState(series?.until || defaultHasta);
   const toggleDow = (dow) => setRepDows(ds => ds.includes(dow) ? ds.filter(x => x !== dow) : [...ds, dow]);
   /* cuántas fechas caerían con la selección actual (para el preview en vivo) */
   const weeklyDates = () => {
@@ -127,23 +139,38 @@ const EventModal = ({ day, month, year, event, onClose }) => {
     while (d <= end && guard < 800) { if (wanted.has(d.getDay())) out.push(isoLocal(d)); d.setDate(d.getDate() + 1); guard++; }
     return out;
   };
-  const addWeekly = () => {
-    if (!repDows.length) return toast("Tocá al menos un día de la semana");
-    if (!repTo) return toast("Elegí hasta qué fecha repetir");
-    if (repTo < (repFrom || defaultDate)) return toast("La fecha 'hasta' es anterior a 'desde'");
-    const out = weeklyDates();
-    if (!out.length) return toast("No hay días que coincidan en ese rango");
-    setDates(ds => Array.from(new Set([...ds, ...out])).sort());
-    toast(`${out.length} fecha${out.length !== 1 ? "s" : ""} agregada${out.length !== 1 ? "s" : ""} ✓`);
-  };
 
-  const existingTaskId = event && Object.keys(data.taskCalendarMap || {}).find(k => data.taskCalendarMap[k] === event.id);
+  const existingTaskId = event && !series && Object.keys(data.taskCalendarMap || {}).find(k => data.taskCalendarMap[k] === event.id);
   const hasLinkedTask = !!existingTaskId;
 
   const save = () => {
     if (!f.title.trim()) return toast("Poné un título");
 
-    /* edición: sigue siendo una sola fecha (esta ocurrencia) */
+    /* si hay días de semana marcados, esto es (o se convierte en) UNA serie que se repite */
+    if (repDows.length > 0) {
+      if (!repFrom || !repTo) return toast("Completá 'desde' y 'hasta'");
+      if (repTo < repFrom) return toast("La fecha 'hasta' es anterior a 'desde'");
+      const seriesId = series?.id || uid();
+      const rec = { id: seriesId, title: f.title.trim(), time: f.time, kind: f.kind || "evento", color: f.color, subjectId: f.subjectId, desc: f.desc, important: f.important, dows: repDows, from: repFrom, until: repTo };
+      set(s => {
+        if (!s.recurringEvents) s.recurringEvents = [];
+        const idx = s.recurringEvents.findIndex(r => r.id === seriesId);
+        if (idx >= 0) s.recurringEvents[idx] = rec; else s.recurringEvents.push(rec);
+        /* si veníamos de un evento puntual, se convierte: se borra el evento suelto original */
+        if (event && !series) {
+          s.events = s.events.filter(e => e.id !== event.id);
+          if (existingTaskId) { s.tasks = (s.tasks || []).filter(t => t.id !== existingTaskId); if (s.taskCalendarMap) delete s.taskCalendarMap[existingTaskId]; }
+        }
+      });
+      toast(series ? "Repetición actualizada — se edita en todas las fechas" : "Listo, se repite cada semana ✓");
+      onClose();
+      return;
+    }
+
+    /* estábamos editando una serie y se sacaron todos los días: no tiene sentido, avisamos */
+    if (isSeries) return toast("Elegí al menos un día, o usá \"Eliminar\" para borrar la repetición");
+
+    /* edición de un evento puntual ya guardado (sin repetición) */
     if (event) {
       if (!f.date) return toast("Elegí una fecha");
       const ev = { ...f, id: event.id, day: parseInt(f.date.slice(8, 10)) };
@@ -153,7 +180,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
       return;
     }
 
-    /* nuevo: una o varias fechas → un evento por día */
+    /* nuevo, sin repetición: una o varias fechas sueltas → un evento por día */
     const ds = dates.length ? dates : (f.date ? [f.date] : []);
     if (!ds.length) return toast("Elegí al menos una fecha");
     const created = ds.map(date => ({ ...f, date, id: uid(), day: parseInt(date.slice(8, 10)) }));
@@ -162,7 +189,14 @@ const EventModal = ({ day, month, year, event, onClose }) => {
     toast(created.length === 1 ? "Evento guardado" : `${created.length} eventos creados ✓`);
     onClose();
   };
+
   const del = () => {
+    if (isSeries) {
+      set(s => { s.recurringEvents = (s.recurringEvents || []).filter(r => r.id !== series.id); });
+      toast("Repetición eliminada (todas las fechas)");
+      onClose();
+      return;
+    }
     if (event) {
       set(s => {
         s.events = s.events.filter(e => e.id !== event.id);
@@ -173,61 +207,71 @@ const EventModal = ({ day, month, year, event, onClose }) => {
     onClose();
   };
 
+  /* panel "¿se repite?" — reutilizado al crear y al editar un evento suelto */
+  const RepeatPanel = ({ optional }) => (
+    <div className="rep-panel">
+      <div className="rep-title"><Icon name="refresh" size={15} /> <span style={{ flex: 1 }}>{optional ? "¿Se repite? Tocá los días" : "Se repite estos días"}</span>{optional && <span className="rep-opt">opcional</span>}</div>
+      <div className="rep-days">
+        {WEEKDAYS.map(w => (
+          <button type="button" key={w.dow} className={`rep-day${repDows.includes(w.dow) ? " on" : ""}`} onClick={() => toggleDow(w.dow)}>{w.lbl}</button>
+        ))}
+      </div>
+      {repDows.length > 0 && (
+        <>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+            <Field label="Desde"><DatePicker value={repFrom} onChange={setRepFrom} allowClear={false} /></Field>
+            <Field label="Hasta"><DatePicker value={repTo} onChange={setRepTo} allowClear={false} placeholder="Fecha final" /></Field>
+          </div>
+          {(() => { const n = weeklyDates().length; return (
+            <div className="rep-hint">{n > 0 ? `Se repite en ${n} fecha${n !== 1 ? "s" : ""} — es UNA sola, editable de una` : "Elegí un rango de fechas válido"}</div>
+          ); })()}
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <Modal title={event ? "Editar evento" : "Nuevo evento"} icon="calendar" onClose={onClose}
-      footer={<><span className="link" style={{ color: event ? "var(--org-deep)" : "var(--tx-3)" }} onClick={del}>{event ? "Eliminar" : "Cancelar"}</span><Btn variant="primary" onClick={save}>Guardar evento</Btn></>}>
+    <Modal title={isSeries ? "Editar repetición" : event ? "Editar evento" : "Nuevo evento"} icon="calendar" onClose={onClose}
+      footer={<><span className="link" style={{ color: source ? "var(--org-deep)" : "var(--tx-3)" }} onClick={del}>{isSeries ? "Eliminar repetición" : event ? "Eliminar" : "Cancelar"}</span><Btn variant="primary" onClick={save}>Guardar evento</Btn></>}>
       <div style={{ display: "grid", gap: 14 }}>
         <Field label="Título *"><input className="input" value={f.title} onChange={e => up("title", e.target.value)} autoFocus /></Field>
-        {event ? (
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
-            <Field label="Fecha"><input className="input" type="date" value={f.date || ""} onChange={e => up("date", e.target.value)} /></Field>
-            <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
-            <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
-          </div>
+
+        {isSeries ? (
+          <RepeatPanel />
+        ) : event ? (
+          <>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+              <Field label="Fecha"><input className="input" type="date" value={f.date || ""} onChange={e => up("date", e.target.value)} disabled={repDows.length > 0} /></Field>
+              <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
+              <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
+            </div>
+            <RepeatPanel optional />
+          </>
         ) : (
           <>
-            <Field label="Fechas" hint={dates.length > 1 ? `${dates.length} días` : "podés elegir varias"}>
-              <input className="input" type="date" value="" onChange={e => { addDate(e.target.value); e.target.value = ""; }} />
-              {dates.length > 0 && (
-                <div className="date-chips">
-                  {dates.map(d => (
-                    <span key={d} className="date-chip">
-                      {fmtChip(d)}
-                      <button type="button" title="Quitar" onClick={() => removeDate(d)}><Icon name="x" size={12} /></button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </Field>
-
-            {/* repetir semanalmente: todos los martes/jueves… (siempre visible) */}
-            <div className="rep-panel">
-              <div className="rep-title"><Icon name="refresh" size={15} /> <span style={{ flex: 1 }}>¿Se repite? Tocá los días</span><span className="rep-opt">opcional</span></div>
-              <div className="rep-days">
-                {WEEKDAYS.map(w => (
-                  <button type="button" key={w.dow} className={`rep-day${repDows.includes(w.dow) ? " on" : ""}`} onClick={() => toggleDow(w.dow)}>{w.lbl}</button>
-                ))}
-              </div>
-              {repDows.length > 0 && (
-                <>
-                  <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
-                    <Field label="Desde"><DatePicker value={repFrom} onChange={setRepFrom} allowClear={false} /></Field>
-                    <Field label="Hasta"><DatePicker value={repTo} onChange={setRepTo} allowClear={false} placeholder="Fecha final" /></Field>
+            {repDows.length === 0 && (
+              <Field label="Fechas" hint={dates.length > 1 ? `${dates.length} días` : "podés elegir varias"}>
+                <input className="input" type="date" value="" onChange={e => { addDate(e.target.value); e.target.value = ""; }} />
+                {dates.length > 0 && (
+                  <div className="date-chips">
+                    {dates.map(d => (
+                      <span key={d} className="date-chip">
+                        {fmtChip(d)}
+                        <button type="button" title="Quitar" onClick={() => removeDate(d)}><Icon name="x" size={12} /></button>
+                      </span>
+                    ))}
                   </div>
-                  {(() => { const n = weeklyDates().length; return (
-                    <div className="rep-hint">{n > 0 ? `Se van a agregar ${n} fecha${n !== 1 ? "s" : ""} 👇` : "Elegí un rango de fechas válido"}</div>
-                  ); })()}
-                  <button type="button" className="rep-add" onClick={addWeekly}><Icon name="plus" size={14} /> Agregar esos días</button>
-                </>
-              )}
-            </div>
-
+                )}
+              </Field>
+            )}
+            <RepeatPanel optional />
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <Field label="Hora"><input className="input" type="time" value={f.time || ""} onChange={e => up("time", e.target.value)} /></Field>
               <Field label="Color"><div className="swatches">{COLORS.map(c => <div key={c} className={`swatch${f.color === c ? " sel" : ""}`} style={{ background: c }} onClick={() => up("color", c)} />)}</div></Field>
             </div>
           </>
         )}
+
         <Field label="Tipo">
           <Seg opts={[{ id: "evento", label: "Evento" }, { id: "clase", label: "Clase" }, { id: "estudio", label: "Estudiar" }, { id: "parcial", label: "Parcial" }, { id: "entrega", label: "Entrega" }]}
             value={f.kind || "evento"} onChange={v => up("kind", v)} />
@@ -248,7 +292,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
           </Field>
         )}
         <Field label="Descripción"><textarea className="input" rows={2} value={f.desc} onChange={e => up("desc", e.target.value)} /></Field>
-        {!event && (
+        {!event && !series && repDows.length === 0 && (
           <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 10, background: syncTask ? "var(--field)" : "var(--surface-2)", cursor: "pointer", transition: "background .15s" }} onClick={() => setSyncTask(v => !v)}>
             <div className={`cbox${syncTask ? " on" : ""}`} style={{ flexShrink: 0 }}>{syncTask && <Icon name="check" size={13} color="#fff" />}</div>
             <div>
@@ -257,7 +301,7 @@ const EventModal = ({ day, month, year, event, onClose }) => {
             </div>
           </div>
         )}
-        {event && hasLinkedTask && (
+        {event && !series && hasLinkedTask && (
           <div className="mono" style={{ fontSize: 11, color: "var(--org-deep)", background: "var(--field)", padding: "8px 12px", borderRadius: 8 }}>
             ✓ Este evento tiene una tarea vinculada
           </div>
@@ -366,7 +410,7 @@ const WeekView = ({ viewDate, events, subjects, onDay, onEvent, onMoveEvent }) =
                     }}>{d.getDate()}</span>
                 </div>
                 <DayColumn iso={iso}>
-                  {dayEvents.map(e => e.studyPlanSubjectId
+                  {dayEvents.map(e => (e.studyPlanSubjectId || e.recurringId)
                     ? <EventCard key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />
                     : <DraggableEvent key={e.id} e={e} subj={subjOf(e, subjects)} onClick={() => onEvent(e)} />
                   )}
@@ -501,6 +545,34 @@ function deriveStudyEvents(subjects) {
   return out;
 }
 
+/* ---------- eventos que SE REPITEN (ej: "todos los miércoles") ----------
+   Se guarda UNA sola serie (título/hora/tipo/color + días de semana + rango
+   de fechas); acá se expande en ocurrencias sólo para MOSTRARLAS en el
+   calendario — no son eventos independientes. Editar cualquier ocurrencia
+   edita la serie entera (mismo patrón que "Estudiar · materia" arriba). */
+function deriveRecurringEvents(list) {
+  const out = [];
+  (list || []).forEach(rec => {
+    const wanted = new Set(rec.dows || []);
+    if (!wanted.size || !rec.from || !rec.until) return;
+    const d = new Date(rec.from + "T00:00:00"), end = new Date(rec.until + "T00:00:00");
+    let guard = 0;
+    while (d <= end && guard < 800) {
+      if (wanted.has(d.getDay())) {
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        out.push({
+          id: `rec-${rec.id}-${iso}`, title: rec.title, date: iso, day: d.getDate(),
+          time: rec.time || "", kind: rec.kind || "evento", color: rec.color,
+          subjectId: rec.subjectId, desc: rec.desc, important: rec.important,
+          recurringId: rec.id,
+        });
+      }
+      d.setDate(d.getDate() + 1); guard++;
+    }
+  });
+  return out;
+}
+
 /* ---------- pantalla principal ---------- */
 const Calendario = ({ onOpenSubjectPlanner }) => {
   const [data, set] = useStore();
@@ -516,8 +588,15 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
     return () => clearInterval(iv);
   }, [set]);
 
-  const events = [...(data.events || []), ...deriveStudyEvents(data.subjects)];
-  const onEventClick = (ev) => { if (ev.studyPlanSubjectId) onOpenSubjectPlanner && onOpenSubjectPlanner(ev.studyPlanSubjectId); else setModal({ event: ev }); };
+  const events = [...(data.events || []), ...deriveStudyEvents(data.subjects), ...deriveRecurringEvents(data.recurringEvents)];
+  const onEventClick = (ev) => {
+    if (ev.studyPlanSubjectId) { onOpenSubjectPlanner && onOpenSubjectPlanner(ev.studyPlanSubjectId); return; }
+    if (ev.recurringId) {
+      const series = (data.recurringEvents || []).find(r => r.id === ev.recurringId);
+      if (series) { setModal({ series }); return; }
+    }
+    setModal({ event: ev });
+  };
   const today = new Date();
 
   const label = vista === "año"
@@ -603,7 +682,7 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
         onEventClick={(e) => { setDayModal(null); onEventClick(e); }}
         onNew={() => { const p = parseDate(dayModal); setDayModal(null); setModal({ day: p.day, month: p.month, year: p.year }); }} />}
 
-      {modal && <EventModal day={modal.day} month={modal.month} year={modal.year} event={modal.event} onClose={() => setModal(null)} />}
+      {modal && <EventModal day={modal.day} month={modal.month} year={modal.year} event={modal.event} series={modal.series} onClose={() => setModal(null)} />}
     </div>
   );
 };

@@ -8,7 +8,7 @@ export const DOMAIN_MAP = {
   sh_profile:  ['profile', 'streak'],
   sh_tasks:    ['tasks', 'taskCalendarMap', 'missions'],
   sh_subjects: ['subjects'],
-  sh_calendar: ['events'],
+  sh_calendar: ['events', 'recurringEvents'],
   sh_diary:    ['journal', 'journalDraft', 'morning'],
   sh_finance:  ['finance'],
   sh_settings: ['settings'],
