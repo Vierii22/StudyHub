@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, todayLocal } from './store.jsx';
 import { SubjectModal, SubjectFiles } from './facultad.jsx';
-import { DatePicker } from './ui.jsx';
+import { DatePicker, Modal, Field, Btn } from './ui.jsx';
 
 /* ============================================================
    INTERIOR DE UNA MATERIA — rediseño cálido (mockup v5)
@@ -269,6 +269,34 @@ const ClasesCard = ({ clases, onChange }) => {
   );
 };
 
+/* ── editar un parcial/TP ya creado (antes no se podía tocar, solo borrar) ── */
+const EditParcialModal = ({ item, onClose, onSave, onDelete }) => {
+  const [t, setT] = React.useState(item.t || "");
+  const [date, setDate] = React.useState(item.date || "");
+  const [important, setImportant] = React.useState(!!item.important);
+
+  const save = () => {
+    if (!t.trim()) return toast("Poné un nombre");
+    onSave({ t: t.trim(), date, important });
+    onClose();
+  };
+  const del = () => { onDelete(); onClose(); };
+
+  return (
+    <Modal title="Editar parcial/TP" icon="calendar" onClose={onClose}
+      footer={<><span className="link" style={{ color: "var(--org-deep)" }} onClick={del}>Eliminar</span><Btn variant="primary" onClick={save}>Guardar</Btn></>}>
+      <div style={{ display: "grid", gap: 14 }}>
+        <Field label="Título *"><input className="input" value={t} onChange={e => setT(e.target.value)} autoFocus /></Field>
+        <Field label="Fecha" hint="opcional"><DatePicker value={date} onChange={setDate} placeholder="Sin fecha" /></Field>
+        <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 10, background: important ? "var(--field)" : "var(--surface-2)", cursor: "pointer", transition: "background .15s" }} onClick={() => setImportant(v => !v)}>
+          <div className={`cbox${important ? " on" : ""}`} style={{ flexShrink: 0 }}>{important && <Icon name="check" size={13} color="#fff" />}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Icon name="star" size={13} color="var(--org)" /> Destacar en el calendario</div>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) => {
   const [data, set] = useStore();
   const s = data.subjects.find(x => x.id === subjectId);
@@ -280,6 +308,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const [pTitle, setPTitle] = React.useState("");
   const [pDate, setPDate] = React.useState("");
   const [pImportant, setPImportant] = React.useState(false);
+  const [editFechaIdx, setEditFechaIdx] = React.useState(null); /* qué parcial/TP se está editando */
   React.useEffect(() => {
     if (autoOpenPlanner) { setPlannerOpen(true); onPlannerConsumed && onPlannerConsumed(); }
   }, [autoOpenPlanner]);
@@ -373,6 +402,30 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
     const item = list[i];
     if (item?.eventId) st.events = (st.events || []).filter(e => e.id !== item.eventId);
     sub.lists = { ...(sub.lists || {}), fechas: list.filter((_, j) => j !== i) };
+  });
+  /* editar un parcial/TP ya creado — mantiene sincronizado el evento vinculado
+     del calendario (lo actualiza, lo crea si antes no tenía fecha, o lo borra
+     si le sacaron la fecha) */
+  const editFecha = (i, patch) => set(st => {
+    const sub = st.subjects.find(x => x.id === subjectId);
+    const list = sub.lists?.fechas || [];
+    const item = list[i];
+    if (!item) return;
+    const next = { ...item, ...patch };
+    if (!st.events) st.events = [];
+    if (next.date) {
+      const ev = next.eventId ? st.events.find(e => e.id === next.eventId) : null;
+      if (ev) { ev.title = next.t; ev.date = next.date; ev.day = parseInt(next.date.slice(8, 10)); ev.important = next.important; }
+      else {
+        const eventId = uid();
+        st.events.push({ id: eventId, title: next.t, date: next.date, day: parseInt(next.date.slice(8, 10)), kind: "parcial", important: next.important, subjectId, color: sub?.color || "#D9551F" });
+        next.eventId = eventId;
+      }
+    } else if (next.eventId) {
+      st.events = st.events.filter(e => e.id !== next.eventId);
+      next.eventId = null;
+    }
+    sub.lists = { ...(sub.lists || {}), fechas: list.map((x, j) => j === i ? next : x) };
   });
   const toggleFechaImportant = (i) => set(st => {
     const sub = st.subjects.find(x => x.id === subjectId);
@@ -548,9 +601,10 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
           {(fechas.length + tps.length) === 0 && <div style={{ fontSize: 13, color: "var(--tx-3)" }}>Sin fechas cargadas.</div>}
           {fechas.map((it, i) => (
             <div key={it.id || "f" + i} className="parcial-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", fontSize: 13.5, borderBottom: "1px solid #eee4d4" }}>
-              <span style={{ flex: 1, minWidth: 0 }}>{it.t}</span>
-              {it.date && <span className="mono" style={{ fontSize: 10.5, color: it.important ? "var(--org-deep)" : "var(--tx-3)", flex: "0 0 auto" }}>{fmtFechaShort(it.date)}</span>}
+              <span style={{ flex: 1, minWidth: 0, cursor: "pointer" }} title="Tocar para editar" onClick={() => setEditFechaIdx(i)}>{it.t}</span>
+              {it.date && <span className="mono" style={{ fontSize: 10.5, color: it.important ? "var(--org-deep)" : "var(--tx-3)", flex: "0 0 auto", cursor: "pointer" }} onClick={() => setEditFechaIdx(i)}>{fmtFechaShort(it.date)}</span>}
               {it.date && <span onClick={() => toggleFechaImportant(i)} title={it.important ? "Quitar destacado" : "Destacar en el calendario"} style={{ cursor: "pointer", display: "flex", flex: "0 0 auto" }}><Icon name="star" size={14} color={it.important ? "var(--org)" : "var(--tx-3)"} /></span>}
+              <span onClick={() => setEditFechaIdx(i)} title="Editar" style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto", display: "flex" }}><Icon name="edit" size={13} /></span>
               <span onClick={() => delFecha(i)} style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="x" size={13} /></span>
             </div>
           ))}
@@ -585,6 +639,14 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
       </div>
 
       {editModal && <SubjectModal subject={s} onClose={() => setEditModal(false)} />}
+      {editFechaIdx != null && fechas[editFechaIdx] && (
+        <EditParcialModal
+          item={fechas[editFechaIdx]}
+          onClose={() => setEditFechaIdx(null)}
+          onSave={patch => editFecha(editFechaIdx, patch)}
+          onDelete={() => delFecha(editFechaIdx)}
+        />
+      )}
     </div>
   );
 };
