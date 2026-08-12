@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast } from './store.jsx';
 import { Btn, MonoLabel, PageHead, Field, Toggle, InstallInstructionsModal } from './ui.jsx';
 import { usePWAInstall } from './pwaInstall.js';
+import { usePushNotifications } from './pushNotifications.js';
 import { supabase } from '../supabase.js';
 import { SupabaseStorage } from '../storage.js';
 
@@ -57,6 +58,54 @@ const InstallPWA = () => {
         <Btn variant="primary" icon="download" onClick={install}>Instalar</Btn>
       </div>
       {showInstructions && <InstallInstructionsModal ios={pwa.isIOS} onClose={() => setShowInstructions(false)} />}
+    </div>
+  );
+};
+
+/* ── NOTIFICACIONES PUSH — avisos aunque la app esté cerrada ── */
+const NotificationsCard = () => {
+  const { status, enable, disable } = usePushNotifications();
+  if (status === "unsupported" || status === "checking") return null;
+
+  if (status === "denied") return (
+    <div className="card card-2" style={{ marginTop: 12, padding: "16px 20px" }}>
+      <div className="row" style={{ gap: 12 }}>
+        <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--field)", color: "var(--org)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="bell" size={19} /></span>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Notificaciones bloqueadas</div>
+          <div className="small" style={{ marginTop: 3 }}>Las bloqueaste antes — activalas desde los permisos del navegador para este sitio.</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (status === "subscribed") return (
+    <div className="card card-2" style={{ marginTop: 12, padding: "16px 20px" }}>
+      <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
+        <div className="row" style={{ gap: 12 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--green-bg)", color: "#2f5e10", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="check" size={19} /></span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Notificaciones activadas</div>
+            <div className="small" style={{ marginTop: 3 }}>Te avisamos lo de mañana, aunque no tengas la app abierta.</div>
+          </div>
+        </div>
+        <span className="link" style={{ color: "var(--tx-3)" }} onClick={disable}>Desactivar</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="card card-2" style={{ marginTop: 12, padding: "16px 20px" }}>
+      <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
+        <div className="row" style={{ gap: 12 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--field)", color: "var(--org)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="bell" size={19} /></span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Activar notificaciones</div>
+            <div className="small" style={{ marginTop: 3 }}>Un aviso con lo de mañana, sin abrir la app.</div>
+          </div>
+        </div>
+        <Btn variant="primary" icon="bell" onClick={enable}>Activar</Btn>
+      </div>
     </div>
   );
 };
@@ -355,6 +404,9 @@ const ConfigSection = ({ onLogout, initialTab }) => {
 
             {/* Instalar como app */}
             <InstallPWA />
+
+            {/* Notificaciones push — reemplazo del bot de Telegram para los avisos */}
+            <NotificationsCard />
 
             <button className="btn-soft" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={() => window.dispatchEvent(new CustomEvent("sh:open-tutorial"))}>
               <Icon name="idea" size={15} /> Ver el tutorial de nuevo

@@ -1,4 +1,4 @@
-const CACHE = 'studyhub-v6-autoupdate';
+const CACHE = 'studyhub-v7-push';
 
 const PRECACHE = [
   '/',
@@ -56,4 +56,32 @@ self.addEventListener('fetch', e => {
         )
     );
   }
+});
+
+// ── notificaciones push (reemplaza al bot de Telegram para los avisos) ──
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { title: 'StudyHub', body: e.data ? e.data.text() : '' }; }
+  const title = data.title || 'StudyHub';
+  const options = {
+    body: data.body || '',
+    icon: '/assets/icon-192.png',
+    badge: '/assets/icon-192.png',
+    data: { url: data.url || '/' },
+    tag: data.tag || 'studyhub-reminder',
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
 });
