@@ -36,23 +36,32 @@ module.exports = async function handler(req, res) {
     const byUser = {};
     for (const s of subs || []) (byUser[s.user_id] = byUser[s.user_id] || []).push(s);
 
+    /* modo prueba: ?test=1 — manda un push de prueba a todos los suscriptos,
+       sin importar si tienen algo para mañana (para poder probar al toque) */
+    const isTest = req.query?.test === '1' || req.query?.test === 'true';
+
     let enviados = 0, fallidos = 0;
 
     for (const userId of Object.keys(byUser)) {
       try {
-        const [{ data: cal }, { data: tasksDom }] = await Promise.all([
-          supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_calendar').maybeSingle(),
-          supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_tasks').maybeSingle(),
-        ]);
-        const events = ((cal?.value?.events) || []).filter(e => e.date === manana);
-        const tasks  = ((tasksDom?.value?.tasks) || []).filter(t => !t.done && t.dueDate === manana);
-        if (!events.length && !tasks.length) continue;
+        let payload;
+        if (isTest) {
+          payload = JSON.stringify({ title: '🔔 StudyHub', body: 'Notificación de prueba — si ves esto, ¡funciona! 🎉', url: '/?section=dashboard' });
+        } else {
+          const [{ data: cal }, { data: tasksDom }] = await Promise.all([
+            supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_calendar').maybeSingle(),
+            supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_tasks').maybeSingle(),
+          ]);
+          const events = ((cal?.value?.events) || []).filter(e => e.date === manana);
+          const tasks  = ((tasksDom?.value?.tasks) || []).filter(t => !t.done && t.dueDate === manana);
+          if (!events.length && !tasks.length) continue;
 
-        const lines = [
-          ...events.map(e => `📅 ${e.title}${e.important ? ' ⭐' : ''}`),
-          ...tasks.map(t => `✅ ${t.t}`),
-        ];
-        const payload = JSON.stringify({ title: '🔔 Para mañana', body: lines.join('\n'), url: '/?section=dashboard' });
+          const lines = [
+            ...events.map(e => `📅 ${e.title}${e.important ? ' ⭐' : ''}`),
+            ...tasks.map(t => `✅ ${t.t}`),
+          ];
+          payload = JSON.stringify({ title: '🔔 Para mañana', body: lines.join('\n'), url: '/?section=dashboard' });
+        }
 
         for (const sub of byUser[userId]) {
           try {
