@@ -12,22 +12,27 @@ function tomorrowAR() {
 }
 
 module.exports = async function handler(req, res) {
-  const auth = req.headers.authorization || '';
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'unauthorized' });
-  }
-
-  const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY;
-  const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return res.status(500).json({ error: 'Faltan VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY' });
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: 'Faltan las credenciales de Supabase' });
-
-  webpush.setVapidDetails('mailto:soporte@studyhub.app', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
+  let stage = 'auth';
   try {
-    const manana = tomorrowAR();
+    const auth = req.headers.authorization || '';
+    if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
 
+    stage = 'env-check';
+    const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY;
+    const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return res.status(500).json({ stage, error: 'Faltan VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ stage, error: 'Faltan las credenciales de Supabase' });
+
+    stage = 'vapid-setup';
+    webpush.setVapidDetails('mailto:soporte@studyhub.app', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+    stage = 'supabase-client';
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    stage = 'fetch-subscriptions';
+    const manana = tomorrowAR();
     const { data: subs, error: subsErr } = await supabase
       .from('push_subscriptions')
       .select('id, user_id, endpoint, p256dh, auth_key');
@@ -41,7 +46,9 @@ module.exports = async function handler(req, res) {
     const isTest = req.query?.test === '1' || req.query?.test === 'true';
 
     let enviados = 0, fallidos = 0;
+    const detalle = [];
 
+    stage = 'loop-usuarios';
     for (const userId of Object.keys(byUser)) {
       try {
         let payload;
@@ -69,6 +76,7 @@ module.exports = async function handler(req, res) {
             enviados++;
           } catch (err) {
             fallidos++;
+            detalle.push({ subId: sub.id, error: err.message, code: err.statusCode || err.code || null });
             /* suscripción vencida/inválida → la limpiamos */
             if (err.statusCode === 404 || err.statusCode === 410) {
               await supabase.from('push_subscriptions').delete().eq('id', sub.id);
@@ -76,13 +84,14 @@ module.exports = async function handler(req, res) {
           }
         }
       } catch (e) {
+        detalle.push({ userId, error: e.message });
         console.error('reminder error for', userId, e.message);
       }
     }
 
-    res.json({ ok: true, enviados, fallidos, usuarios: Object.keys(byUser).length });
+    res.json({ ok: true, enviados, fallidos, usuarios: Object.keys(byUser).length, detalle });
   } catch (e) {
-    console.error('send-reminders error:', e);
-    res.status(500).json({ error: e.message });
+    console.error('send-reminders error at stage', stage, ':', e);
+    res.status(500).json({ stage, error: e.message, name: e.name, code: e.code || e.statusCode || null });
   }
 };
