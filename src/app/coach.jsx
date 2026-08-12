@@ -4,6 +4,7 @@ import { getAllTasks, todayLocal } from './store.jsx';
 import { Hubby } from './ui.jsx';
 import { buildSystemPrompt } from './aiPrompt.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
+import { ActionEditor } from './actionReview.jsx';
 
 const COACH_POSE = { alta: "vamos", media: "vamos", baja: "idea", cero: "contento" };
 
@@ -221,6 +222,7 @@ const CaptureBar = ({ data }) => {
     setResult(r => ({ ...r, confirm: [], done: [...(r.done || []), ...done] }));
   };
   const cancelPending = () => setResult(r => ({ ...r, confirm: [], canceled: true }));
+  const editPending = (k, editedAction) => setResult(r => ({ ...r, confirm: r.confirm.map((a, ai) => ai === k ? editedAction : a) }));
 
   return (
     <div>
@@ -249,10 +251,15 @@ const CaptureBar = ({ data }) => {
           )}
           {result.confirm?.length > 0 && (
             <div className="chat-confirm" style={{ marginTop: 8 }}>
-              <div className="chat-confirm-t"><Icon name="trash" size={14} /> ¿Confirmás?</div>
-              {result.confirm.map((a, k) => <div key={k} className="chat-confirm-i">{describeAction(a)}</div>)}
+              <div className="chat-confirm-t"><Icon name="edit" size={14} /> Revisá antes de guardar</div>
+              {result.confirm.map((a, k) => (
+                <div key={k}>
+                  <div className="chat-confirm-i">{describeAction(a)}</div>
+                  <ActionEditor action={a} subjects={data.subjects} onChange={edited => editPending(k, edited)} />
+                </div>
+              ))}
               <div className="chat-confirm-btns">
-                <button className="chat-confirm-yes" onClick={confirmPending}>Sí, hacelo</button>
+                <button className="chat-confirm-yes" onClick={confirmPending}>Aceptar</button>
                 <button className="chat-confirm-no" onClick={cancelPending}>Cancelar</button>
               </div>
             </div>

@@ -273,4 +273,5 @@ export {
   TerminalCorners, Btn, Chip, MonoLabel, Hubby, HubbyChatFab,
   Header, MobileMenu, PageHead, Seg, Field,
   Modal, Toggle, Empty, SubjectDot, DatePicker,
+  InstallInstructionsModal,
 };

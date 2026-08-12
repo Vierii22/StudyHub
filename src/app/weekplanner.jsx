@@ -3,21 +3,33 @@ import React from 'react';
 import { DndContext, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast } from './store.jsx';
+import { useStore, uid, toast, getAllTasks } from './store.jsx';
 import { syncTaskToCalendar, formatDateToDue } from './syncEngine.js';
 import { Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPlan } from './facultad2.jsx';
 
 /* ============================================================
    ORGANIZAR LA SEMANA — planificador general de TAREAS.
    Mismo patrón visual/interacción que "Planificar la semana"
-   por materia (facultad2.jsx), pero para todas las tareas
-   pendientes sin fecha: arrastrar (o tocar y tocar la celda)
-   al día × franja de la semana. Al ubicarla, se guarda la fecha
-   en la tarea y se sincroniza sola con el Calendario.
+   por materia (facultad2.jsx), pero para TODAS las tareas
+   pendientes sin fecha — las generales Y las que viven adentro
+   de cada materia ("Qué tengo que hacer", getAllTasks) — arrastrar
+   (o tocar y tocar la celda) al día × franja de la semana. Al
+   ubicarla se guarda la fecha en la tarea REAL (donde sea que
+   viva) y se sincroniza sola con el Calendario, así se ve igual
+   acá y en la materia — es el mismo dato, no una copia.
    ============================================================ */
 
+/* encuentra dónde vive de verdad una tarea (global o adentro de una materia) */
+function findTaskLocation(s, taskId) {
+  if ((s.tasks || []).some(t => t.id === taskId)) return { kind: "global" };
+  for (const sub of (s.subjects || [])) {
+    if ((sub.lists?.tareas || []).some(t => t.id === taskId)) return { kind: "subject", subjectId: sub.id };
+  }
+  return null;
+}
+
 /* tarjeta de tarea arrastrable/tocable — mismo look que PlanChip del planificador por materia */
-const TaskChip = ({ task, placedId, selected, onSelect }) => {
+const TaskChip = ({ task, subj, placedId, selected, onSelect }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: placedId ? `plan-${placedId}` : `pool-${task.id}`, data: { taskId: task.id, placedId } });
   const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
   const prioColor = task.prio === "alta" ? "#B8461A" : task.prio === "baja" ? "#7E8A4F" : "#C68A2E";
@@ -25,7 +37,8 @@ const TaskChip = ({ task, placedId, selected, onSelect }) => {
     <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect}
       style={{ ...style, display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", cursor: "grab", touchAction: "none" }}>
       <span style={{ width: 6, height: 6, borderRadius: 99, background: selected ? "#fff" : prioColor, flex: "0 0 auto" }} />
-      {task.t}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.t}</span>
+      {subj && <span className="mono" style={{ fontSize: 9, color: selected ? "#fff" : "var(--tx-3)", flex: "0 0 auto" }}>· {subj.name}</span>}
     </div>
   );
 };
@@ -36,7 +49,8 @@ const WeekPlanner = ({ onBack }) => {
   const [sel, setSel] = React.useState(null); /* id de tarea seleccionada para "tocar y colocar" */
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const tasks = data.tasks || [];
+  const subjById = (id) => (data.subjects || []).find(s => s.id === id);
+  const tasks = getAllTasks(data); /* generales + las "Qué tengo que hacer" de cada materia */
   const pending = tasks.filter(t => !t.done);
   const unlocated = pending.filter(t => !t.dueDate);
 
@@ -44,25 +58,28 @@ const WeekPlanner = ({ onBack }) => {
   const weekIsos = weekDays.map(isoOfPlan);
   const placedThisWeek = pending.filter(t => t.dueDate && weekIsos.includes(t.dueDate));
 
-  /* ubicar una tarea en día×franja: guarda fecha en la tarea y sincroniza el evento del calendario */
+  /* encuentra y muta la tarea DONDE SEA que viva de verdad (global o adentro de una materia) —
+     así queda sincronizada con "Qué tengo que hacer" de esa materia, es el mismo dato */
+  const mutateTask = (s, taskId, patch) => {
+    const loc = findTaskLocation(s, taskId);
+    if (!loc) return;
+    const t = loc.kind === "global"
+      ? s.tasks.find(x => x.id === taskId)
+      : s.subjects.find(x => x.id === loc.subjectId)?.lists?.tareas?.find(x => x.id === taskId);
+    if (t) Object.assign(t, patch);
+  };
+
+  /* ubicar una tarea en día×franja: guarda fecha en la tarea real y sincroniza el evento del calendario */
   const placeTask = (taskId, iso, franja) => {
-    set(s => {
-      const t = s.tasks.find(x => x.id === taskId);
-      if (!t) return;
-      t.dueDate = iso;
-      t.due = formatDateToDue(iso);
-      t.franja = franja;
-    });
-    /* Store.set muta en el lugar: `data` ya refleja el cambio acá mismo */
-    const updated = data.tasks.find(t => t.id === taskId);
+    set(s => mutateTask(s, taskId, { dueDate: iso, due: formatDateToDue(iso), franja }));
+    /* Store.set muta en el lugar: getAllTasks(data) ya refleja el cambio acá mismo */
+    const updated = getAllTasks(data).find(t => t.id === taskId);
     if (updated) syncTaskToCalendar(updated, data, set);
   };
 
   /* sacar una tarea de la semana: le borra la fecha (vuelve al pool) y limpia el evento vinculado */
   const unplaceTask = (taskId) => set(s => {
-    const t = s.tasks.find(x => x.id === taskId);
-    if (!t) return;
-    t.dueDate = ""; t.due = "—"; t.franja = null;
+    mutateTask(s, taskId, { dueDate: "", due: "—", franja: null });
     const evId = s.taskCalendarMap?.[taskId];
     if (evId) { s.events = (s.events || []).filter(e => e.id !== evId); delete s.taskCalendarMap[taskId]; }
   });
@@ -105,7 +122,7 @@ const WeekPlanner = ({ onBack }) => {
               ? <div className="small" style={{ color: "var(--tx-3)" }}>{pending.length === 0 ? "No tenés tareas pendientes." : "Todas tus tareas ya tienen día."}</div>
               : <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 10, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá una tarea y después la celda donde va (o arrastrala)."}</div>}
             <div style={{ display: "grid", gap: 8 }}>
-              {unlocated.map(t => <TaskChip key={t.id} task={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
+              {unlocated.map(t => <TaskChip key={t.id} task={t} subj={subjById(t.subject)} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
             </div>
           </Card>
 
@@ -122,7 +139,7 @@ const WeekPlanner = ({ onBack }) => {
                       <PlanCell key={iso + fk} id={`cell|${iso}|${fk}`} onClick={sel ? () => placeSelected(iso, fk) : undefined}>
                         {items.map(t => (
                           <div key={t.id} className="row" style={{ gap: 4 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}><TaskChip task={t} placedId={t.id} /></div>
+                            <div style={{ flex: 1, minWidth: 0 }}><TaskChip task={t} subj={subjById(t.subject)} placedId={t.id} /></div>
                             <span onClick={(e) => { e.stopPropagation(); unplaceTask(t.id); }} style={{ cursor: "pointer", color: "var(--tx-3)", flex: "0 0 auto" }}><Icon name="x" size={12} /></span>
                           </div>
                         ))}

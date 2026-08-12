@@ -56,10 +56,8 @@
       });
     }
   }
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    window._pwaPrompt = e;
-  });
+  /* El manejo de "instalar la app" vive en React (usePWAInstall, pwaInstall.js) —
+     un solo mecanismo, usado por el menú (☰) y por Configuración. */
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1102,6 +1100,10 @@ a{ color:inherit; text-decoration:none; }
 .chat-confirm-t{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:12.5px; color:#9c4a2e; margin-bottom:6px; }
 .chat-confirm-i{ font-size:12.5px; color:var(--ink); padding:3px 0; line-height:1.35; }
 .chat-confirm-btns{ display:flex; gap:8px; margin-top:9px; }
+
+/* revisar/editar la acción antes de aceptar (actionReview.jsx) */
+.ar-fields{ margin:7px 0 4px; padding:12px 13px 2px; background:var(--field); border:1px solid var(--line); border-radius:11px; }
+.ar-fields .mono{ font-size:9.5px; }
 .chat-confirm-yes,.chat-confirm-no{ flex:1; padding:8px 10px; border-radius:10px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:var(--font-body); border:1px solid transparent; transition:transform .1s ease, filter .12s ease; }
 .chat-confirm-yes{ background:#9c4a2e; color:#fff; box-shadow:0 2px 0 #7a3822; }
 .chat-confirm-yes:hover{ filter:brightness(1.06); }

@@ -5,6 +5,7 @@ import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
 import { buildSystemPrompt } from './aiPrompt.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
+import { ActionEditor } from './actionReview.jsx';
 
 /* ============================================================
    CHAT IA (Gemini via /api/chat) — "Hubby", tu organizador in-app
@@ -66,7 +67,7 @@ const ChatIA = () => {
     }
   };
 
-  /* confirmar / cancelar las acciones destructivas de un mensaje */
+  /* confirmar / cancelar / editar las acciones pendientes de revisión de un mensaje */
   const confirmActions = (i) => {
     const m = msgs[i];
     if (!m?.confirm?.length) return;
@@ -77,6 +78,10 @@ const ChatIA = () => {
   const cancelActions = (i) => {
     ChatStore.setMsgs(msgs.map((mm, j) =>
       j === i ? { ...mm, confirm: [], canceled: true } : mm));
+  };
+  const editConfirmField = (i, k, editedAction) => {
+    ChatStore.setMsgs(msgs.map((mm, j) =>
+      j === i ? { ...mm, confirm: mm.confirm.map((a, ai) => ai === k ? editedAction : a) } : mm));
   };
 
   const initial = data.profile?.initial || "?";
@@ -132,15 +137,18 @@ const ChatIA = () => {
                   </div>
                 )}
 
-                {/* acciones destructivas pendientes de confirmar */}
+                {/* acciones pendientes de revisar y confirmar */}
                 {m.confirm?.length > 0 && (
                   <div className="chat-confirm">
-                    <div className="chat-confirm-t"><Icon name="trash" size={14} /> ¿Confirmás?</div>
+                    <div className="chat-confirm-t"><Icon name="edit" size={14} /> Revisá antes de guardar</div>
                     {m.confirm.map((a, k) => (
-                      <div key={k} className="chat-confirm-i">{describeAction(a)}</div>
+                      <div key={k}>
+                        <div className="chat-confirm-i">{describeAction(a)}</div>
+                        <ActionEditor action={a} subjects={data.subjects} onChange={edited => editConfirmField(i, k, edited)} />
+                      </div>
                     ))}
                     <div className="chat-confirm-btns">
-                      <button className="chat-confirm-yes" onClick={() => confirmActions(i)}>Sí, hacelo</button>
+                      <button className="chat-confirm-yes" onClick={() => confirmActions(i)}>Aceptar</button>
                       <button className="chat-confirm-no" onClick={() => cancelActions(i)}>Cancelar</button>
                     </div>
                   </div>

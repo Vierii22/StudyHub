@@ -41,9 +41,15 @@ function bestMatch(list, field, query) {
   return bestScore >= 40 ? best : null;                      /* umbral para no matchear cualquier cosa */
 }
 
-/* qué acciones necesitan confirmación antes de aplicarse */
+/* qué acciones necesitan confirmación antes de aplicarse.
+   TEMPORAL: mientras la IA no demuestre ser confiable, TODAS las
+   acciones piden confirmación (no solo las que borran) — el usuario
+   revisa y puede tocar los campos antes de aceptar. Para volver a que
+   las acciones seguras se apliquen solas, poner ALWAYS_CONFIRM en
+   false (las destructivas van a seguir pidiendo confirmar igual). */
+const ALWAYS_CONFIRM = true;
 const DESTRUCTIVE = new Set(["delete_task", "delete_event", "delete_recurring_event", "delete_note"]);
-export const needsConfirm = (a) => DESTRUCTIVE.has(a?.type);
+export const needsConfirm = (a) => ALWAYS_CONFIRM || DESTRUCTIVE.has(a?.type);
 
 /* ── parseo: separa el texto visible de las acciones ─────── */
 export function parseActions(reply) {

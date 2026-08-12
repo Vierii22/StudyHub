@@ -2,7 +2,8 @@ import React from 'react';
 
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast } from './store.jsx';
-import { Btn, MonoLabel, PageHead, Field, Toggle } from './ui.jsx';
+import { Btn, MonoLabel, PageHead, Field, Toggle, InstallInstructionsModal } from './ui.jsx';
+import { usePWAInstall } from './pwaInstall.js';
 import { supabase } from '../supabase.js';
 import { SupabaseStorage } from '../storage.js';
 
@@ -25,30 +26,17 @@ const ConfigRow = ({ label, sub, children }) => (
   </div>
 );
 
-/* ── PWA INSTALL BUTTON ─────────────────────────────────── */
+/* ── PWA INSTALL BUTTON ── mismo hook que el del menú (☰), un solo mecanismo ── */
 const InstallPWA = () => {
-  const [canInstall, setCanInstall] = React.useState(!!window._pwaPrompt);
-  const [installed,  setInstalled]  = React.useState(false);
-
-  React.useEffect(() => {
-    const onPrompt = () => setCanInstall(true);
-    window.addEventListener("beforeinstallprompt_ready", onPrompt);
-    // Si el prompt ya llegó antes de que este componente montara
-    if (window._pwaPrompt) setCanInstall(true);
-    // Detectar si ya está instalada (standalone mode)
-    if (window.matchMedia("(display-mode: standalone)").matches) setInstalled(true);
-    return () => window.removeEventListener("beforeinstallprompt_ready", onPrompt);
-  }, []);
+  const pwa = usePWAInstall();
+  const [showInstructions, setShowInstructions] = React.useState(false);
 
   const install = async () => {
-    const prompt = window._pwaPrompt;
-    if (!prompt) return;
-    prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === "accepted") { setInstalled(true); setCanInstall(false); window._pwaPrompt = null; toast("¡App instalada! Buscala en tu escritorio."); }
+    if (pwa.canPrompt) { const accepted = await pwa.promptInstall(); if (accepted) toast("¡App instalada! Buscala en tu escritorio."); return; }
+    setShowInstructions(true);
   };
 
-  if (installed) return (
+  if (pwa.isStandalone) return (
     <div className="card card-2" style={{ marginTop: 16, textAlign: "center", padding: "18px 22px" }}>
       <div style={{ color: "var(--green)", marginBottom: 6 }}><Icon name="check" size={22} /></div>
       <div style={{ fontWeight: 600, fontSize: 14 }}>StudyHub instalada</div>
@@ -56,26 +44,11 @@ const InstallPWA = () => {
     </div>
   );
 
-  if (!canInstall) return (
-    <div className="card card-2" style={{ marginTop: 16, padding: "16px 20px" }}>
-      <div className="row" style={{ gap: 12 }}>
-        <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="home" size={20} /></span>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Instalar como app</div>
-          <div className="small" style={{ marginTop: 3 }}>
-            En Chrome/Edge: menú <b>⋮</b> → <b>"Instalar StudyHub"</b>.<br />
-            En Safari (iOS): compartir → <b>"Añadir a pantalla de inicio"</b>.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="card card-2" style={{ marginTop: 16, padding: "16px 20px" }}>
       <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
         <div className="row" style={{ gap: 12 }}>
-          <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="home" size={20} /></span>
+          <span style={{ width: 40, height: 40, borderRadius: 11, background: "var(--field)", color: "var(--org)", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="home" size={20} /></span>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>Instalar como app</div>
             <div className="small" style={{ marginTop: 3 }}>Sin browser, con ícono propio, como app nativa.</div>
@@ -83,6 +56,7 @@ const InstallPWA = () => {
         </div>
         <Btn variant="primary" icon="download" onClick={install}>Instalar</Btn>
       </div>
+      {showInstructions && <InstallInstructionsModal ios={pwa.isIOS} onClose={() => setShowInstructions(false)} />}
     </div>
   );
 };
@@ -203,7 +177,7 @@ const ConfigSection = ({ onLogout, initialTab }) => {
         {/* sub-nav */}
         <div className="cfg-nav">
           {CONFIG_TABS.map(([id, label, icon]) => (
-            <div key={id} onClick={() => setTab(id)} className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: tab === id ? "var(--violet-hi)" : "var(--tx-2)", background: tab === id ? "var(--violet-soft)" : "transparent", border: "1px solid " + (tab === id ? "var(--violet-line)" : "transparent"), whiteSpace: "nowrap" }}>
+            <div key={id} onClick={() => setTab(id)} className="row cfg-tab" style={{ gap: 11, padding: "10px 13px", borderRadius: "var(--r)", cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: tab === id ? "var(--org-deep)" : "var(--tx-2)", background: tab === id ? "var(--field)" : "transparent", border: "1px solid " + (tab === id ? "var(--org)" : "transparent"), whiteSpace: "nowrap" }}>
               <Icon name={icon} size={16} />{label}
             </div>
           ))}

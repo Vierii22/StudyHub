@@ -435,6 +435,9 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
             <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid #eee4d4" }}>
               <span onClick={() => setList("tareas", tareas.map((x, j) => j === i ? { ...x, done: !x.done, completedAt: !x.done ? todayLocal() : null } : x))} style={{ width: 18, height: 18, borderRadius: 6, border: "2px solid " + (it.done ? "#639922" : "#c3b7a3"), background: it.done ? "#639922" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" }}>{it.done && <Icon name="check" size={11} color="#fff" />}</span>
               <span style={{ flex: 1, fontSize: 14, textDecoration: it.done ? "line-through" : "none", color: it.done ? "var(--tx-3)" : "var(--tx-1)" }}>{it.t}</span>
+              {it.due && it.due !== "—" && (
+                <span className="mono" title="Se ubicó desde Organizar semana" style={{ fontSize: 10.5, fontWeight: 700, color: it.due === "Hoy" ? "var(--org-deep)" : "var(--tx-3)", flex: "0 0 auto" }}>{it.due === "Hoy" ? "HOY" : it.due}</span>
+              )}
               <span onClick={() => setList("tareas", tareas.filter((_, j) => j !== i))} style={{ cursor: "pointer", color: "var(--tx-3)" }}><Icon name="x" size={13} /></span>
             </div>
           ))}
