@@ -60,6 +60,12 @@ const TOPNAV = [
 ];
 const Header = ({ profile, onNav, section, onMenu }) => {
   const initial = profile.initial || (profile.name ? profile.name[0] : "?");
+  const pwa = usePWAInstall();
+  const [showInstructions, setShowInstructions] = React.useState(false);
+  const install = async () => {
+    if (pwa.canPrompt) { await pwa.promptInstall(); return; }
+    setShowInstructions(true);
+  };
   return (
     <header className="topbar">
       <button className="tb-burger" onClick={onMenu} aria-label="Abrir menú"><Icon name="menu" size={22} /></button>
@@ -73,8 +79,14 @@ const Header = ({ profile, onNav, section, onMenu }) => {
         ))}
       </nav>
       <div className="tb-right">
+        {!pwa.isStandalone && (
+          <button className="tb-install" onClick={install} title="Instalar StudyHub como app (celu o PC)">
+            <Icon name="download" size={15} /> Instalar
+          </button>
+        )}
         <div className="tb-avatar" onClick={() => onNav("config")} title="Tu perfil">{initial}</div>
       </div>
+      {showInstructions && <InstallInstructionsModal ios={pwa.isIOS} onClose={() => setShowInstructions(false)} />}
     </header>
   );
 };

@@ -325,7 +325,11 @@ input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
   border-radius:11px; padding:8px 11px; color:var(--tx-3); cursor:pointer; }
 .tb-avatar{ width:34px; height:34px; border-radius:50%; background:var(--org); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:14px; cursor:pointer; flex:0 0 auto; }
-@media(max-width:760px){ .tb-nav{ display:none; } .topbar{ padding:calc(11px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 11px calc(16px + env(safe-area-inset-left)); } }
+/* botón "Instalar" en la barra de arriba (junto a Ocio) — solo desktop; en mobile ya está en el menú ☰ */
+.tb-install{ display:flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 14px; font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--ink); cursor:pointer; box-shadow:0 2px 0 #e0d5c3; transition:background .15s ease, border-color .15s ease; white-space:nowrap; }
+.tb-install:hover{ background:var(--field); border-color:var(--org); }
+.tb-install svg{ color:var(--org); }
+@media(max-width:760px){ .tb-nav{ display:none; } .tb-install{ display:none; } .topbar{ padding:calc(11px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 11px calc(16px + env(safe-area-inset-left)); } }
 
 /* botón hamburguesa (solo mobile) */
 .tb-burger{ display:none; background:none; border:none; color:var(--ink); cursor:pointer; margin-right:2px; align-items:center; justify-content:center; width:44px; height:44px; margin-left:-9px; flex:0 0 auto; }
