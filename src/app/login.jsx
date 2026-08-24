@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS } from './store.jsx';
 import { Btn, Field, Seg } from './ui.jsx';
+import { usePushNotifications } from './pushNotifications.js';
 import { supabase } from '../supabase.js';
 
 /* ============================================================
@@ -10,14 +11,6 @@ import { supabase } from '../supabase.js';
    Fondo piedra con orbes cálidos (parallax al mouse) + tarjeta
    crema que se inclina apenas — mockup aprobado (DESIGN.md Fase 7)
    ============================================================ */
-
-/* helper: genera código SH-XXXX */
-const genHubbyCode = () => {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return "SH-" + s;
-};
 
 /* ---------- fondo de orbes cálidos con parallax ---------- */
 const ORBS = [
@@ -197,43 +190,10 @@ const ROLES = [
 const Onboarding = ({ onDone }) => {
   const [step, setStep]         = React.useState(0);
   const [d, setD]               = React.useState({ name: "", role: "", place: "", career: "", year: "1", work: "", subjects: ["", ""] });
-  const [code, setCode]         = React.useState(genHubbyCode);
-  const [hubbyLinked, setHubby] = React.useState(false);
   const [photoSrc, setPhoto]    = React.useState(null);
+  const { status: notifStatus, enable: enableNotif } = usePushNotifications();
   const set   = (k, v) => setD(x => ({ ...x, [k]: v }));
-  const steps = ["Perfil", "Ocupación", "Detalles", "Hubby"];
-
-  /* cuando llega al paso Hubby, registra el código en Supabase */
-  React.useEffect(() => {
-    if (step !== 3) return;
-    const freshCode = genHubbyCode();
-    setCode(freshCode);
-    (async () => {
-      const sb = supabase;
-      if (!sb) return;
-
-      /* Intentar obtener el usuario — funciona con session o con token de confirmación pendiente */
-      let userId = null;
-      try {
-        const { data: sessionData } = await sb.auth.getSession();
-        userId = sessionData?.session?.user?.id;
-        if (!userId) {
-          const { data: userData } = await sb.auth.getUser();
-          userId = userData?.user?.id;
-        }
-      } catch (_) { /* ignorar — igual mostramos el código */ }
-
-      if (!userId) return; /* sin sesión todavía, el código se muestra igual pero no se guarda */
-
-      await sb.from("telegram_links").delete().eq("user_id", userId);
-      await sb.from("telegram_links").insert({
-        user_id: userId,
-        link_code: freshCode,
-        linked: false,
-        created_at: new Date().toISOString(),
-      });
-    })();
-  }, [step]);
+  const steps = ["Perfil", "Ocupación", "Detalles", "Avisos"];
 
   const finish = () => {
     Store.set(s => {
@@ -243,7 +203,6 @@ const Onboarding = ({ onDone }) => {
       s.profile.uni     = d.place;
       s.profile.career  = d.role === "work" ? d.work : d.career;
       s.profile.year    = d.year;
-      s.profile.hubby   = hubbyLinked;
       if (photoSrc) s.profile.photo = photoSrc;
       const subs = d.subjects.filter(x => x.trim());
       if (subs.length) {
@@ -357,21 +316,26 @@ const Onboarding = ({ onDone }) => {
             </div>
           )}
 
-          {/* paso 3: Hubby (Telegram) */}
+          {/* paso 3: activar notificaciones push */}
           {step === 3 && (
             <div className="fade-in">
-              <div className="h2" style={{ marginBottom: 6 }}>Conectá a Hubby 🤖</div>
-              <div className="small" style={{ marginBottom: 22 }}>Tu asistente de Telegram para guardar cosas al toque. Opcional.</div>
+              <div className="h2" style={{ marginBottom: 6 }}>Activá los avisos 🔔</div>
+              <div className="small" style={{ marginBottom: 22 }}>Un aviso con lo que tenés para mañana, aunque no tengas la app abierta. Opcional.</div>
               <div className="card card-2" style={{ textAlign: "center", padding: 28 }}>
-                <div className="mono" style={{ marginBottom: 12 }}>Tu código de vinculación</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 32, letterSpacing: ".1em", color: "var(--org-deep)", margin: "16px 0" }}>{code}</div>
-                <div className="row" style={{ gap: 10, justifyContent: "center" }}>
-                  <Btn variant="secondary" icon="copy" onClick={() => { navigator.clipboard?.writeText(code); toast("Código copiado"); }}>Copiar</Btn>
-                  <Btn variant="primary" icon="send" onClick={() => window.open("https://t.me/Hubby_ia_bot?start=" + code, "_blank")}>Abrir Hubby</Btn>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--field)", color: "var(--org)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
+                  <Icon name="bell" size={24} />
                 </div>
-              </div>
-              <div className="small" style={{ marginTop: 16, textAlign: "center" }}>
-                Buscá <b className="tx-1">@Hubby_ia_bot</b> en Telegram y pegale el código para vincular.
+                {notifStatus === "subscribed" ? (
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#2f5e10", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <Icon name="check" size={18} /> Notificaciones activadas
+                  </div>
+                ) : notifStatus === "denied" ? (
+                  <div className="small">Las bloqueaste antes — activalas desde los permisos del navegador para este sitio.</div>
+                ) : notifStatus === "unsupported" ? (
+                  <div className="small">Tu navegador no soporta notificaciones push — no hay drama, seguimos.</div>
+                ) : (
+                  <Btn variant="primary" icon="bell" onClick={enableNotif}>Activar notificaciones</Btn>
+                )}
               </div>
             </div>
           )}

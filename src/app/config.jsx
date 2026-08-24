@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Icon } from './icons.jsx';
-import { Store, useStore, uid, toast } from './store.jsx';
+import { Store, useStore, toast } from './store.jsx';
 import { Btn, MonoLabel, PageHead, Field, Toggle, InstallInstructionsModal } from './ui.jsx';
 import { usePWAInstall } from './pwaInstall.js';
 import { usePushNotifications } from './pushNotifications.js';
@@ -10,12 +10,11 @@ import { SupabaseStorage } from '../storage.js';
 
 /* ============================================================
    CONFIGURACIÓN — sección de página completa
-   Con auth Supabase real: Telegram, password, borrar datos
+   Con auth Supabase real: notificaciones, password, borrar datos
    ============================================================ */
 
 const CONFIG_TABS = [
   ["perfil",    "Perfil",     "user"  ],
-  ["integr",    "Integraciones","robot"],
   ["cuenta",    "Cuenta",     "gear"  ],
   ["acerca",    "Acerca de",  "info"  ],
 ];
@@ -125,11 +124,6 @@ const ConfigSection = ({ onLogout, initialTab }) => {
   const [confPwd,   setConfPwd]   = React.useState("");
   const [pwdLoading, setPwdLoad]  = React.useState(false);
 
-  /* ── Telegram ── */
-  const [tgCode,    setTgCode]    = React.useState(null);
-  const [tgLoading, setTgLoad]    = React.useState(false);
-  const [tgLinked,  setTgLinked]  = React.useState(data.profile?.hubby || false);
-
   const p  = data.profile;
   const upProfile  = (k, v) => set(s => s.profile[k] = v);
 
@@ -141,54 +135,6 @@ const ConfigSection = ({ onLogout, initialTab }) => {
       if (u?.user?.email) setUserEmail(u.user.email);
     });
   }, []);
-
-  /* helper: obtiene el user_id de la sesión activa (compatible con confirmación pendiente) */
-  const getSbUserId = async (sb) => {
-    try {
-      const { data: sd } = await sb.auth.getSession();
-      if (sd?.session?.user?.id) return sd.session.user.id;
-      const { data: ud } = await sb.auth.getUser();
-      return ud?.user?.id || null;
-    } catch (_) { return null; }
-  };
-
-  /* cargar código Telegram al abrir la pestaña */
-  React.useEffect(() => {
-    if (tab !== "integr") return;
-    (async () => {
-      const sb = supabase;
-      if (!sb) return;
-      const userId = await getSbUserId(sb);
-      if (!userId) return;
-      const { data: row } = await sb.from("telegram_links").select("link_code,linked").eq("user_id", userId).maybeSingle();
-      if (row) {
-        setTgCode(row.link_code);
-        setTgLinked(row.linked);
-        set(s => s.profile.hubby = row.linked);
-      }
-    })();
-  }, [tab]);
-
-  /* generar nuevo código Telegram */
-  const genTgCode = async () => {
-    setTgLoad(true);
-    const sb = supabase;
-    const userId = await getSbUserId(sb);
-    if (!userId) { toast("Necesitás estar logueado"); setTgLoad(false); return; }
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    const newCode = "SH-" + s;
-    await sb.from("telegram_links").delete().eq("user_id", userId);
-    const { error } = await sb.from("telegram_links").insert({
-      user_id:    userId,
-      link_code:  newCode,
-      linked:     false,
-      created_at: new Date().toISOString(),
-    });
-    if (error) { toast("Error al generar código"); } else { setTgCode(newCode); setTgLinked(false); toast("Código generado ✓"); }
-    setTgLoad(false);
-  };
 
   /* cambiar contraseña */
   const changePwd = async () => {
@@ -266,15 +212,15 @@ const ConfigSection = ({ onLogout, initialTab }) => {
                     style={{
                       padding: "12px 10px",
                       borderRadius: 12,
-                      border: `1.5px solid ${p.role === r.id ? "var(--violet)" : "var(--line-2)"}`,
-                      background: p.role === r.id ? "var(--violet-soft)" : "var(--surface-2)",
+                      border: `1.5px solid ${p.role === r.id ? "var(--org)" : "var(--line-2)"}`,
+                      background: p.role === r.id ? "var(--field)" : "var(--surface-2)",
                       cursor: "pointer",
                       textAlign: "center",
                       transition: "all .15s",
                     }}
                   >
                     <div style={{ fontSize: 22, marginBottom: 5 }}>{r.emoji}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: p.role === r.id ? "var(--violet-hi)" : "var(--tx-2)" }}>{r.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: p.role === r.id ? "var(--org-deep)" : "var(--tx-2)" }}>{r.label}</div>
                   </div>
                 ))}
               </div>
@@ -295,68 +241,6 @@ const ConfigSection = ({ onLogout, initialTab }) => {
                 </Field>
               </>
             )}
-          </div>}
-
-          {/* ── INTEGRACIONES (Telegram) ── */}
-          {tab === "integr" && <div className="fade-in">
-            <div className="row between" style={{ marginBottom: 16 }}>
-              <div className="row" style={{ gap: 12 }}>
-                <div style={{ fontSize: 30 }}>🤖</div>
-                <div><div className="h3">Hubby</div><div className="mono" style={{ marginTop: 4 }}>Asistente de Telegram</div></div>
-              </div>
-              <span className="chip" style={{ color: tgLinked ? "var(--green)" : "var(--tx-3)", borderColor: tgLinked ? "var(--green)55" : "var(--line-2)" }}>{tgLinked ? "Vinculado ✓" : "No vinculado"}</span>
-            </div>
-
-            <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
-              {["Generá tu código abajo","Abrí @Hubby_ia_bot en Telegram","Pegá el código en el chat","¡Listo! Guardá cosas desde Telegram"].map((s, i) => (
-                <div key={i} className="row" style={{ gap: 11 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--violet-soft)", color: "var(--violet-hi)", display: "grid", placeItems: "center", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, flex: "0 0 auto" }}>{i + 1}</div>
-                  <span style={{ fontSize: 13.5 }}>{s}</span>
-                </div>
-              ))}
-            </div>
-
-            {tgCode && (
-              <div style={{ textAlign: "center", padding: "18px 0", marginBottom: 14, background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--line)" }}>
-                <div className="mono" style={{ fontSize: 10.5, marginBottom: 8 }}>Tu código</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 28, letterSpacing: ".12em", color: "var(--violet-hi)" }}>{tgCode}</div>
-              </div>
-            )}
-
-            <div className="wrap-gap">
-              <Btn variant="secondary" onClick={genTgCode} disabled={tgLoading}>{tgLoading ? "…" : tgCode ? "Regenerar código" : "Generar código"}</Btn>
-              {tgCode && <Btn variant="secondary" icon="copy" onClick={() => { navigator.clipboard?.writeText(tgCode); toast("Código copiado"); }}>Copiar</Btn>}
-              {tgCode && <Btn variant="primary" icon="send" onClick={() => window.open("https://t.me/Hubby_ia_bot?start=" + tgCode, "_blank")}>Abrir en Telegram</Btn>}
-            </div>
-
-            {/* ── guía: qué puede hacer el bot ── */}
-            <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-              <div className="h3" style={{ marginBottom: 4 }}>¿Qué le podés pedir?</div>
-              <div className="small" style={{ marginBottom: 12 }}>Ya conectado, escribile en Telegram como a una persona — la IA lo guarda solo en la app:</div>
-              <div style={{ display: "grid", gap: 2 }}>
-                {[
-                  ["plus", "Agregar una tarea", "tarea: terminar el TP de redes para el viernes"],
-                  ["calendar", "Agendar un parcial o evento", "parcial de álgebra el 24"],
-                  ["check", "Marcar algo como hecho", "ya terminé el TP de redes"],
-                  ["pen", "Anotar en una materia", "anotá en filosofía: entra hasta la unidad 3"],
-                  ["target", "Cargar una nota", "me saqué 8 en el parcial de álgebra"],
-                  ["paperclip", "Guardar una foto o archivo", "mandale la foto y elegís la materia"],
-                  ["chat", "Preguntar qué tenés", "¿qué tengo esta semana?"],
-                ].map(([icon, title, ex]) => (
-                  <div key={title} className="row" style={{ gap: 11, alignItems: "flex-start", padding: "9px 0", borderBottom: "1px solid var(--line)" }}>
-                    <span style={{ color: "var(--org)", flex: "0 0 auto", display: "flex", marginTop: 1 }}><Icon name={icon} size={16} /></span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{title}</div>
-                      <div className="mono" style={{ fontSize: 11, color: "var(--tx-3)", marginTop: 3, lineHeight: 1.4 }}>“{ex}”</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="small" style={{ marginTop: 14, color: "var(--tx-2)", lineHeight: 1.6 }}>
-                <b>Comandos:</b> <span className="mono" style={{ fontSize: 11 }}>/start</span> vincular · <span className="mono" style={{ fontSize: 11 }}>/help</span> ayuda · <span className="mono" style={{ fontSize: 11 }}>/menu</span> botones rápidos.<br />
-                En el bot también podés usar los <b>botones</b> (Ver pendientes / Esta semana) sin escribir nada.
-              </div>
-            </div>
           </div>}
 
           {/* ── CUENTA ── */}

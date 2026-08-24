@@ -17,7 +17,7 @@ const STEPS = [
   { pose: "contento", icon: "check",    title: "Tareas",                body: "Todas tus tareas juntas, agrupadas por materia o por fecha. Lo que completás hoy se cuenta y se reinicia cada día." },
   { pose: "festejo",  icon: "target",   title: "Progreso",              body: "Cargá tus notas y el estado de cada materia se calcula solo. Acá también está tu Plan de correlatividades." },
   { pose: "idle",     icon: "film",     title: "Ocio",                  body: "Pelis, series y juegos con estado y puntaje — para cuando cortás de estudiar." },
-  { pose: "chat",     icon: "chat",     title: "Hablá conmigo",         body: "Tocá mi carita abajo a la izquierda para el chat con IA. También me podés escribir por Telegram (se activa en Configuración)." },
+  { pose: "chat",     icon: "chat",     title: "Hablá conmigo",         body: "Tocá mi carita abajo a la izquierda para el chat con IA, o escribime directo en la captura rápida de Hoy." },
 ];
 
 function Tutorial() {

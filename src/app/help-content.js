@@ -1,7 +1,7 @@
-/* Manual de uso de StudyHub — se inyecta en el prompt del Chat IA, la
-   captura rápida del dashboard y el bot de Telegram. Es la ÚNICA fuente
-   de verdad sobre qué existe en la app y qué se puede guardar en cada
-   lugar — mantenerlo actualizado cuando se agregue o cambie una función. */
+/* Manual de uso de StudyHub — se inyecta en el prompt del Chat IA y la
+   captura rápida del dashboard. Es la ÚNICA fuente de verdad sobre qué
+   existe en la app y qué se puede guardar en cada lugar — mantenerlo
+   actualizado cuando se agregue o cambie una función. */
 
 export const APP_GUIDE = `
 === MANUAL DE STUDYHUB (qué existe, para qué sirve, qué se guarda ahí) ===
@@ -49,10 +49,10 @@ Pelis, series y juegos con estado (querés ver/viendo/visto, a jugar/jugando/ter
 
 ── HUBBY (vos, la IA) ──
 Dos trabajos: (1) explicar cómo usar la app con este manual, (2) organizar y EJECUTAR cambios reales con los datos del usuario. Vive en dos lugares con el MISMO cerebro: el chat completo (conversación) y la captura rápida del dashboard (una frase suelta, sin ida y vuelta — ahí hay que resolver todo de una, sin preguntar, salvo que sea imposible de inferir).
-También existe el BOT DE TELEGRAM (@Hubby_ia_bot): mismo propósito pero desde afuera de la app, para capturar rápido sin abrir el celu. Hay que vincularlo con un código desde Configuración → Integraciones.
+No hay bot de Telegram — se dio de baja. Los avisos proactivos ahora son notificaciones push del navegador/PWA (Configuración → Acerca de → "Activar notificaciones", o en el paso "Avisos" del onboarding).
 
 ── CONFIGURACIÓN ──
-Perfil (nombre, foto, facultad, carrera, año), vincular Telegram, cambiar contraseña, instalar como app (PWA), borrar datos.
+Perfil (nombre, foto, facultad, carrera, año), notificaciones push, cambiar contraseña, instalar como app (PWA), borrar datos.
 
 === CÓMO HACER TAREAS COMUNES (para cuando el usuario pregunta "cómo hago X") ===
 - Agregar materia: Facultad → "Nueva materia".
@@ -62,6 +62,6 @@ Perfil (nombre, foto, facultad, carrera, año), vincular Telegram, cambiar contr
 - Organizar TODAS las tareas de la semana: dashboard → tarjeta HOY → "Organizar semana".
 - Repetir un evento todas las semanas: Calendario → nuevo evento (o editar uno existente) → "¿Se repite?" → elegir los días.
 - Cargar un recuperatorio: Progreso → tarjeta de la materia → "+ recuperatorio" al lado del parcial.
-- Conectar Telegram: Configuración → Integraciones → generar código → @Hubby_ia_bot → pegar el código.
-- Instalar como app: menú (☰) → "Instalar la app" (o en iOS: Safari → compartir → "Añadir a pantalla de inicio").
+- Activar avisos (notificaciones push): Configuración → Acerca de → "Activar notificaciones".
+- Instalar como app: menú (☰), o el botón "Instalar" junto a Ocio en la barra de arriba (o en iOS: Safari → compartir → "Añadir a pantalla de inicio").
 `;

@@ -3,22 +3,25 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore } from './store.jsx';
 import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
+import { usePushNotifications } from './pushNotifications.js';
 
 const greetingTime = () => { const h = new Date().getHours(); return h < 6 ? "noche" : h < 13 ? "mañana" : h < 20 ? "tarde" : "noche"; };
 
-/* recordatorio de conectar el bot de Telegram (hasta que lo vinculás o lo cerrás) */
-const BotReminder = ({ profile, onNav }) => {
-  const [gone, setGone] = React.useState(() => { try { return localStorage.getItem("sh_bot_reminder") === "off"; } catch { return false; } });
-  if (profile.hubby || gone) return null;
-  const dismiss = (e) => { e.stopPropagation(); try { localStorage.setItem("sh_bot_reminder", "off"); } catch {} setGone(true); };
+/* recordatorio para activar las notificaciones push (hasta que las activás o lo cerrás) —
+   reemplaza al viejo aviso de "conectá el bot de Telegram", dado de baja */
+const NotifyReminder = () => {
+  const { status, enable } = usePushNotifications();
+  const [gone, setGone] = React.useState(() => { try { return localStorage.getItem("sh_notif_reminder") === "off"; } catch { return false; } });
+  if (status !== "unsubscribed" || gone) return null;
+  const dismiss = (e) => { e.stopPropagation(); try { localStorage.setItem("sh_notif_reminder", "off"); } catch {} setGone(true); };
   return (
-    <div className="bot-reminder" onClick={() => onNav("config")}>
+    <div className="bot-reminder" onClick={enable}>
       <img src="/assets/hubby/hubby-saluda.png" alt="" className="bot-reminder-hubby" />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="bot-reminder-title">Conectá el bot de Telegram</div>
-        <div className="bot-reminder-sub">Anotá tareas y parciales escribiéndole a Hubby, sin abrir la app.</div>
+        <div className="bot-reminder-title">Activá las notificaciones</div>
+        <div className="bot-reminder-sub">Un aviso con lo de mañana, aunque no tengas la app abierta.</div>
       </div>
-      <span className="bot-reminder-cta">Conectar</span>
+      <span className="bot-reminder-cta">Activar</span>
       <span className="bot-reminder-x" onClick={dismiss} title="Ahora no"><Icon name="x" size={15} /></span>
     </div>
   );
@@ -79,7 +82,7 @@ const Dashboard = ({ onNav }) => {
         </div>
         <div style={{ marginTop: 16 }}><CoachCard data={data} onNav={onNav} /></div>
         <div style={{ margin: "14px 0" }}><CaptureBar data={data} set={set} onOpen={onNav} /></div>
-        <BotReminder profile={p} onNav={onNav} />
+        <NotifyReminder />
         <TodayTimeline data={data} set={set} onNav={onNav} />
       </div>
     );
@@ -98,8 +101,8 @@ const Dashboard = ({ onNav }) => {
         <CaptureBar data={data} set={set} onOpen={onNav} />
       </div>
 
-      {/* ── recordatorio del bot (si no está conectado) ── */}
-      <BotReminder profile={p} onNav={onNav} />
+      {/* ── recordatorio para activar notificaciones (si todavía no están) ── */}
+      <NotifyReminder />
 
       {/* ── MENÚ DE ÍCONOS ── */}
       <HoyMenu active="dashboard" onNav={onNav} />
