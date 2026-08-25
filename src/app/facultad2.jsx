@@ -568,7 +568,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
                             {subs.map(st => (
                               <div key={st.id} className="subt-row">
                                 <span className="subt-check" onClick={() => upSubtema(it.id, st.id, { done: !st.done })} style={{ borderColor: st.done ? "#639922" : "#c3b7a3", background: st.done ? "#639922" : "transparent" }}>{st.done && <Icon name="check" size={10} color="#fff" />}</span>
-                                <span className="subt-name" style={{ textDecoration: st.done ? "line-through" : "none", color: st.done ? "var(--tx-3)" : "var(--soft)" }}>{st.t}</span>
+                                <input className="subt-name" value={st.t} onChange={e => upSubtema(it.id, st.id, { t: e.target.value })} style={{ textDecoration: st.done ? "line-through" : "none", color: st.done ? "var(--tx-3)" : "var(--soft)" }} />
                                 <span className="subt-del" onClick={() => delSubtema(it.id, st.id)}><Icon name="x" size={12} /></span>
                               </div>
                             ))}
