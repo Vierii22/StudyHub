@@ -66,19 +66,25 @@ const pushCount = {};
 for (const p of pushes || []) pushCount[p.user_id] = (pushCount[p.user_id] || 0) + 1;
 
 const dias = (d) => d ? (Date.now() - new Date(d)) / 86400000 : Infinity;
-const act7     = users.filter(u => dias(u.last_sign_in_at) <= 7).length;
-const act30    = users.filter(u => dias(u.last_sign_in_at) <= 30).length;
+/* OJO: last_sign_in_at solo se actualiza cuando alguien se loguea DE CERO.
+   Con la sesion guardada (app instalada) se usa la app sin volver a loguearse,
+   asi que ese dato subestima el uso. La senal real es cuando guardo algo
+   (app_data.updated_at). Usamos esa para medir actividad. */
+const ultimoUso = (u) => act[u.id]?.ultima || null;
+const act7     = users.filter(u => dias(ultimoUso(u)) <= 7).length;
+const act30    = users.filter(u => dias(ultimoUso(u)) <= 30).length;
 const conDatos = users.filter(u => (act[u.id]?.materias || 0) > 0).length;
+const nunca    = users.filter(u => !ultimoUso(u) && !(act[u.id]?.materias)).length;
 
 console.log('');
 console.log('  STUDYHUB · USUARIOS');
 console.log('  ' + '─'.repeat(74));
-console.log(`  Registrados: ${users.length}   ·   Activos últimos 7 días: ${act7}   ·   últimos 30: ${act30}`);
-console.log(`  Con materias cargadas (usan de verdad): ${conDatos}`);
+console.log(`  Registrados: ${users.length}   ·   Usaron la app (guardaron algo) — últimos 7 días: ${act7}   ·   últimos 30: ${act30}`);
+console.log(`  Con materias cargadas: ${conDatos}${nunca ? `   ·   Nunca usaron nada: ${nunca}` : ''}`);
 console.log('  ' + '─'.repeat(74));
 console.log('');
 
-const orden = [...users].sort((a, b) => new Date(b.last_sign_in_at || 0) - new Date(a.last_sign_in_at || 0));
+const orden = [...users].sort((a, b) => new Date(ultimoUso(b) || 0) - new Date(ultimoUso(a) || 0));
 for (const u of orden) {
   const a = act[u.id] || {};
   const avisos = pushCount[u.id] ? `  🔔${pushCount[u.id]}` : '';
