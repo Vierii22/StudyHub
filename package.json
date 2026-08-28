@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:bundle": "node scripts/build-jsx.js",
-    "usuarios": "node scripts/usuarios.mjs"
+    "usuarios": "node scripts/usuarios.mjs",
+    "feedback": "node scripts/feedback.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
