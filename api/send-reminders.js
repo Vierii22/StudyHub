@@ -4,6 +4,17 @@
 // por eso NO hace falta pg_cron/SQL en Supabase para esto.
 const { createClient } = require('@supabase/supabase-js');
 const webpush = require('web-push');
+const crypto = require('crypto');
+
+/* Compara sin filtrar información por el tiempo que tarda. Con === se
+   puede adivinar el secreto carácter por carácter midiendo la demora. */
+function secretoValido(recibido, esperado) {
+  if (!esperado || !recibido) return false;
+  const a = Buffer.from(String(recibido));
+  const b = Buffer.from(String(esperado));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 /* mañana en hora de Argentina (UTC-3) */
 function tomorrowAR() {
@@ -15,7 +26,8 @@ module.exports = async function handler(req, res) {
   let stage = 'auth';
   try {
     const auth = req.headers.authorization || '';
-    if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (!secretoValido(token, process.env.CRON_SECRET)) {
       return res.status(401).json({ error: 'unauthorized' });
     }
 
@@ -41,9 +53,17 @@ module.exports = async function handler(req, res) {
     const byUser = {};
     for (const s of subs || []) (byUser[s.user_id] = byUser[s.user_id] || []).push(s);
 
-    /* modo prueba: ?test=1 — manda un push de prueba a todos los suscriptos,
-       sin importar si tienen algo para mañana (para poder probar al toque) */
+    /* modo prueba: ?test=1&user=<uuid> — manda un push de prueba SOLO a ese
+       usuario. Antes le pegaba a todos los suscriptos: si el CRON_SECRET se
+       filtraba, era spam masivo a todo el mundo. */
     const isTest = req.query?.test === '1' || req.query?.test === 'true';
+    const testUser = req.query?.user || '';
+    if (isTest && !/^[0-9a-f-]{36}$/i.test(testUser)) {
+      return res.status(400).json({ error: 'En modo prueba hace falta ?user=<uuid> — no se manda a todos.' });
+    }
+    if (isTest) {
+      for (const uid of Object.keys(byUser)) if (uid !== testUser) delete byUser[uid];
+    }
 
     let enviados = 0, fallidos = 0;
     const detalle = [];

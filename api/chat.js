@@ -13,20 +13,47 @@ const MAX_MESSAGES = 40;
 const MAX_CHARS = 24000;
 const MAX_SYSTEM_CHARS = 12000;
 
-/* Rate limit por usuario. Es en memoria: cada instancia serverless tiene la
-   suya, así que no es un candado perfecto, pero frena el uso automatizado. */
+/* Rate limit por usuario, contado en la base (compartido entre todas las
+   instancias serverless). Si la base no responde caemos al contador en
+   memoria — peor, pero mejor que quedarnos sin límite. */
 const RATE_MAX = 30;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_WINDOW_MIN = 10;
 const hits = new Map();
 
-function rateLimited(userId) {
+function rateLimitedInMemory(userId) {
   const now = Date.now();
-  const prev = (hits.get(userId) || []).filter(t => now - t < RATE_WINDOW_MS);
+  const prev = (hits.get(userId) || []).filter(t => now - t < RATE_WINDOW_MIN * 60 * 1000);
   if (prev.length >= RATE_MAX) return true;
   prev.push(now);
   hits.set(userId, prev);
   if (hits.size > 5000) hits.clear();
   return false;
+}
+
+async function rateLimited(userId) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return rateLimitedInMemory(userId);
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/check_ai_rate_limit`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_max: RATE_MAX,
+        p_window_minutes: RATE_WINDOW_MIN,
+      }),
+    });
+    if (!r.ok) return rateLimitedInMemory(userId);
+    const permitido = await r.json();
+    return permitido === false;
+  } catch {
+    return rateLimitedInMemory(userId);
+  }
 }
 
 /* Valida el token contra Supabase. Devuelve el user id o null. */
@@ -67,7 +94,7 @@ module.exports = async function handler(req, res) {
   const userId = await getUserId(token);
   if (!userId) return res.status(401).json({ error: 'Necesitás iniciar sesión para usar la IA.' });
 
-  if (rateLimited(userId)) {
+  if (await rateLimited(userId)) {
     return res.status(429).json({ error: 'Estás yendo muy rápido. Esperá unos minutos.' });
   }
 

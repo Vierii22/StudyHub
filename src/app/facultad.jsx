@@ -16,8 +16,17 @@ async function uploadToStorage(file) {
   const path = `${userId}/${uid()}-${safe}`;
   const { error } = await supabase.storage.from(FILES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || undefined });
   if (error) throw error;
-  const { data } = supabase.storage.from(FILES_BUCKET).getPublicUrl(path);
-  return { path, url: data.publicUrl };
+  /* Guardamos SOLO la ruta. Antes guardábamos una URL pública permanente:
+     cualquiera con ese link se bajaba el archivo, para siempre. Ahora el
+     link se firma en el momento de abrirlo y vence en minutos. */
+  return { path };
+}
+
+/* Link temporal (1 hora) para abrir un archivo del bucket privado. */
+async function signedUrlFor(path) {
+  const { data, error } = await supabase.storage.from(FILES_BUCKET).createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 /* ============================================================
@@ -35,8 +44,21 @@ const fileIcon = (type = "", name = "") => {
   if (/\.(doc|docx|txt|md)/.test(n)) return "fileText";
   return "file";
 };
-const downloadFile = (f) => {
-  if (f.url) { window.open(f.url, "_blank", "noopener"); return; } /* archivo en Storage */
+const downloadFile = async (f) => {
+  /* Archivo en Storage: pedimos un link firmado al momento (vence en 1h).
+     Los archivos viejos tienen guardada una URL pública — si todavía no
+     migraron, la usamos como respaldo. */
+  if (f.path) {
+    try {
+      window.open(await signedUrlFor(f.path), "_blank", "noopener");
+      return;
+    } catch {
+      if (f.url) { window.open(f.url, "_blank", "noopener"); return; }
+      toast("No se pudo abrir el archivo.");
+      return;
+    }
+  }
+  if (f.url) { window.open(f.url, "_blank", "noopener"); return; }
   const a = document.createElement("a");
   a.href = f.data; a.download = f.name;
   document.body.appendChild(a); a.click(); a.remove();

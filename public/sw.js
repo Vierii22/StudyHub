@@ -73,9 +73,21 @@ self.addEventListener('push', e => {
   e.waitUntil(self.registration.showNotification(title, options));
 });
 
+/* Solo abrimos rutas de NUESTRO sitio. El payload viene firmado con VAPID
+   (solo nuestro servidor puede mandarlo), pero si esa clave se filtrara
+   una notificación podría llevar a una página trucha. Defensa en capas. */
+function sameOriginPath(raw) {
+  try {
+    const u = new URL(raw || '/', self.location.origin);
+    return u.origin === self.location.origin ? u.pathname + u.search : '/';
+  } catch {
+    return '/';
+  }
+}
+
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = e.notification.data?.url || '/';
+  const url = sameOriginPath(e.notification.data?.url);
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {

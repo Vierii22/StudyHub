@@ -103,7 +103,10 @@ const Login = ({ onEnter, onRegister }) => {
   const handleRegister = async () => {
     if (!email || !password) { setError("Completá email y contraseña."); return; }
     if (password !== confirm) { setError("Las contraseñas no coinciden."); return; }
-    if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
+    const flojas = ["12345678", "contraseña", "password", "qwertyui", "studyhub", "11111111", "123456789"];
+    if (password.length < 8) { setError("La contraseña debe tener al menos 8 caracteres."); return; }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) { setError("Usá al menos una letra y un número."); return; }
+    if (flojas.some(f => password.toLowerCase().includes(f))) { setError("Esa contraseña es muy fácil de adivinar. Probá otra."); return; }
     setLoading(true); setError("");
     const { error: err } = await sb().auth.signUp({ email, password });
     setLoading(false);
