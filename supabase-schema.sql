@@ -186,7 +186,10 @@ ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS auto_save boolean DEFAULT fa
 ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 ALTER TABLE telegram_links ENABLE ROW LEVEL SECURITY;
 -- El bot usa service_role (bypassa RLS). El frontend solo lee su propio vínculo.
-CREATE POLICY IF NOT EXISTS "user_own_telegram" ON telegram_links FOR ALL USING (auth.uid() = user_id);
+-- OJO: Postgres NO soporta "CREATE POLICY IF NOT EXISTS" — usar DROP + CREATE,
+-- si no el script corta acá y todo lo de abajo queda sin crear.
+DROP POLICY IF EXISTS "user_own_telegram" ON telegram_links;
+CREATE POLICY "user_own_telegram" ON telegram_links FOR ALL USING (auth.uid() = user_id);
 
 -- 15. FEEDBACK (bugs, ideas y sugerencias enviadas desde la app)
 CREATE TABLE IF NOT EXISTS feedback (
@@ -198,10 +201,13 @@ CREATE TABLE IF NOT EXISTS feedback (
   section text,
   created_at timestamptz DEFAULT now()
 );
--- Solo el dueño puede insertar; solo vos (service_role) podés leer todo
+-- Solo el dueño puede insertar (con SU user_id); leer todo solo con service_role.
+-- WITH CHECK (true) permitía mandar feedback firmado como otra persona.
 ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "insert_own_feedback" ON feedback FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "select_own_feedback" ON feedback FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "insert_own_feedback" ON feedback;
+DROP POLICY IF EXISTS "select_own_feedback" ON feedback;
+CREATE POLICY "insert_own_feedback" ON feedback FOR INSERT TO authenticated
+  WITH CHECK (user_id IS NULL OR user_id = auth.uid());
 
 -- 14. TELEGRAM_STATE (estado de conversación multi-turno del bot)
 CREATE TABLE IF NOT EXISTS telegram_state (

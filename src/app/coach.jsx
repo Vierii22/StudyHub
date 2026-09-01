@@ -2,7 +2,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { getAllTasks, todayLocal } from './store.jsx';
 import { Hubby } from './ui.jsx';
-import { buildSystemPrompt } from './aiPrompt.js';
+import { buildSystemPrompt, askAI } from './aiPrompt.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 import { ActionEditor } from './actionReview.jsx';
 
@@ -197,12 +197,10 @@ const CaptureBar = ({ data }) => {
     setBusy(true);
     setResult(null);
     try {
-      const resp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ systemPrompt: buildSystemPrompt(data, "quick"), messages: [{ role: "user", content: q }] }),
+      const json = await askAI({
+        systemPrompt: buildSystemPrompt(data, "quick"),
+        messages: [{ role: "user", content: q }],
       });
-      const json  = await resp.json();
       const reply = json.text || "No pude entenderlo. Probá desde el chat completo.";
       const { text: replyText, actions } = parseActions(reply);
       const confirm = actions.filter(needsConfirm);
@@ -210,8 +208,11 @@ const CaptureBar = ({ data }) => {
       const done    = safe.length ? applyActions(safe) : [];
       setResult({ text: replyText, done, confirm });
       setText("");
-    } catch {
-      setResult({ text: "Error de conexión — probá de nuevo.", done: [], confirm: [] });
+    } catch (err) {
+      const msg = err?.message === "sin-sesion"
+        ? "Se cerró tu sesión. Volvé a entrar para usar la IA."
+        : (err?.message && err.message !== "error" ? err.message : "Error de conexión — probá de nuevo.");
+      setResult({ text: msg, done: [], confirm: [] });
     }
     setBusy(false);
   };

@@ -3,7 +3,7 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
-import { buildSystemPrompt } from './aiPrompt.js';
+import { buildSystemPrompt, askAI } from './aiPrompt.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 import { ActionEditor } from './actionReview.jsx';
 
@@ -45,15 +45,10 @@ const ChatIA = () => {
     ChatStore.setTyping(true);
 
     try {
-      const resp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemPrompt: buildSystemPrompt(data),
-          messages: newMsgs.map(m => ({ role: m.me ? "user" : "assistant", content: m.content })),
-        }),
+      const json = await askAI({
+        systemPrompt: buildSystemPrompt(data),
+        messages: newMsgs.map(m => ({ role: m.me ? "user" : "assistant", content: m.content })),
       });
-      const json  = await resp.json();
       const reply = json.text || "No pude responder. Intentá de nuevo.";
       const { text, actions } = parseActions(reply);
       const confirmables = actions.filter(needsConfirm);
@@ -61,9 +56,12 @@ const ChatIA = () => {
       const done         = safe.length ? applyActions(safe) : [];
       ChatStore.setTyping(false);
       ChatStore.addMsg({ role: "assistant", content: text, me: false, displayTime: now(), done, confirm: confirmables });
-    } catch {
+    } catch (err) {
       ChatStore.setTyping(false);
-      ChatStore.addMsg({ role: "assistant", content: "Error de conexión. Verificá tu internet.", me: false, displayTime: "ahora" });
+      const msg = err?.message === "sin-sesion"
+        ? "Se cerró tu sesión. Volvé a entrar para usar la IA."
+        : (err?.message && err.message !== "error" ? err.message : "Error de conexión. Verificá tu internet.");
+      ChatStore.addMsg({ role: "assistant", content: msg, me: false, displayTime: "ahora" });
     }
   };
 

@@ -1,4 +1,5 @@
 import { APP_GUIDE } from './help-content.js';
+import { supabase } from '../supabase.js';
 
 /* ============================================================
    CEREBRO COMPARTIDO DE HUBBY — mismo prompt para el chat completo
@@ -65,4 +66,27 @@ const buildSystemPrompt = (data, mode = "chat") => {
   return lines.join("\n");
 };
 
-export { buildSystemPrompt, ACTION_PROTOCOL };
+/* ============================================================
+   Llamada a /api/chat CON el token de sesión. El backend rechaza
+   cualquier pedido sin token válido (antes cualquiera podía usar
+   nuestra cuota de Gemini desde afuera).
+   ============================================================ */
+async function askAI({ systemPrompt, messages }) {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new Error('sin-sesion');
+
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ systemPrompt, messages }),
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.error || 'error');
+  return json;
+}
+
+export { buildSystemPrompt, ACTION_PROTOCOL, askAI };
