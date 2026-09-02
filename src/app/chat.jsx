@@ -3,7 +3,8 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
-import { buildSystemPrompt, askAI } from './aiPrompt.js';
+import { buildSystemPrompt } from './aiPrompt.js';
+import { askAI } from './aiClient.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 import { ActionEditor } from './actionReview.jsx';
 

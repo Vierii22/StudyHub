@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "build:bundle": "node scripts/build-jsx.js",
     "usuarios": "node scripts/usuarios.mjs",
-    "feedback": "node scripts/feedback.mjs"
+    "feedback": "node scripts/feedback.mjs",
+    "test-ia": "node scripts/test-ia.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

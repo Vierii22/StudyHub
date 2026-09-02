@@ -2,7 +2,8 @@ import React from 'react';
 import { Icon } from './icons.jsx';
 import { getAllTasks, todayLocal } from './store.jsx';
 import { Hubby } from './ui.jsx';
-import { buildSystemPrompt, askAI } from './aiPrompt.js';
+import { buildSystemPrompt } from './aiPrompt.js';
+import { askAI } from './aiClient.js';
 import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
 import { ActionEditor } from './actionReview.jsx';
 

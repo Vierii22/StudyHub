@@ -1,5 +1,4 @@
 import { APP_GUIDE } from './help-content.js';
-import { supabase } from '../supabase.js';
 
 /* ============================================================
    CEREBRO COMPARTIDO DE HUBBY — mismo prompt para el chat completo
@@ -14,6 +13,7 @@ const ACTION_PROTOCOL = (todayISO, subjNames) => [
   `── CÓMO EJECUTAR ACCIONES ──`,
   `Además de aconsejar, PODÉS HACER cambios reales en la app: crear/editar/completar/borrar tareas, agregar/borrar eventos (puntuales o que se repiten) y anotar en materias.`,
   `Cuando el usuario te pida hacer algo (o aceptes un plan que armaste), respondé normal en texto Y AL FINAL agregá una línea con el marcador exacto @@ACTIONS@@ seguido de un array JSON con las acciones. Ejemplo:`,
+  `⛔ EL ERROR MÁS GRAVE QUE PODÉS COMETER: decir que hiciste algo SIN emitir el marcador. Si tu texto dice "listo", "anoté", "agregué", "agendé", "actualicé" o cualquier cosa parecida, ENTONCES el marcador @@ACTIONS@@ con la acción correspondiente ES OBLIGATORIO en esa misma respuesta. Sin el marcador NO se guarda NADA y el usuario cree que sí — le hacés perder la información. Si por algún motivo no podés armar la acción, NO digas que lo hiciste: decí qué te falta para hacerlo.`,
   `Listo, te agrego eso.\n@@ACTIONS@@\n[{"type":"add_task","t":"Leer capítulo 3","prio":"media","due":"${todayISO}"}]`,
   `Tipos de acción válidos (usá EXACTAMENTE estos campos):`,
   `- {"type":"add_task","t":"título","prio":"alta|media|baja","due":"YYYY-MM-DD","subject":"nombre materia opcional"}`,
@@ -26,6 +26,7 @@ const ACTION_PROTOCOL = (todayISO, subjNames) => [
   `- {"type":"delete_recurring_event","match":"parte del título de la serie"}`,
   `- {"type":"note_subject","subject":"nombre de materia","text":"la anotación"}`,
   `- {"type":"delete_note","match":"parte del texto de la anotación","subject":"nombre materia opcional"}`,
+  `TAREA vs EVENTO (importante, no los mezcles): si es algo que el usuario TIENE QUE HACER (entregar un TP, terminar un resumen, leer, estudiar, comprar algo) → es add_task, con "due" si dio fecha. Si es algo que OCURRE a una hora/fecha y él asiste (clase, parcial, final, turno, gym, reunión) → es add_event. Cuando el usuario enumera cosas para hacer ("mañana quiero hacer estas 3 cosas", "tengo que hacer X, Y y Z"), son TODAS add_task — una por cada cosa, ninguna como evento.`,
   `REGLAS: Las fechas SIEMPRE en formato YYYY-MM-DD calculadas desde hoy (${todayISO}). Si el usuario dice "mañana", "el viernes", "todos los martes", etc., convertilo vos a fecha(s) exacta(s) — NUNCA le pidas que él la calcule. Podés poner varias acciones en el array (ej: organizar la semana = varias add_task). Solo emití acciones que el usuario pidió o aprobó explícitamente — NO inventes ni agregues cosas de más. IMPORTANTE sobre fechas: si el usuario NO menciona ninguna fecha ni día (ej: "tengo que repasar la unidad 3"), la tarea VA SIN "due" (omitilo o dejalo vacío) — NO le inventes un día porque sí, eso es un error grave. Si NO hay nada que ejecutar (solo pregunta o consejo), NO pongas el marcador. Para borrar (delete_task/delete_event/delete_recurring_event/delete_note), igual emití la acción: la app le va a pedir confirmación al usuario antes de aplicarla, así que en el texto podés decir algo como "¿Confirmás que borre X?". ${subjNames.length ? `Materias del usuario (usá estos nombres EXACTOS en "subject"): ${subjNames.join(", ")}.` : "Todavía no cargó materias."}`,
 ].join("\n");
 
@@ -66,27 +67,5 @@ const buildSystemPrompt = (data, mode = "chat") => {
   return lines.join("\n");
 };
 
-/* ============================================================
-   Llamada a /api/chat CON el token de sesión. El backend rechaza
-   cualquier pedido sin token válido (antes cualquiera podía usar
-   nuestra cuota de Gemini desde afuera).
-   ============================================================ */
-async function askAI({ systemPrompt, messages }) {
-  const { data } = await supabase.auth.getSession();
-  const token = data?.session?.access_token;
-  if (!token) throw new Error('sin-sesion');
 
-  const resp = await fetch('/api/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ systemPrompt, messages }),
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(json.error || 'error');
-  return json;
-}
-
-export { buildSystemPrompt, ACTION_PROTOCOL, askAI };
+export { buildSystemPrompt, ACTION_PROTOCOL };

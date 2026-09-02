@@ -129,10 +129,28 @@ module.exports = async function handler(req, res) {
       body.systemInstruction = { parts: [{ text: systemPrompt.slice(0, MAX_SYSTEM_CHARS) }] };
     }
 
-    const resp = await fetch(
+    /* Gemini free tier: 5 pedidos/minuto. Si nos pasamos devuelve 429 y
+       dice cuántos segundos esperar — reintentamos una vez en vez de
+       tirarle un error al usuario por un pico de un par de segundos. */
+    const llamarGemini = () => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
     );
+
+    let resp = await llamarGemini();
+
+    if (resp.status === 429) {
+      const detalle = await resp.text();
+      const m = detalle.match(/retry in ([\d.]+)s/i);
+      const esperaS = Math.min(m ? parseFloat(m[1]) : 3, 8);
+      console.warn(`Gemini 429 — reintento en ${esperaS}s`);
+      await new Promise(r => setTimeout(r, esperaS * 1000));
+      resp = await llamarGemini();
+      if (resp.status === 429) {
+        console.error('Gemini 429 tras reintento:', detalle.slice(0, 300));
+        return res.status(429).json({ error: 'La IA está muy pedida en este momento. Probá de nuevo en un minuto.' });
+      }
+    }
 
     if (!resp.ok) {
       // El detalle solo va al log — puede traer info interna de Google.
