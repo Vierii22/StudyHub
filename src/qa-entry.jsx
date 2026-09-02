@@ -29,8 +29,8 @@ const sampleData = {
   profile: { name: "Juli", initial: "J", role: "uni", uni: "UTN FRBA", career: "Ing. en Sistemas", year: "3", email: "juli@test.com", photo: null, hubby: false },
   streak: 4,
   subjects: [
-    { id: "s1", name: "Análisis Matemático II", color: "#D9551F", photo: null, profs: ["Dra. Pérez"], files: [], eval: { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "promedio", threshold: 7 }, promedioOn: true }, grades: { p1: 8 }, promoManual: false, schedule: [], commission: "K3001", year: "2", studyPlan: [], lists: { unidades: [{ id: "u1", name: "Límites y continuidad", collapsed: false }], temas: [{ id: "t1", t: "Límites", unidadId: "u1", resumido: true, estudiado: true, repasos: 2 }, { id: "t2", t: "Derivadas", unidadId: "u1", resumido: false, estudiado: false, repasos: 0 }], tareas: [{ id: "ta1", t: "Practica 3", done: false }], notas: [{ id: "n1", t: "Repasar regla de L'Hôpital antes del parcial" }], fechas: [{ id: "f1", t: "Primer parcial", date: plusDays(3), important: true }] } },
-    { id: "s2", name: "Programación I", color: "#C68A2E", photo: null, profs: [], files: [], eval: { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "parciales", threshold: 7 }, promedioOn: true }, grades: {}, promoManual: false, schedule: [], commission: "K1002", year: "1", studyPlan: [], lists: { unidades: [], temas: [], tareas: [], notas: [], fechas: [] } },
+    { id: "s1", name: "Análisis Matemático II", color: "#D9551F", photo: null, profs: ["Dra. Pérez"], files: [], eval: { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "promedio", threshold: 7 }, promedioOn: true }, grades: { p1: 8 }, promoManual: false, schedule: [{ day: "lun", from: "18:00", to: "20:00" }, { day: "mié", from: "18:00", to: "20:00" }], commission: "K3001", year: "2", studyPlan: [], lists: { unidades: [{ id: "u1", name: "Límites y continuidad", collapsed: false }], temas: [{ id: "t1", t: "Límites", unidadId: "u1", resumido: true, estudiado: true, repasos: 2 }, { id: "t2", t: "Derivadas", unidadId: "u1", resumido: false, estudiado: false, repasos: 0 }], tareas: [{ id: "ta1", t: "Practica 3", done: false }], notas: [{ id: "n1", t: "Repasar regla de L'Hôpital antes del parcial" }], fechas: [{ id: "f1", t: "Primer parcial", date: plusDays(3), important: true }] } },
+    { id: "s2", name: "Programación I", color: "#C68A2E", photo: null, profs: [], files: [], eval: { parciales: 2, coloquio: false, final: true, promo: { on: true, mode: "parciales", threshold: 7 }, promedioOn: true }, grades: {}, promoManual: false, schedule: [{ day: "mar", from: "08:00", to: "10:00" }], commission: "K1002", year: "1", studyPlan: [], lists: { unidades: [], temas: [], tareas: [], notas: [], fechas: [] } },
     { id: "s3", name: "Física I", color: "#7E8A4F", photo: null, profs: [], files: [], eval: { parciales: 2, coloquio: false, final: true, promo: { on: false, mode: "promedio", threshold: 7 }, promedioOn: true }, grades: { p1: 9, p2: 8, final: 8 }, promoManual: false, schedule: [], commission: "", year: "1", studyPlan: [], lists: { unidades: [], temas: [], tareas: [], notas: [], fechas: [] } },
   ],
   tasks: [
@@ -80,7 +80,7 @@ function QAApp() {
     if (section === "facultad" && openSubject)
       return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} autoOpenPlanner={false} onPlannerConsumed={() => {}} />;
     switch (section) {
-      case "dashboard":  return <Dashboard onNav={nav} />;
+      case "dashboard":  return <Dashboard onNav={nav} onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} onNav={nav} />;
       case "tareas":     return <Tareas onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={false} />;
       case "calendario": return <Calendario onOpenSubjectPlanner={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
@@ -90,7 +90,7 @@ function QAApp() {
       case "ocio":       return <Ocio />;
       case "notas":      return <Notas onNav={nav} />;
       case "config":     return <ConfigSection onLogout={() => {}} />;
-      default: return <Dashboard onNav={nav} />;
+      default: return <Dashboard onNav={nav} onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
     }
   };
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
-import { useStore, uid, toast, COLORS, isSubjectDone } from './store.jsx';
+import { useStore, uid, toast, COLORS, isSubjectDone, DIA_A_DOW } from './store.jsx';
 import { Btn, Modal, Field, Seg, DatePicker } from './ui.jsx';
 import { cleanupPastEvents, syncEventToTask } from './syncEngine.js';
 
@@ -581,7 +581,6 @@ function deriveRecurringEvents(list) {
    las cargue una por una. No son eventos guardados: se derivan del
    horario, igual que "Estudiar · tema". Si cambia el horario de la
    materia, cambian todas las clases. */
-const DIA_A_DOW = { lun: 1, mar: 2, "mié": 3, mie: 3, jue: 4, vie: 5, "sáb": 6, sab: 6, dom: 0 };
 const CLASES_DIAS_ATRAS = 45;
 const CLASES_DIAS_ADELANTE = 150;
 

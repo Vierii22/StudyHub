@@ -254,7 +254,7 @@ function App() {
     if (section === "facultad" && openSubject)
       return <SubjectView subjectId={openSubject} onBack={() => setOpenSubject(null)} autoOpenPlanner={autoPlanner} onPlannerConsumed={() => setAutoPlanner(false)} />;
     switch (section) {
-      case "dashboard":  return <Dashboard onNav={nav} />;
+      case "dashboard":  return <Dashboard onNav={nav} onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
       case "facultad":   return <Facultad onOpenSubject={setOpenSubject} onNav={nav} />;
       case "correlatividades": return <Correlatividades />;
       case "tareas":     return <Tareas   onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} autoNew={new URLSearchParams(window.location.search).get("action") === "new"} />;
@@ -264,7 +264,7 @@ function App() {
       case "ocio":       return <Ocio />;
       case "notas":      return <Notas onNav={nav} />;
       case "config":     return <ConfigSection onLogout={logout} />;
-      default: return <Dashboard onNav={nav} />;
+      default: return <Dashboard onNav={nav} onOpenSubject={(id) => { setSection("facultad"); setOpenSubject(id); }} />;
     }
   };
 

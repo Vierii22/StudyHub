@@ -649,12 +649,38 @@ const getAllTasks = (data) => {
   return [...global, ...subjectTasks];
 };
 
+
+/* ── horario semanal de una materia ──────────────────────────
+   El editor de horarios guarda { day: "lun", from, to }. Este mapa
+   pasa esa etiqueta al número de día de JS (0=domingo). Lo usan el
+   calendario (para dibujar las clases) y el dashboard (para avisarte
+   si tuviste clase y no anotaste qué se dio). */
+const DIA_A_DOW = { lun: 1, mar: 2, "mié": 3, mie: 3, jue: 4, vie: 5, "sáb": 6, sab: 6, dom: 0 };
+
+/* Fechas (ISO local) en que esa materia tuvo clase entre dos fechas. */
+function subjectClassDates(subject, desde, hasta) {
+  const filas = (subject?.schedule || []).filter(r => r && DIA_A_DOW[r.day] !== undefined);
+  if (!filas.length) return [];
+  const dows = new Set(filas.map(r => DIA_A_DOW[r.day]));
+  const out = [];
+  const d = new Date(desde), end = new Date(hasta);
+  let guard = 0;
+  while (d <= end && guard < 400) {
+    if (dows.has(d.getDay())) {
+      out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    d.setDate(d.getDate() + 1); guard++;
+  }
+  return out;
+}
+
 export {
   Store, useStore, uid, scaleToZoom, toast, ToastHost,
   COLORS, PRIO, STATUS, ALL_WIDGETS,
   playSound, addPomoMinutes, getPomoWeekMins, getPomoWeekByDay,
   getStreak, getAllTasks, todayLocal,
   DEFAULT_EVAL, PASSING, subjectPromedio, deriveEstado, deriveCourseStatus, isSubjectDone,
+  DIA_A_DOW, subjectClassDates,
   PomoStore, usePomoStore,
   ChatStore, useChatStore,
 };
