@@ -61,7 +61,16 @@ const buildSystemPrompt = (data, mode = "chat") => {
       : "No tiene tareas pendientes.",
     events.length ? `Próximos eventos/parciales: ${events.slice(0,6).map(e => `${e.title}${e.date ? " (" + e.date + ")" : ""}`).join(", ")}.` : "",
     ACTION_PROTOCOL(todayISO, subjNames),
-    APP_GUIDE,
+    /* El manual de la app es casi la mitad del prompt y en la captura
+       rápida no sirve: ahí el usuario tira una frase para que la
+       ejecutemos, no para preguntar cómo se usa la app. Sacarlo baja el
+       costo por consulta a la mitad en el camino más usado (y deja más
+       margen de tokens para la respuesta). Si igual preguntan cómo se
+       hace algo, los mandamos al chat, que sí lo tiene. */
+    mode === "quick" ? "" : APP_GUIDE,
+    mode === "quick"
+      ? `Si el usuario pregunta CÓMO se usa la app (no te pide crear nada), respondé en una línea que se lo explicás mejor en el chat de Hubby (el botón del globito) y no emitas acciones.`
+      : "",
   ].filter(Boolean);
 
   return lines.join("\n");
