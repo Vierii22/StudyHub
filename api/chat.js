@@ -120,9 +120,19 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'El primer mensaje debe ser del usuario' });
     }
 
+    /* maxOutputTokens tiene que dar de sobra: Gemini 2.5 "piensa" antes de
+       responder y esos tokens SE DESCUENTAN de este límite. Con 1024 una
+       respuesta con varias acciones se cortaba antes del marcador
+       @@ACTIONS@@ — el usuario leía "listo, agendé las 3 cosas" y no se
+       guardaba ninguna. Además apagamos el pensamiento: acá la tarea es
+       extraer datos estructurados, no razonar, así que solo suma latencia. */
     const body = {
       contents,
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.75 },
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.75,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     };
 
     if (typeof systemPrompt === 'string' && systemPrompt) {
