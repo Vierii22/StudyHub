@@ -132,19 +132,23 @@ const fail = [];
 
 for (const [frase, modo, check, esperado] of casos) {
   const sys = buildSystemPrompt(DATA, modo);
-  let txt = '', acts = [];
-  try {
-    const r = await fetch('https://studyhub.com.ar/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Origin: 'https://studyhub.com.ar', Authorization: `Bearer ${tok}` },
-      body: JSON.stringify({ systemPrompt: sys, messages: [{ role: 'user', content: frase }] }),
-    });
-    const j = await r.json();
-    if (!r.ok) { console.log(`\n[HTTP ${r.status}] ${frase}\n  ${JSON.stringify(j).slice(0, 100)}`); fail.push(frase); continue; }
-    ({ text: txt, actions: acts } = parseActions(j.text || ''));
-  } catch (e) {
-    console.log(`\n[ERROR] ${frase}: ${e.message}`); fail.push(frase); continue;
+  let txt = '', acts = [], errHttp = null;
+  /* Gemini free tier = 5 pedidos/min. Reintentamos si nos frena. */
+  for (let intento = 0; intento < 4; intento++) {
+    try {
+      const r = await fetch('https://studyhub.com.ar/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: 'https://studyhub.com.ar', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ systemPrompt: sys, messages: [{ role: 'user', content: frase }] }),
+      });
+      const j = await r.json();
+      if (r.ok) { ({ text: txt, actions: acts } = parseActions(j.text || '')); errHttp = null; break; }
+      errHttp = `HTTP ${r.status} ${JSON.stringify(j).slice(0, 80)}`;
+      if (r.status === 429 || r.status === 502) { await new Promise(res => setTimeout(res, 20000)); continue; }
+      break;
+    } catch (e) { errHttp = e.message; await new Promise(res => setTimeout(res, 5000)); }
   }
+  if (errHttp) { console.log(`\n[${errHttp}] ${frase}`); fail.push(frase); continue; }
   let pass = false;
   try { pass = !!check(acts); } catch { pass = false; }
   if (pass) ok++; else fail.push(frase);
@@ -152,7 +156,7 @@ for (const [frase, modo, check, esperado] of casos) {
   console.log(`   espera: ${esperado}`);
   console.log(`   dijo:   ${txt.replace(/\n/g, ' ').slice(0, 95)}`);
   console.log(`   acciones (${acts.length}): ${JSON.stringify(acts).slice(0, 320)}`);
-  await new Promise(res => setTimeout(res, 900)); /* no chocar el rate limit */
+  await new Promise(res => setTimeout(res, 13000)); /* free tier: 5 pedidos/min */
 }
 
 console.log(`\n${'='.repeat(72)}\nRESULTADO: ${ok}/${casos.length} OK`);

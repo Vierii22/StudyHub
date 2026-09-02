@@ -85,10 +85,11 @@ const todayISO = () => {
 
 /* ============================================================
    CALENDARIO — Semana · Mes · Año (DESIGN.md punto 6)
-   Fuentes de eventos: data.events (manuales + import .ics) +
-   bloques "Estudiar · materia" derivados de subject.studyPlan.
-   Pendiente: clases derivadas de subject.schedule (Fase 4 sólo
-   guarda el horario; falta generarlas como eventos acá).
+   Fuentes de eventos: data.events (manuales + import .ics),
+   bloques "Estudiar · materia" derivados de subject.studyPlan,
+   series que se repiten (data.recurringEvents) y las CLASES
+   derivadas de subject.schedule (el horario semanal de cada
+   materia) — ver deriveClassEvents más abajo.
    ============================================================ */
 
 const WEEKDAYS = [{ lbl: "Lun", dow: 1 }, { lbl: "Mar", dow: 2 }, { lbl: "Mié", dow: 3 }, { lbl: "Jue", dow: 4 }, { lbl: "Vie", dow: 5 }, { lbl: "Sáb", dow: 6 }, { lbl: "Dom", dow: 0 }];
@@ -573,6 +574,57 @@ function deriveRecurringEvents(list) {
   return out;
 }
 
+/* ---------- CLASES derivadas del horario de cada materia ----------
+   Cada materia tiene su horario fijo (Facultad → editar materia →
+   "Horario semanal": día + desde/hasta). Acá lo expandimos a eventos
+   del calendario, así las clases aparecen solas sin que el usuario
+   las cargue una por una. No son eventos guardados: se derivan del
+   horario, igual que "Estudiar · tema". Si cambia el horario de la
+   materia, cambian todas las clases. */
+const DIA_A_DOW = { lun: 1, mar: 2, "mié": 3, mie: 3, jue: 4, vie: 5, "sáb": 6, sab: 6, dom: 0 };
+const CLASES_DIAS_ATRAS = 45;
+const CLASES_DIAS_ADELANTE = 150;
+
+function deriveClassEvents(subjects) {
+  const out = [];
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const desde = new Date(hoy); desde.setDate(desde.getDate() - CLASES_DIAS_ATRAS);
+  const hasta = new Date(hoy); hasta.setDate(hasta.getDate() + CLASES_DIAS_ADELANTE);
+
+  (subjects || []).forEach(s => {
+    if (isSubjectDone && isSubjectDone(s)) return; /* materia terminada: no más clases */
+    const filas = (s.schedule || []).filter(r => r && r.day && DIA_A_DOW[r.day] !== undefined);
+    if (!filas.length) return;
+    const porDow = {};
+    filas.forEach(r => { (porDow[DIA_A_DOW[r.day]] = porDow[DIA_A_DOW[r.day]] || []).push(r); });
+
+    const d = new Date(desde);
+    let guard = 0;
+    while (d <= hasta && guard < 400) {
+      const filasHoy = porDow[d.getDay()];
+      if (filasHoy) {
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        filasHoy.forEach((r, k) => {
+          out.push({
+            id: `clase-${s.id}-${iso}-${k}`,
+            title: s.name,
+            date: iso,
+            day: d.getDate(),
+            time: r.from || "",
+            timeTo: r.to || "",
+            kind: "clase",
+            color: s.color,
+            subjectId: s.id,
+            classSubjectId: s.id, /* marca: es una clase derivada del horario */
+          });
+        });
+      }
+      d.setDate(d.getDate() + 1); guard++;
+    }
+  });
+  return out;
+}
+
 /* ---------- pantalla principal ---------- */
 const Calendario = ({ onOpenSubjectPlanner }) => {
   const [data, set] = useStore();
@@ -588,9 +640,12 @@ const Calendario = ({ onOpenSubjectPlanner }) => {
     return () => clearInterval(iv);
   }, [set]);
 
-  const events = [...(data.events || []), ...deriveStudyEvents(data.subjects), ...deriveRecurringEvents(data.recurringEvents)];
+  const events = [...(data.events || []), ...deriveStudyEvents(data.subjects), ...deriveRecurringEvents(data.recurringEvents), ...deriveClassEvents(data.subjects)];
   const onEventClick = (ev) => {
     if (ev.studyPlanSubjectId) { onOpenSubjectPlanner && onOpenSubjectPlanner(ev.studyPlanSubjectId); return; }
+    /* Clase derivada del horario: no es un evento guardado, así que no se
+       edita acá — te lleva a la materia (donde está el horario y el diario). */
+    if (ev.classSubjectId) { onOpenSubjectPlanner && onOpenSubjectPlanner(ev.classSubjectId); return; }
     if (ev.recurringId) {
       const series = (data.recurringEvents || []).find(r => r.id === ev.recurringId);
       if (series) { setModal({ series }); return; }
