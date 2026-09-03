@@ -1,7 +1,9 @@
-// Manda el recordatorio diario ("para mañana") por notificación push.
-// Vercel Cron llama a esto una vez por día (ver vercel.json) y agrega
-// automáticamente el header Authorization: Bearer <CRON_SECRET> —
-// por eso NO hace falta pg_cron/SQL en Supabase para esto.
+// Avisos por notificación push. DOS momentos del día (ver vercel.json):
+//   ?tipo=manana (8am AR) -> "hoy tenés..." — lo que arranca hoy
+//   ?tipo=noche  (21h AR) -> cierre del día + "¿qué hacés mañana?"
+// El contenido cambia según la situación de CADA usuario; si no hay nada
+// que decir no se manda nada (avisar por avisar hace que te silencien).
+// Vercel Cron agrega solo el header Authorization: Bearer <CRON_SECRET>.
 const { createClient } = require('@supabase/supabase-js');
 const webpush = require('web-push');
 const crypto = require('crypto');
@@ -16,10 +18,50 @@ function secretoValido(recibido, esperado) {
   return crypto.timingSafeEqual(a, b);
 }
 
-/* mañana en hora de Argentina (UTC-3) */
+/* fechas en hora de Argentina (UTC-3) */
+function todayAR() {
+  return new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+}
 function tomorrowAR() {
   const d = new Date(Date.now() - 3 * 3600 * 1000 + 24 * 3600 * 1000);
   return d.toISOString().slice(0, 10);
+}
+
+const NL = String.fromCharCode(10);
+
+/* ── Qué decirle a CADA usuario ──────────────────────────────
+   Un mismo aviso que cambia según su situación, en vez de N
+   avisos distintos (el plan Hobby de Vercel deja 100 tareas
+   programadas, pero cada una dispara UNA vez por día).
+   Devuelve null si no hay nada que valga una notificación —
+   avisar por avisar es la forma más rápida de que te silencien. */
+function armarAviso(tipo, { eventosHoy, tareasHoy, eventosManana, tareasManana, pendientesHoy, inbox }) {
+  if (tipo === 'noche') {
+    const lineas = [];
+    if (pendientesHoy.length === 0 && (tareasHoy.length > 0 || eventosHoy.length > 0)) {
+      lineas.push('Terminaste todo lo de hoy. Bien ahí 👏');
+    } else if (pendientesHoy.length > 0) {
+      lineas.push(`Te quedaron ${pendientesHoy.length} cosa${pendientesHoy.length > 1 ? 's' : ''} de hoy:`);
+      lineas.push(...pendientesHoy.slice(0, 3).map(t => `· ${t.t}`));
+    }
+    if (inbox.length > 0) {
+      lineas.push(`Tenés ${inbox.length} nota${inbox.length > 1 ? 's' : ''} sin ordenar.`);
+    }
+    const manana = [...eventosManana.map(e => e.title), ...tareasManana.map(t => t.t)];
+    if (manana.length) lineas.push(`Mañana: ${manana.slice(0, 3).join(' · ')}`);
+
+    if (!lineas.length) return null;
+    return { title: '¿Qué hacés mañana?', body: lineas.join(NL), url: '/?section=dashboard' };
+  }
+
+  /* mañana temprano: lo de HOY (antes avisaba lo de mañana, que a las
+     8am ya no sirve para nada — el día que importa es el que arranca) */
+  const lineas = [
+    ...eventosHoy.map(e => `📅 ${e.title}${e.important ? ' ⭐' : ''}`),
+    ...tareasHoy.map(t => `✅ ${t.t}`),
+  ];
+  if (!lineas.length) return null;
+  return { title: '🔔 Hoy tenés', body: lineas.slice(0, 5).join(NL), url: '/?section=dashboard' };
 }
 
 module.exports = async function handler(req, res) {
@@ -43,8 +85,13 @@ module.exports = async function handler(req, res) {
     stage = 'supabase-client';
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+    /* ?tipo=noche  -> cierre del dia + que haces manana (21hs)
+       ?tipo=manana -> lo que tenes HOY (8am, por defecto) */
+    const tipo = req.query?.tipo === 'noche' ? 'noche' : 'manana';
+
     stage = 'fetch-subscriptions';
     const manana = tomorrowAR();
+    const hoy = todayAR();
     const { data: subs, error: subsErr } = await supabase
       .from('push_subscriptions')
       .select('id, user_id, endpoint, p256dh, auth_key');
@@ -79,15 +126,19 @@ module.exports = async function handler(req, res) {
             supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_calendar').maybeSingle(),
             supabase.from('app_data').select('value').eq('user_id', userId).eq('key', 'sh_tasks').maybeSingle(),
           ]);
-          const events = ((cal?.value?.events) || []).filter(e => e.date === manana);
-          const tasks  = ((tasksDom?.value?.tasks) || []).filter(t => !t.done && t.dueDate === manana);
-          if (!events.length && !tasks.length) continue;
+          const todosEventos = (cal?.value?.events) || [];
+          const todasTareas  = (tasksDom?.value?.tasks) || [];
 
-          const lines = [
-            ...events.map(e => `📅 ${e.title}${e.important ? ' ⭐' : ''}`),
-            ...tasks.map(t => `✅ ${t.t}`),
-          ];
-          payload = JSON.stringify({ title: '🔔 Para mañana', body: lines.join('\n'), url: '/?section=dashboard' });
+          const aviso = armarAviso(tipo, {
+            eventosHoy:    todosEventos.filter(e => e.date === hoy),
+            tareasHoy:     todasTareas.filter(t => t.dueDate === hoy),
+            eventosManana: todosEventos.filter(e => e.date === manana),
+            tareasManana:  todasTareas.filter(t => !t.done && t.dueDate === manana),
+            pendientesHoy: todasTareas.filter(t => !t.done && t.dueDate === hoy),
+            inbox:         (tasksDom?.value?.inbox) || [],
+          });
+          if (!aviso) continue; /* sin nada que decir, no molestamos */
+          payload = JSON.stringify(aviso);
         }
 
         for (const sub of byUser[userId]) {
@@ -109,7 +160,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    res.json({ ok: true, enviados, fallidos, usuarios: Object.keys(byUser).length, detalle });
+    res.json({ ok: true, tipo, enviados, fallidos, usuarios: Object.keys(byUser).length, detalle });
   } catch (e) {
     console.error('send-reminders error at stage', stage, ':', e);
     res.status(500).json({ stage, error: e.message, name: e.name, code: e.code || e.statusCode || null });

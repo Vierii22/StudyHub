@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { useStore, isSubjectDone, subjectClassDates, todayLocal } from './store.jsx';
 import { CoachCard, CaptureBar, TodayTimeline } from './coach.jsx';
 import { usePushNotifications } from './pushNotifications.js';
+import { InboxCard } from './inbox.jsx';
 
 const greetingTime = () => { const h = new Date().getHours(); return h < 6 ? "noche" : h < 13 ? "mañana" : h < 20 ? "tarde" : "noche"; };
 
@@ -130,6 +131,7 @@ const Dashboard = ({ onNav, onOpenSubject }) => {
         </div>
         <div style={{ marginTop: 16 }}><CoachCard data={data} onNav={onNav} /></div>
         <div style={{ margin: "14px 0" }}><CaptureBar data={data} set={set} onOpen={onNav} /></div>
+        <div style={{ marginBottom: 14 }}><InboxCard /></div>
         <NotifyReminder />
         <ClaseSinAnotar onOpenSubject={onOpenSubject} />
         <TodayTimeline data={data} set={set} onNav={onNav} />
@@ -159,7 +161,10 @@ const Dashboard = ({ onNav, onOpenSubject }) => {
 
       {/* ── COACH + HOY ── */}
       <div className="grid" style={{ gridTemplateColumns: "repeat(12,1fr)", marginTop: 22 }}>
-        <div style={{ gridColumn: "span 7" }} className="dash-col-coach"><CoachCard data={data} onNav={onNav} /></div>
+        <div style={{ gridColumn: "span 7" }} className="dash-col-coach">
+          <CoachCard data={data} onNav={onNav} />
+          <div style={{ marginTop: 14 }}><InboxCard /></div>
+        </div>
         <div style={{ gridColumn: "span 5" }} className="dash-col-hoy"><TodayTimeline data={data} set={set} onNav={onNav} /></div>
       </div>
     </div>

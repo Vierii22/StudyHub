@@ -118,6 +118,7 @@ const SEED = {
   missions: [],
   events: [],
   recurringEvents: [], /* eventos que se repiten (ej: "todos los miércoles") — UNA serie, no N eventos sueltos */
+  inbox: [],             /* bandeja "lo que se me ocurre": {id, t, created, done} — se vacía ordenándola, no borrándola */
   journal: [],
   journalDraft: "",
   morning: [],
@@ -203,6 +204,7 @@ function applyMigrations(data) {
   if (!Array.isArray(data.missions))  data.missions  = [];
   if (!Array.isArray(data.events))    data.events    = [];
   if (!Array.isArray(data.recurringEvents)) data.recurringEvents = [];
+  if (!Array.isArray(data.inbox))     data.inbox     = [];
   if (!Array.isArray(data.journal))   data.journal   = [];
   if (data.streak== null) data.streak= 0;
   if (data.journalDraft == null) data.journalDraft = "";

@@ -6,7 +6,7 @@ import { supabase } from './supabase.js';
    ============================================================ */
 export const DOMAIN_MAP = {
   sh_profile:  ['profile', 'streak'],
-  sh_tasks:    ['tasks', 'taskCalendarMap', 'missions'],
+  sh_tasks:    ['tasks', 'taskCalendarMap', 'missions', 'inbox'],
   sh_subjects: ['subjects'],
   sh_calendar: ['events', 'recurringEvents'],
   sh_diary:    ['journal', 'journalDraft', 'morning'],
