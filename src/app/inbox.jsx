@@ -35,9 +35,48 @@ const mimeSoportado = () => {
   return "";
 };
 
+/* App instalada (ventana propia, sin barra de direcciones) vs. pestaña
+   normal del navegador — el camino para destrabar el micrófono es
+   DISTINTO en cada caso, así que hay que saber cuál es. Ningún sitio
+   puede abrir la configuración del sistema por vos (Chrome y Windows lo
+   bloquean a propósito) — lo único que podemos hacer es decirte el
+   camino exacto según dónde estás parado. */
+const appInstalada = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches ||
+  window.matchMedia?.('(display-mode: window-controls-overlay)').matches ||
+  window.navigator.standalone === true;
+
+const PASOS_INSTALADA = [
+  'Abrí el menú ⋮ (arriba a la derecha de esta ventana)',
+  'Buscá "Información de la app" / "App info"',
+  'En la página de Windows que se abre, activá "Micrófono"',
+];
+const PASOS_NAVEGADOR = [
+  'Tocá el candado 🔒 junto a la URL, arriba',
+  'Buscá "Micrófono" y cambialo a "Permitir"',
+  'Recargá la página (F5)',
+];
+
+const MicBloqueado = ({ onCerrar }) => {
+  const instalada = appInstalada();
+  return (
+    <div className="inbox-mic-help">
+      <div className="inbox-mic-help-t">
+        Micrófono bloqueado — {instalada ? "estás usando la app instalada" : "estás en el navegador"}, el camino es:
+      </div>
+      <ol>
+        {(instalada ? PASOS_INSTALADA : PASOS_NAVEGADOR).map((p, i) => <li key={i}>{p}</li>)}
+      </ol>
+      {instalada && <div className="inbox-mic-help-alt">Si no ves esa opción, buscá el ícono de StudyHub en el menú inicio → click derecho → "Configuración de la aplicación".</div>}
+      <button className="inbox-mic-help-x" onClick={onCerrar}>Entendido</button>
+    </div>
+  );
+};
+
 const RecordButton = () => {
   const [grabando, setGrabando] = React.useState(false);
   const [subiendo, setSubiendo] = React.useState(false);
+  const [bloqueado, setBloqueado] = React.useState(false);
   const [seg, setSeg] = React.useState(0);
   const recRef = React.useRef(null);
   const chunksRef = React.useRef([]);
@@ -55,6 +94,7 @@ const RecordButton = () => {
 
   const empezar = async () => {
     if (!navigator.mediaDevices?.getUserMedia) return toast("Este navegador no puede grabar audio");
+    setBloqueado(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -78,7 +118,7 @@ const RecordButton = () => {
          sistema" y "no hay micrófono". Cada una se arregla distinto. */
       const nombre = e?.name || "";
       if (nombre === "NotAllowedError" || nombre === "PermissionDeniedError") {
-        toast("Micrófono bloqueado — mirá el candado 🔒 junto a la URL → Permisos → Micrófono, y también en Windows: Configuración → Privacidad → Micrófono");
+        setBloqueado(true); /* toast fugaz no alcanza para 3 pasos — panel que se queda */
       } else if (nombre === "NotFoundError" || nombre === "OverconstrainedError") {
         toast("No se encontró ningún micrófono conectado");
       } else if (nombre === "NotReadableError") {
@@ -127,9 +167,12 @@ const RecordButton = () => {
     );
   }
   return (
-    <button className="inbox-mic-btn" onClick={empezar} title="Grabar nota de voz">
-      <Icon name="mic" size={17} />
-    </button>
+    <span className="inbox-mic-wrap">
+      <button className="inbox-mic-btn" onClick={empezar} title="Grabar nota de voz">
+        <Icon name="mic" size={17} />
+      </button>
+      {bloqueado && <MicBloqueado onCerrar={() => setBloqueado(false)} />}
+    </span>
   );
 };
 
