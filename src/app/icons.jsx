@@ -17,6 +17,8 @@ const Icon = ({ name, size = 20, ...rest }) => {
     calendar: <><rect x="3" y="4.5" width="18" height="17" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,
     check: <><rect x="3" y="3.5" width="18" height="17" rx="3" /><path d="m8 12 2.5 2.5L16 9" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></>,
+    mic: <><rect x="9" y="2.5" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0" /><path d="M12 17.5V21M9 21h6" /></>,
+    playFilled: <><circle cx="12" cy="12" r="9.5" /><path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" stroke="none" /></>,
     chat: <path d="M4 5h16v11H8l-4 4V5Z" />,
     pen: <><path d="M14 4.5 19.5 10 8 21.5l-5.5.5.5-5.5L14 4.5Z" /><path d="m12.5 6 5.5 5.5" /></>,
     calendarDays: <><rect x="3" y="4.5" width="18" height="17" rx="2.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 17h.01M12 17h.01" /></>,

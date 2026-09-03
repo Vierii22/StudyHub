@@ -271,12 +271,27 @@ const DatePicker = ({ value, onChange, placeholder = "Elegir fecha", allowClear 
   );
 };
 
-/* ---------- HUBBY CHAT FAB — entrada al chat, abajo a la izquierda ---------- */
+/* ---------- HUBBY CHAT FAB — entrada al chat, abajo a la izquierda ----------
+   Antes era solo un ícono ambiguo: nadie sabía qué era ni que ahí se
+   hablaba con la IA. Ahora muestra la etiqueta "Hablar con Hubby" hasta
+   que el usuario entra al chat por primera vez — después se achica a
+   solo el ícono, para no ocupar espacio de por vida. */
 const HubbyChatFab = ({ section, onNav }) => {
+  const [usado, setUsado] = React.useState(() => {
+    try { return localStorage.getItem("sh_chat_used") === "1"; } catch { return false; }
+  });
   if (section === "chat") return null; /* ya estás en el chat */
+
+  const abrir = () => {
+    try { localStorage.setItem("sh_chat_used", "1"); } catch {}
+    setUsado(true);
+    onNav("chat");
+  };
+
   return (
-    <button className="hubby-fab" onClick={() => onNav("chat")} title="Hablar con Hubby" aria-label="Abrir chat con Hubby">
-      <Hubby pose="chat" size={44} />
+    <button className={`hubby-fab${usado ? "" : " expandido"}`} onClick={abrir} title="Hablar con Hubby" aria-label="Abrir chat con Hubby">
+      <Hubby pose="chat" size={usado ? 44 : 34} />
+      {!usado && <span className="hubby-fab-label">Hablar con Hubby</span>}
     </button>
   );
 };

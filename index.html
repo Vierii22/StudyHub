@@ -1074,9 +1074,15 @@ a{ color:inherit; text-decoration:none; }
 .hubby-fab:hover{ transform:translateY(-2px); box-shadow:0 5px 0 #e0d5c3, 0 16px 36px -12px rgba(58,51,43,.55); }
 .hubby-fab:active{ transform:translateY(1px); box-shadow:0 1px 0 #e0d5c3; }
 .hubby-fab img{ width:44px; height:44px; }
+.hubby-fab.expandido{ width:auto; border-radius:34px; padding:0 20px 0 10px; gap:10px; }
+.hubby-fab.expandido img{ width:34px; height:34px; }
+.hubby-fab-label{ font-family:var(--font-head); font-weight:600; font-size:14px; color:var(--ink); white-space:nowrap; }
 @media(max-width:768px){
   .hubby-fab{ bottom:calc(18px + env(safe-area-inset-bottom)); left:16px; width:52px; height:52px; }
   .hubby-fab img{ width:38px; height:38px; }
+  .hubby-fab.expandido{ width:auto; height:48px; padding:0 16px 0 8px; }
+  .hubby-fab.expandido img{ width:30px; height:30px; }
+  .hubby-fab-label{ font-size:13px; }
 }
 
 /* ===== FEEDBACK WIDGET ===== */
@@ -1448,6 +1454,15 @@ a{ color:inherit; text-decoration:none; }
 .inbox-add-btn{flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);border:none;border-radius:var(--r);cursor:pointer;transition:opacity .14s,transform .1s}
 .inbox-add-btn:disabled{opacity:.35;cursor:default}
 .inbox-add-btn:not(:disabled):active{transform:scale(.94)}
+.inbox-mic-btn{flex:0 0 auto;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;background:var(--field);color:var(--tx-2);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;transition:background .14s,color .14s}
+.inbox-mic-btn:hover{color:var(--org)}
+.inbox-mic-btn.grabando{background:var(--org);color:#fff;border-color:var(--org)}
+.inbox-mic-btn.subiendo{opacity:.6;cursor:wait}
+.inbox-mic-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:inboxPulse 1.1s ease-in-out infinite}
+.inbox-mic-time{font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+@keyframes inboxPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.inbox-row-ic.play{color:var(--org)}
+.inbox-row-ic.play:hover{background:var(--card)}
 .inbox-vacio{margin-top:14px;font-size:13px;color:var(--tx-3);line-height:1.5}
 .inbox-lista{margin-top:12px;display:flex;flex-direction:column;gap:2px}
 .inbox-row{border-radius:var(--r);transition:background .14s}

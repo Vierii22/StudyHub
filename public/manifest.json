@@ -6,42 +6,63 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "orientation": "portrait",
   "background_color": "#E6DFD3",
   "theme_color": "#E6DFD3",
   "shortcuts": [
     {
+      "name": "Hablar con Hubby",
+      "short_name": "Hubby",
+      "description": "Abrir el chat con la IA",
+      "url": "/?section=chat",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Nueva tarea",
       "short_name": "Tarea",
       "description": "Agregar una tarea rápida",
       "url": "/?section=tareas&action=new",
-      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Calendario",
       "short_name": "Calendario",
       "description": "Ver la semana y el mes",
       "url": "/?section=calendario",
-      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Hoy",
       "short_name": "Dashboard",
       "description": "Ver el resumen de hoy",
       "url": "/?section=dashboard",
-      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
-  "share_target": {
-    "action": "/share",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
   "icons": [
     {
       "src": "/assets/icon-192.png",
@@ -68,6 +89,9 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["education", "productivity"],
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "lang": "es-AR"
 }

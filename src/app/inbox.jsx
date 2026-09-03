@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, isSubjectDone } from './store.jsx';
 import { DatePicker, Seg } from './ui.jsx';
 import { syncTaskToCalendar } from './syncEngine.js';
+import { uploadToStorage, signedUrlFor, removeFromStorage } from './storageFiles.js';
 
 /* ============================================================
    BANDEJA — "lo que se me ocurre"
@@ -23,6 +24,101 @@ const mananaISO = () => {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/* ---------- grabador de notas de voz ---------- */
+const REC_MAX_S = 120; /* 2 min — de sobra para "se me ocurrió" y no dispara el costo de Storage */
+
+const mimeSoportado = () => {
+  const tipos = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  for (const t of tipos) if (window.MediaRecorder?.isTypeSupported?.(t)) return t;
+  return "";
+};
+
+const RecordButton = () => {
+  const [grabando, setGrabando] = React.useState(false);
+  const [subiendo, setSubiendo] = React.useState(false);
+  const [seg, setSeg] = React.useState(0);
+  const recRef = React.useRef(null);
+  const chunksRef = React.useRef([]);
+  const streamRef = React.useRef(null);
+  const timerRef = React.useRef(null);
+
+  const limpiar = () => {
+    clearInterval(timerRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    recRef.current = null;
+    setGrabando(false);
+    setSeg(0);
+  };
+
+  const empezar = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return toast("Este navegador no puede grabar audio");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = mimeSoportado();
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      chunksRef.current = [];
+      rec.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = () => subir(new Blob(chunksRef.current, { type: mime || "audio/webm" }), seg);
+      rec.start();
+      recRef.current = rec;
+      setGrabando(true);
+      timerRef.current = setInterval(() => {
+        setSeg(s => {
+          if (s + 1 >= REC_MAX_S) { rec.stop(); return s; }
+          return s + 1;
+        });
+      }, 1000);
+    } catch {
+      toast("No se pudo acceder al micrófono");
+    }
+  };
+
+  const parar = () => recRef.current?.stop();
+
+  const subir = async (blob, duracionSeg) => {
+    limpiar();
+    if (blob.size < 500) return; /* grabación vacía / cancelada al toque */
+    setSubiendo(true);
+    try {
+      const ext = blob.type.includes("mp4") ? "m4a" : "webm";
+      const file = new File([blob], `nota-${Date.now()}.${ext}`, { type: blob.type });
+      const { path } = await uploadToStorage(file, "audio");
+      const mm = Math.floor(duracionSeg / 60), ss = duracionSeg % 60;
+      Store.set(s => {
+        s.inbox = [{
+          id: uid(), type: "audio", path,
+          t: `Nota de voz (${mm}:${String(ss).padStart(2, "0")})`,
+          created: new Date().toISOString(),
+        }, ...(s.inbox || [])];
+      });
+      toast("Nota de voz guardada");
+    } catch {
+      toast("No se pudo guardar el audio");
+    }
+    setSubiendo(false);
+  };
+
+  if (subiendo) {
+    return <button className="inbox-mic-btn subiendo" disabled title="Guardando…"><Icon name="clock" size={17} /></button>;
+  }
+  if (grabando) {
+    const mm = Math.floor(seg / 60), ss = seg % 60;
+    return (
+      <button className="inbox-mic-btn grabando" onClick={parar} title="Detener">
+        <span className="inbox-mic-dot" />
+        <span className="inbox-mic-time">{mm}:{String(ss).padStart(2, "0")}</span>
+      </button>
+    );
+  }
+  return (
+    <button className="inbox-mic-btn" onClick={empezar} title="Grabar nota de voz">
+      <Icon name="mic" size={17} />
+    </button>
+  );
 };
 
 /* ---------- caja de escritura rápida ---------- */
@@ -51,6 +147,7 @@ export const InboxQuickAdd = ({ autoFocus = false, placeholder = "Se me ocurrió
         onChange={e => setTxt(e.target.value)}
         onKeyDown={e => e.key === "Enter" && add()}
       />
+      <RecordButton />
       <button className="inbox-add-btn" onClick={add} disabled={!txt.trim()} title="Anotar">
         <Icon name="plus" size={17} />
       </button>
@@ -138,10 +235,43 @@ const Ordenar = ({ item, onListo, onCancelar }) => {
   );
 };
 
+/* botón de escuchar una nota de voz — pide el link firmado recién al tocar */
+const PlayAudio = ({ path }) => {
+  const [estado, setEstado] = React.useState("quieto"); /* quieto | cargando | sonando */
+  const audioRef = React.useRef(null);
+
+  const tocar = async () => {
+    if (estado === "sonando") { audioRef.current?.pause(); setEstado("quieto"); return; }
+    setEstado("cargando");
+    try {
+      const url = await signedUrlFor(path);
+      const audio = new Audio(url);
+      audio.onended = () => setEstado("quieto");
+      audioRef.current = audio;
+      await audio.play();
+      setEstado("sonando");
+    } catch {
+      toast("No se pudo reproducir el audio");
+      setEstado("quieto");
+    }
+  };
+
+  React.useEffect(() => () => audioRef.current?.pause(), []);
+
+  return (
+    <button className="inbox-row-ic play" onClick={tocar} title={estado === "sonando" ? "Pausar" : "Escuchar"}>
+      <Icon name={estado === "cargando" ? "clock" : estado === "sonando" ? "pause" : "playFilled"} size={15} />
+    </button>
+  );
+};
+
 /* ---------- una fila de la bandeja ---------- */
 const Fila = ({ item, abierto, onAbrir, onCerrar }) => {
+  const esAudio = item.type === "audio";
+
   const descartar = () => {
     Store.set(s => { s.inbox = (s.inbox || []).filter(x => x.id !== item.id); });
+    if (esAudio && item.path) removeFromStorage(item.path);
     toast("Descartado");
   };
   const sacar = () => Store.set(s => { s.inbox = (s.inbox || []).filter(x => x.id !== item.id); });
@@ -158,6 +288,7 @@ const Fila = ({ item, abierto, onAbrir, onCerrar }) => {
   return (
     <div className={`inbox-row${abierto ? " abierta" : ""}`}>
       <div className="inbox-row-head">
+        {esAudio && <PlayAudio path={item.path} />}
         <span className="inbox-row-txt" onClick={abierto ? onCerrar : onAbrir}>{item.t}</span>
         <span className="inbox-row-when">{cuando}</span>
         {!abierto && (

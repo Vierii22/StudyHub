@@ -4,30 +4,7 @@ import { Icon } from './icons.jsx';
 import { Store, useStore, uid, toast, COLORS, DEFAULT_EVAL, deriveEstado, subjectPromedio, isSubjectDone } from './store.jsx';
 import { Btn, Chip, MonoLabel, PageHead, Empty, Modal, Field } from './ui.jsx';
 import { supabase } from '../supabase.js';
-
-/* ── subida de archivos a Supabase Storage (para archivos grandes, hasta 100 MB) ── */
-const FILES_BUCKET = "materiales";
-const FILE_MAX_MB = 100;
-async function uploadToStorage(file) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  if (!userId) throw new Error("no-session");
-  const safe = file.name.replace(/[^\w.\-]+/g, "_");
-  const path = `${userId}/${uid()}-${safe}`;
-  const { error } = await supabase.storage.from(FILES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || undefined });
-  if (error) throw error;
-  /* Guardamos SOLO la ruta. Antes guardábamos una URL pública permanente:
-     cualquiera con ese link se bajaba el archivo, para siempre. Ahora el
-     link se firma en el momento de abrirlo y vence en minutos. */
-  return { path };
-}
-
-/* Link temporal (1 hora) para abrir un archivo del bucket privado. */
-async function signedUrlFor(path) {
-  const { data, error } = await supabase.storage.from(FILES_BUCKET).createSignedUrl(path, 3600);
-  if (error) throw error;
-  return data.signedUrl;
-}
+import { FILES_BUCKET, FILE_MAX_MB, uploadToStorage, signedUrlFor } from './storageFiles.js';
 
 /* ============================================================
    FACULTAD — grid de materias + vista interna (pizarrón / widgets)
