@@ -72,8 +72,20 @@ const RecordButton = () => {
           return s + 1;
         });
       }, 1000);
-    } catch {
-      toast("No se pudo acceder al micrófono");
+    } catch (e) {
+      /* Un solo mensaje genérico no alcanza: la causa real cambia mucho
+         entre "el navegador lo bloqueó", "Windows lo bloquea a nivel
+         sistema" y "no hay micrófono". Cada una se arregla distinto. */
+      const nombre = e?.name || "";
+      if (nombre === "NotAllowedError" || nombre === "PermissionDeniedError") {
+        toast("Micrófono bloqueado — mirá el candado 🔒 junto a la URL → Permisos → Micrófono, y también en Windows: Configuración → Privacidad → Micrófono");
+      } else if (nombre === "NotFoundError" || nombre === "OverconstrainedError") {
+        toast("No se encontró ningún micrófono conectado");
+      } else if (nombre === "NotReadableError") {
+        toast("El micrófono lo está usando otra app (Zoom, Teams…). Cerrala e intentá de nuevo");
+      } else {
+        toast("No se pudo acceder al micrófono" + (nombre ? ` (${nombre})` : ""));
+      }
     }
   };
 

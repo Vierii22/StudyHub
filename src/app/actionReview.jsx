@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Field, DatePicker, Seg } from './ui.jsx';
+import { describeAction } from './chatActions.js';
 
 /* ============================================================
    REVISAR ANTES DE GUARDAR (temporal)
@@ -94,4 +95,27 @@ const ActionEditor = ({ action, subjects, onChange }) => {
   }
 };
 
-export { ActionEditor };
+/* ============================================================
+   UNA acción a confirmar. Antes se mostraba el formulario
+   editable SIEMPRE, para cada acción — mucho para algo que el
+   mensaje de Hubby ya explicó en texto. Ahora por defecto solo
+   se ve la descripción; el formulario queda un toque atrás de
+   "Editar", para cuando algo salió mal y hay que corregirlo.
+   ============================================================ */
+const ConfirmItem = ({ action, subjects, onChange }) => {
+  const [editando, setEditando] = React.useState(false);
+  const editable = EDITABLE_TYPES.has(action.type);
+
+  return (
+    <div className="chat-confirm-item">
+      <div className="chat-confirm-i">{describeAction(action)}</div>
+      {editable && (
+        editando
+          ? <ActionEditor action={action} subjects={subjects} onChange={onChange} />
+          : <button type="button" className="chat-confirm-edit" onClick={() => setEditando(true)}>Editar</button>
+      )}
+    </div>
+  );
+};
+
+export { ActionEditor, ConfirmItem };

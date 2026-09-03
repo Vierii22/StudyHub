@@ -5,8 +5,8 @@ import { useStore, ChatStore, useChatStore } from './store.jsx';
 import { Btn, PageHead, Hubby } from './ui.jsx';
 import { buildSystemPrompt } from './aiPrompt.js';
 import { askAI } from './aiClient.js';
-import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
-import { ActionEditor } from './actionReview.jsx';
+import { parseActions, applyActions, needsConfirm } from './chatActions.js';
+import { ConfirmItem } from './actionReview.jsx';
 
 /* ============================================================
    CHAT IA (Gemini via /api/chat) — "Hubby", tu organizador in-app
@@ -141,10 +141,7 @@ const ChatIA = () => {
                   <div className="chat-confirm">
                     <div className="chat-confirm-t"><Icon name="edit" size={14} /> Revisá antes de guardar</div>
                     {m.confirm.map((a, k) => (
-                      <div key={k}>
-                        <div className="chat-confirm-i">{describeAction(a)}</div>
-                        <ActionEditor action={a} subjects={data.subjects} onChange={edited => editConfirmField(i, k, edited)} />
-                      </div>
+                      <ConfirmItem key={k} action={a} subjects={data.subjects} onChange={edited => editConfirmField(i, k, edited)} />
                     ))}
                     <div className="chat-confirm-btns">
                       <button className="chat-confirm-yes" onClick={() => confirmActions(i)}>Aceptar</button>

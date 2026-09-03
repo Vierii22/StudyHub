@@ -4,8 +4,8 @@ import { getAllTasks, todayLocal } from './store.jsx';
 import { Hubby } from './ui.jsx';
 import { buildSystemPrompt } from './aiPrompt.js';
 import { askAI } from './aiClient.js';
-import { parseActions, applyActions, needsConfirm, describeAction } from './chatActions.js';
-import { ActionEditor } from './actionReview.jsx';
+import { parseActions, applyActions, needsConfirm } from './chatActions.js';
+import { ConfirmItem } from './actionReview.jsx';
 
 const COACH_POSE = { alta: "vamos", media: "vamos", baja: "idea", cero: "contento" };
 
@@ -255,10 +255,7 @@ const CaptureBar = ({ data }) => {
             <div className="chat-confirm" style={{ marginTop: 8 }}>
               <div className="chat-confirm-t"><Icon name="edit" size={14} /> Revisá antes de guardar</div>
               {result.confirm.map((a, k) => (
-                <div key={k}>
-                  <div className="chat-confirm-i">{describeAction(a)}</div>
-                  <ActionEditor action={a} subjects={data.subjects} onChange={edited => editPending(k, edited)} />
-                </div>
+                <ConfirmItem key={k} action={a} subjects={data.subjects} onChange={edited => editPending(k, edited)} />
               ))}
               <div className="chat-confirm-btns">
                 <button className="chat-confirm-yes" onClick={confirmPending}>Aceptar</button>
