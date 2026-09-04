@@ -57,8 +57,17 @@ const PASOS_NAVEGADOR = [
   'Recargá la página (F5)',
 ];
 
+const CHROME_MIC_URL = "chrome://settings/content/microphone";
+
 const MicBloqueado = ({ onCerrar }) => {
   const instalada = appInstalada();
+  const [copiado, setCopiado] = React.useState(false);
+
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(CHROME_MIC_URL); setCopiado(true); }
+    catch { /* clipboard sin permiso — no es grave, el texto ya está visible */ }
+  };
+
   return (
     <div className="inbox-mic-help">
       <div className="inbox-mic-help-t">
@@ -68,6 +77,14 @@ const MicBloqueado = ({ onCerrar }) => {
         {(instalada ? PASOS_INSTALADA : PASOS_NAVEGADOR).map((p, i) => <li key={i}>{p}</li>)}
       </ol>
       {instalada && <div className="inbox-mic-help-alt">Si no ves esa opción, buscá el ícono de StudyHub en el menú inicio → click derecho → "Configuración de la aplicación".</div>}
+      <div className="inbox-mic-help-alt">
+        ¿Ya hiciste eso y sigue sin andar? El bloqueo puede estar en Chrome mismo, aparte de Windows. Abrí una pestaña normal y pegá:
+      </div>
+      <div className="inbox-mic-help-url">
+        <code>{CHROME_MIC_URL}</code>
+        <button type="button" onClick={copiar}>{copiado ? "Copiado ✓" : "Copiar"}</button>
+      </div>
+      <div className="inbox-mic-help-alt">Buscá studyhub.com.ar en "No permitido" y cambialo a "Permitir".</div>
       <button className="inbox-mic-help-x" onClick={onCerrar}>Entendido</button>
     </div>
   );
