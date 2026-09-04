@@ -227,6 +227,9 @@ const DatePicker = ({ value, onChange, placeholder = "Elegir fecha", allowClear 
   const todayISO = dpISO(today.getFullYear(), today.getMonth(), today.getDate());
   const [view, setView] = React.useState(() => sel ? { y: sel.y, m: sel.m } : { y: today.getFullYear(), m: today.getMonth() });
 
+  const manana = new Date(today); manana.setDate(manana.getDate() + 1);
+  const mananaISO = dpISO(manana.getFullYear(), manana.getMonth(), manana.getDate());
+
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
   const offset = (new Date(view.y, view.m, 1).getDay() + 6) % 7; /* lunes primero */
   const prevM = () => setView(v => v.m === 0  ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 });
@@ -263,6 +266,7 @@ const DatePicker = ({ value, onChange, placeholder = "Elegir fecha", allowClear 
           </div>
           <div className="dp-foot">
             <button type="button" className="dp-foot-btn" onClick={() => { onChange(todayISO); setOpen(false); }}>Hoy</button>
+            <button type="button" className="dp-foot-btn" onClick={() => { onChange(mananaISO); setOpen(false); }}>Mañana</button>
             {allowClear && value && <button type="button" className="dp-foot-btn ghost" onClick={() => { onChange(""); setOpen(false); }}>Sin fecha</button>}
           </div>
         </div>
