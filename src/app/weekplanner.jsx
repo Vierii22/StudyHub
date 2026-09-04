@@ -52,7 +52,12 @@ const TaskChipVisual = ({ task, subj, selected }) => {
 /* tarjeta de tarea arrastrable/tocable */
 const TaskChip = ({ task, subj, placedId, selected, onSelect }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: placedId ? `plan-${placedId}` : `pool-${task.id}`, data: { taskId: task.id, placedId } });
-  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.3 : 1, cursor: "grab", touchAction: "none" };
+  /* minWidth:0 es necesario ACÁ, no solo en el texto de adentro: este
+     div es a su vez un ítem de grid/flex del padre, y por default esos
+     ítems no se achican por debajo del ancho de su contenido aunque el
+     texto de adentro sí sepa truncar — sin esto, el chip entero se
+     queda con su ancho natural y se sale del contenedor angosto. */
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.3 : 1, cursor: "grab", touchAction: "none", minWidth: 0 };
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect} style={style}>
       <TaskChipVisual task={task} subj={subj} selected={selected} />
@@ -122,7 +127,7 @@ const WeekPlanner = ({ onBack }) => {
   };
 
   return (
-    <div className="page page-wide">
+    <div className="page">
       <div className="row between planner-head" style={{ marginBottom: 18, alignItems: "flex-end", gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, marginBottom: 8 }}>
@@ -138,19 +143,30 @@ const WeekPlanner = ({ onBack }) => {
       </div>
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="grid" style={{ gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
-          <Card>
+        {/* Franja angosta con las tareas sueltas — antes era una columna
+            lateral que competía en tamaño con el calendario. Ahora es una
+            tira horizontal chica arriba: elegís qué ubicar acá, y el
+            calendario de abajo (ancho completo) es lo que manda en la
+            pantalla, como pediste. */}
+        <Card style={{ marginBottom: 16 }}>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: unlocated.length ? 10 : 0, gap: 10 }}>
             <CardTitle icon="target">Tareas sin ubicar</CardTitle>
-            {unlocated.length === 0
-              ? <div className="small" style={{ color: "var(--tx-3)" }}>{pending.length === 0 ? "No tenés tareas pendientes." : "Todas tus tareas ya tienen día."}</div>
-              : <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 10, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá una tarea y después la celda donde va (o arrastrala)."}</div>}
-            <div style={{ display: "grid", gap: 8 }}>
-              {unlocated.map(t => <TaskChip key={t.id} task={t} subj={subjById(t.subject)} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
-            </div>
-          </Card>
+            {unlocated.length > 0 && <span className="mono plan-count">{unlocated.length}</span>}
+          </div>
+          {unlocated.length === 0
+            ? <div className="small" style={{ color: "var(--tx-3)" }}>{pending.length === 0 ? "No tenés tareas pendientes." : "Todas tus tareas ya tienen día."}</div>
+            : (
+              <>
+                <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 10, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá una tarea y después la celda donde va (o arrastrala)."}</div>
+                <div className="plan-tray">
+                  {unlocated.map(t => <TaskChip key={t.id} task={t} subj={subjById(t.subject)} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
+                </div>
+              </>
+            )}
+        </Card>
 
-          <Card style={{ overflowX: "auto" }}>
-            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
+        <Card style={{ overflowX: "auto" }}>
+          <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
               <div></div>
               {DIAS_PLAN.map((d, i) => {
                 const esHoy = weekIsos[i] === todayISO;
@@ -180,7 +196,6 @@ const WeekPlanner = ({ onBack }) => {
               ))}
             </div>
           </Card>
-        </div>
 
         <DragOverlay dropAnimation={{ duration: 160, easing: "ease" }}>
           {activeTask ? <div style={{ width: 210 }}><TaskChipVisual task={activeTask} subj={subjById(activeTask.subject)} /></div> : null}

@@ -177,7 +177,7 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   };
 
   return (
-    <div className="page page-wide">
+    <div className="page">
       <div className="row between planner-head" style={{ marginBottom: 18, alignItems: "flex-end", gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: "var(--tx-3)", fontWeight: 500, marginBottom: 8 }}>
@@ -193,32 +193,36 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
       </div>
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="grid" style={{ gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
-          <Card>
+        {/* Franja angosta arriba en vez de columna lateral — el calendario
+            de abajo, a todo el ancho, es lo que manda en la pantalla. */}
+        <Card style={{ marginBottom: 16 }}>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: unlocated.length ? 8 : 0, gap: 10 }}>
             <CardTitle icon="target">Temas sin ubicar</CardTitle>
-            {unlocated.length === 0
-              ? <div className="small" style={{ color: "var(--tx-3)" }}>Todos los temas están ubicados esta semana.</div>
-              : <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 4, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá un tema y después la celda donde va (o arrastralo)."}</div>}
-            {unlocatedByUnidad.map(({ unidad, temas: uts }) => (
-              <div key={unidad.id} style={{ marginTop: 10 }}>
-                <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>{(unidad.name || "").toUpperCase()}</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {uts.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
-                </div>
+            {unlocated.length > 0 && <span className="mono plan-count">{unlocated.length}</span>}
+          </div>
+          {unlocated.length === 0
+            ? <div className="small" style={{ color: "var(--tx-3)" }}>Todos los temas están ubicados esta semana.</div>
+            : <div className="small" style={{ color: sel ? "var(--org-deep)" : "var(--tx-3)", marginBottom: 10, lineHeight: 1.4 }}>{sel ? "Ahora tocá el día y la franja donde va 👇" : "Tocá un tema y después la celda donde va (o arrastralo)."}</div>}
+          {unlocatedByUnidad.map(({ unidad, temas: uts }) => (
+            <div key={unidad.id} style={{ marginTop: 8 }}>
+              <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>{(unidad.name || "").toUpperCase()}</div>
+              <div className="plan-tray">
+                {uts.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
               </div>
-            ))}
-            {unlocatedHuerfanos.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>SIN UNIDAD</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {unlocatedHuerfanos.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
-                </div>
+            </div>
+          ))}
+          {unlocatedHuerfanos.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div className="mono" style={{ fontSize: 9.5, color: "var(--tx-3)", letterSpacing: ".05em", marginBottom: 6 }}>SIN UNIDAD</div>
+              <div className="plan-tray">
+                {unlocatedHuerfanos.map(t => <PlanChip key={t.id} tema={t} selected={sel === t.id} onSelect={() => setSel(sel === t.id ? null : t.id)} />)}
               </div>
-            )}
-          </Card>
+            </div>
+          )}
+        </Card>
 
-          <Card style={{ overflowX: "auto" }}>
-            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
+        <Card style={{ overflowX: "auto" }}>
+          <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
               <div></div>
               {DIAS_PLAN.map((d, i) => {
                 const esHoy = weekIsos[i] === todayISO;
@@ -252,7 +256,6 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
               ))}
             </div>
           </Card>
-        </div>
 
         <DragOverlay dropAnimation={{ duration: 160, easing: "ease" }}>
           {activeTema ? <div style={{ width: 210 }}><PlanChipVisual tema={activeTema} /></div> : null}
