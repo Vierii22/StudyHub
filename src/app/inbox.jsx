@@ -316,6 +316,10 @@ const Ordenar = ({ item, onListo, onCancelar }) => {
   );
 };
 
+/* Códigos de MediaError — sirven para saber SI el bloqueo es de red,
+   de CSP (el navegador nunca llega a bajar el archivo) o el formato. */
+const MEDIA_ERR = { 1: "cancelado", 2: "de red", 3: "no se pudo decodificar", 4: "formato no soportado o bloqueado" };
+
 /* botón de escuchar una nota de voz — pide el link firmado recién al tocar */
 const PlayAudio = ({ path }) => {
   const [estado, setEstado] = React.useState("quieto"); /* quieto | cargando | sonando */
@@ -328,11 +332,16 @@ const PlayAudio = ({ path }) => {
       const url = await signedUrlFor(path);
       const audio = new Audio(url);
       audio.onended = () => setEstado("quieto");
+      audio.onerror = () => {
+        const cod = audio.error?.code;
+        toast("No se pudo reproducir el audio" + (cod ? ` (error ${MEDIA_ERR[cod] || cod})` : ""));
+        setEstado("quieto");
+      };
       audioRef.current = audio;
       await audio.play();
       setEstado("sonando");
-    } catch {
-      toast("No se pudo reproducir el audio");
+    } catch (e) {
+      toast("No se pudo reproducir el audio" + (e?.name ? ` (${e.name})` : ""));
       setEstado("quieto");
     }
   };
