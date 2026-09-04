@@ -99,6 +99,7 @@ const RecordButton = () => {
   const chunksRef = React.useRef([]);
   const streamRef = React.useRef(null);
   const timerRef = React.useRef(null);
+  const inicioRef = React.useRef(0);
 
   const limpiar = () => {
     clearInterval(timerRef.current);
@@ -118,8 +119,16 @@ const RecordButton = () => {
       const mime = mimeSoportado();
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       chunksRef.current = [];
+      inicioRef.current = Date.now();
       rec.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data); };
-      rec.onstop = () => subir(new Blob(chunksRef.current, { type: mime || "audio/webm" }), seg);
+      /* OJO: "seg" acá sería el valor de la primera vez que se armó este
+         closure (0) — nunca el real, porque este handler se define una
+         sola vez, al arrancar. La duración real sale de la marca de
+         tiempo, no del estado que se ve en pantalla. */
+      rec.onstop = () => {
+        const duracion = Math.round((Date.now() - inicioRef.current) / 1000);
+        subir(new Blob(chunksRef.current, { type: mime || "audio/webm" }), duracion);
+      };
       rec.start();
       recRef.current = rec;
       setGrabando(true);
