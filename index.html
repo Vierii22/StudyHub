@@ -1145,6 +1145,16 @@ a{ color:inherit; text-decoration:none; }
   .chat-shell form{ padding-bottom:calc(16px + env(safe-area-inset-bottom)) !important; }
 }
 
+/* ===== PLANIFICADOR (Organizar semana / Planificar por materia) ===== */
+.plan-cell{ background:transparent; border:1.5px dashed var(--line); transition:background .15s ease, border-color .15s ease; position:relative; }
+.plan-cell.over{ background:var(--field); border-color:var(--org); border-style:solid; }
+.plan-cell.clickable{ cursor:pointer; }
+.plan-cell.clickable.vacia:hover{ background:var(--field); border-color:var(--org); }
+.plan-cell.clickable.vacia:hover::after{ content:"+"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--org); font-size:19px; font-weight:700; opacity:.5; }
+.plan-hoy{ display:inline-flex; align-items:center; justify-content:center; min-width:19px; height:19px; padding:0 3px; border-radius:99px; background:var(--org); color:#fff; font-weight:700; }
+.plan-franja-label{ font-size:10px; color:var(--tx-3); display:flex; align-items:center; gap:5px; }
+.plan-franja-label svg{ opacity:.7; flex:0 0 auto; }
+
 /* ===== otros ajustes mobile ===== */
 @media(max-width:768px){
   .planner-head{ flex-direction:column; align-items:flex-start !important; }

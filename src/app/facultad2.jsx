@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, todayLocal } from './store.jsx';
@@ -101,40 +101,65 @@ const DIAS_PLAN = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const startOfWeekPlan = (d) => { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x; };
 const isoOfPlan = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+const FRANJA_ICON = { m: "sun", t: "sunset", n: "moon" };
+
+/* apariencia separada del "agarre" arrastrable — se reusa tal cual en
+   el DragOverlay (el fantasma que sigue al dedo/mouse mientras se
+   arrastra). Antes se arrastraba el elemento REAL de la lista, con el
+   ancho de la columna angosta de origen — un tema largo quedaba cortado
+   o desbordado apenas se lo arrastraba fuera de esa columna. */
+const PlanChipVisual = ({ tema, selected }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", overflow: "hidden", maxWidth: "100%" }}>
+    <Icon name="dots" size={12} color={selected ? "#fff" : "var(--tx-3)"} />
+    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tema.t}</span>
+  </div>
+);
+
 const PlanChip = ({ tema, planId, selected, onSelect }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: planId ? `plan-${planId}` : `pool-${tema.id}`, data: { temaId: tema.id, planId } });
-  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.3 : 1, cursor: "grab", touchAction: "none" };
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect}
-      style={{ ...style, display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", cursor: "grab", touchAction: "none" }}>
-      <Icon name="dots" size={12} color={selected ? "#fff" : "var(--tx-3)"} />{tema.t}
+    <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect} style={style}>
+      <PlanChipVisual tema={tema} selected={selected} />
     </div>
   );
 };
 
 const PlanCell = ({ id, children, onClick }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
-  return <div ref={setNodeRef} onClick={onClick} style={{ minHeight: 56, borderRadius: 9, padding: 6, display: "flex", flexDirection: "column", gap: 6, background: isOver ? "var(--field)" : "transparent", border: "1px dashed " + (isOver ? "var(--org)" : "var(--line)"), transition: "background .12s ease", cursor: onClick ? "pointer" : "default" }}>{children}</div>;
+  const vacia = !Array.isArray(children) || children.length === 0;
+  return (
+    <div ref={setNodeRef} onClick={onClick}
+      className={`plan-cell${onClick ? " clickable" : ""}${isOver ? " over" : ""}${vacia ? " vacia" : ""}`}
+      style={{ minHeight: 56, borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+      {children}
+    </div>
+  );
 };
 
 const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekPlan(new Date()));
   const [sel, setSel] = React.useState(null); /* tema seleccionado para "tocar y colocar" */
+  const [activeId, setActiveId] = React.useState(null); /* tema que se está arrastrando ahora */
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const temas = subject.lists?.temas || [];
   const unidades = subject.lists?.unidades || [];
   const plan = subject.studyPlan || [];
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
   const weekIsos = weekDays.map(isoOfPlan);
+  const todayISO = isoOfPlan(new Date());
   const placedThisWeek = plan.filter(p => weekIsos.includes(p.date));
   const unlocated = temas.filter(t => !placedThisWeek.some(p => p.temaId === t.id));
+  const activeTema = activeId ? temas.find(t => t.id === activeId) : null;
   /* temas sin ubicar agrupados por su unidad (para arrastrar cada tema por separado) */
   const unlocatedByUnidad = unidades
     .map(u => ({ unidad: u, temas: unlocated.filter(t => t.unidadId === u.id) }))
     .filter(g => g.temas.length > 0);
   const unlocatedHuerfanos = unlocated.filter(t => !unidades.some(u => u.id === t.unidadId));
 
+  const onDragStart = ({ active }) => setActiveId(active.data.current?.temaId || null);
   const onDragEnd = ({ active, over }) => {
+    setActiveId(null);
     if (!over) return;
     const [, iso, franja] = over.id.split("|");
     const { temaId, planId } = active.data.current;
@@ -167,7 +192,7 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
         </div>
       </div>
 
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div className="grid" style={{ gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
           <Card>
             <CardTitle icon="target">Temas sin ubicar</CardTitle>
@@ -193,12 +218,19 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
           </Card>
 
           <Card style={{ overflowX: "auto" }}>
-            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,1fr)", gap: 8, minWidth: 720 }}>
+            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
               <div></div>
-              {DIAS_PLAN.map((d, i) => <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>{d} <span style={{ color: "var(--ink)", fontWeight: 700 }}>{weekDays[i].getDate()}</span></div>)}
+              {DIAS_PLAN.map((d, i) => {
+                const esHoy = weekIsos[i] === todayISO;
+                return (
+                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>
+                    {d} <span className={esHoy ? "plan-hoy" : undefined} style={!esHoy ? { color: "var(--ink)", fontWeight: 700 } : undefined}>{weekDays[i].getDate()}</span>
+                  </div>
+                );
+              })}
               {FRANJAS.map(([fk, flabel]) => (
                 <React.Fragment key={fk}>
-                  <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)", display: "flex", alignItems: "center" }}>{flabel.toUpperCase()}</div>
+                  <div className="mono plan-franja-label"><Icon name={FRANJA_ICON[fk]} size={12} />{flabel.toUpperCase()}</div>
                   {weekIsos.map(iso => {
                     const items = placedThisWeek.filter(p => p.date === iso && p.franja === fk);
                     return (
@@ -221,6 +253,10 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
             </div>
           </Card>
         </div>
+
+        <DragOverlay dropAnimation={{ duration: 160, easing: "ease" }}>
+          {activeTema ? <div style={{ width: 210 }}><PlanChipVisual tema={activeTema} /></div> : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { DndContext, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, getAllTasks } from './store.jsx';
@@ -19,6 +19,8 @@ import { Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPl
    acá y en la materia — es el mismo dato, no una copia.
    ============================================================ */
 
+const FRANJA_ICON = { m: "sun", t: "sunset", n: "moon" };
+
 /* encuentra dónde vive de verdad una tarea (global o adentro de una materia) */
 function findTaskLocation(s, taskId) {
   if ((s.tasks || []).some(t => t.id === taskId)) return { kind: "global" };
@@ -28,17 +30,32 @@ function findTaskLocation(s, taskId) {
   return null;
 }
 
-/* tarjeta de tarea arrastrable/tocable — mismo look que PlanChip del planificador por materia */
-const TaskChip = ({ task, subj, placedId, selected, onSelect }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: placedId ? `plan-${placedId}` : `pool-${task.id}`, data: { taskId: task.id, placedId } });
-  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
+/* apariencia de la tarjeta — separada del "agarre" arrastrable para
+   poder reusarla también en el DragOverlay (el fantasma que sigue al
+   dedo/mouse). Antes el chip que se arrastraba era el elemento REAL de
+   la lista, con el ancho de la columna angosta de origen (220px en el
+   sidebar, o mucho menos adentro de una celda del calendario) — un
+   título largo quedaba cortado o desbordado mientras lo arrastrabas.
+   El DragOverlay dibuja una copia aparte con ancho fijo, prolija sin
+   importar de dónde salió. */
+const TaskChipVisual = ({ task, subj, selected }) => {
   const prioColor = task.prio === "alta" ? "#B8461A" : task.prio === "baja" ? "#7E8A4F" : "#C68A2E";
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect}
-      style={{ ...style, display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", cursor: "grab", touchAction: "none" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, background: selected ? "var(--org)" : "var(--field)", border: "1px solid " + (selected ? "var(--org)" : "var(--line)"), borderRadius: 8, padding: "6px 9px", fontSize: 12.5, fontWeight: 600, color: selected ? "#fff" : "var(--ink)", overflow: "hidden", maxWidth: "100%" }}>
       <span style={{ width: 6, height: 6, borderRadius: 99, background: selected ? "#fff" : prioColor, flex: "0 0 auto" }} />
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.t}</span>
-      {subj && <span className="mono" style={{ fontSize: 9, color: selected ? "#fff" : "var(--tx-3)", flex: "0 0 auto" }}>· {subj.name}</span>}
+      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.t}</span>
+      {subj && <span className="mono" style={{ fontSize: 9, color: selected ? "#fff" : "var(--tx-3)", flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {subj.name}</span>}
+    </div>
+  );
+};
+
+/* tarjeta de tarea arrastrable/tocable */
+const TaskChip = ({ task, subj, placedId, selected, onSelect }) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: placedId ? `plan-${placedId}` : `pool-${task.id}`, data: { taskId: task.id, placedId } });
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.3 : 1, cursor: "grab", touchAction: "none" };
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} onClick={onSelect} style={style}>
+      <TaskChipVisual task={task} subj={subj} selected={selected} />
     </div>
   );
 };
@@ -47,6 +64,7 @@ const WeekPlanner = ({ onBack }) => {
   const [data, set] = useStore();
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekPlan(new Date()));
   const [sel, setSel] = React.useState(null); /* id de tarea seleccionada para "tocar y colocar" */
+  const [activeId, setActiveId] = React.useState(null); /* id de tarea que se está arrastrando ahora */
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const subjById = (id) => (data.subjects || []).find(s => s.id === id);
@@ -57,6 +75,9 @@ const WeekPlanner = ({ onBack }) => {
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
   const weekIsos = weekDays.map(isoOfPlan);
   const placedThisWeek = pending.filter(t => t.dueDate && weekIsos.includes(t.dueDate));
+  const todayISO = isoOfPlan(new Date());
+
+  const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
   /* encuentra y muta la tarea DONDE SEA que viva de verdad (global o adentro de una materia) —
      así queda sincronizada con "Qué tengo que hacer" de esa materia, es el mismo dato */
@@ -84,7 +105,9 @@ const WeekPlanner = ({ onBack }) => {
     if (evId) { s.events = (s.events || []).filter(e => e.id !== evId); delete s.taskCalendarMap[taskId]; }
   });
 
+  const onDragStart = ({ active }) => setActiveId(active.data.current?.taskId || null);
   const onDragEnd = ({ active, over }) => {
+    setActiveId(null);
     if (!over) return;
     const [, iso, franja] = String(over.id).split("|");
     const { taskId } = active.data.current;
@@ -114,7 +137,7 @@ const WeekPlanner = ({ onBack }) => {
         </div>
       </div>
 
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div className="grid" style={{ gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
           <Card>
             <CardTitle icon="target">Tareas sin ubicar</CardTitle>
@@ -127,12 +150,19 @@ const WeekPlanner = ({ onBack }) => {
           </Card>
 
           <Card style={{ overflowX: "auto" }}>
-            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,1fr)", gap: 8, minWidth: 720 }}>
+            <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
               <div></div>
-              {DIAS_PLAN.map((d, i) => <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>{d} <span style={{ color: "var(--ink)", fontWeight: 700 }}>{weekDays[i].getDate()}</span></div>)}
+              {DIAS_PLAN.map((d, i) => {
+                const esHoy = weekIsos[i] === todayISO;
+                return (
+                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>
+                    {d} <span className={esHoy ? "plan-hoy" : undefined} style={!esHoy ? { color: "var(--ink)", fontWeight: 700 } : undefined}>{weekDays[i].getDate()}</span>
+                  </div>
+                );
+              })}
               {FRANJAS.map(([fk, flabel]) => (
                 <React.Fragment key={fk}>
-                  <div className="mono" style={{ fontSize: 10, color: "var(--tx-3)", display: "flex", alignItems: "center" }}>{flabel.toUpperCase()}</div>
+                  <div className="mono plan-franja-label"><Icon name={FRANJA_ICON[fk]} size={12} />{flabel.toUpperCase()}</div>
                   {weekIsos.map(iso => {
                     const items = placedThisWeek.filter(t => t.dueDate === iso && (t.franja || "m") === fk);
                     return (
@@ -151,6 +181,10 @@ const WeekPlanner = ({ onBack }) => {
             </div>
           </Card>
         </div>
+
+        <DragOverlay dropAnimation={{ duration: 160, easing: "ease" }}>
+          {activeTask ? <div style={{ width: 210 }}><TaskChipVisual task={activeTask} subj={subjById(activeTask.subject)} /></div> : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
