@@ -43,6 +43,9 @@ const TaskChipVisual = ({ task, subj, selected }) => {
       <span style={{ width: 6, height: 6, borderRadius: 99, background: selected ? "#fff" : prioColor, flex: "0 0 auto" }} />
       <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.t}</span>
       {subj && <span className="mono" style={{ fontSize: 9, color: selected ? "#fff" : "var(--tx-3)", flex: "0 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {subj.name}</span>}
+      {/* si tiene fecha, es porque cae afuera de la semana visible —
+          se lo aclaramos para que no parezca que "perdió" el día */}
+      {task.dueDate && <span className="mono plan-chip-date" style={selected ? { background: "rgba(255,255,255,.25)", color: "#fff" } : undefined}>{task.due}</span>}
     </div>
   );
 };
@@ -73,12 +76,19 @@ const WeekPlanner = ({ onBack }) => {
   const subjById = (id) => (data.subjects || []).find(s => s.id === id);
   const tasks = getAllTasks(data); /* generales + las "Qué tengo que hacer" de cada materia */
   const pending = tasks.filter(t => !t.done);
-  const unlocated = pending.filter(t => !t.dueDate);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
   const weekIsos = weekDays.map(isoOfPlan);
-  const placedThisWeek = pending.filter(t => t.dueDate && weekIsos.includes(t.dueDate));
   const todayISO = isoOfPlan(new Date());
+
+  /* "sin ubicar" = sin fecha, O CON una fecha que cae afuera de la
+     semana que estás mirando ahora mismo. Antes solo entraban acá las
+     que no tenían fecha — una tarea con fecha para otra semana no
+     aparecía en NINGÚN lado (ni acá ni en la grilla, que solo muestra
+     estos 7 días) y quedaba invisible sin que nada avisara. Ahora nada
+     queda oculto: si no está en la semana visible, aparece acá. */
+  const unlocated = pending.filter(t => !t.dueDate || !weekIsos.includes(t.dueDate));
+  const placedThisWeek = pending.filter(t => t.dueDate && weekIsos.includes(t.dueDate));
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
