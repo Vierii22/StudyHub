@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './icons.jsx';
 import { useStore, uid, toast, getAllTasks } from './store.jsx';
 import { syncTaskToCalendar, formatDateToDue } from './syncEngine.js';
-import { Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPlan } from './facultad2.jsx';
+import { Card, CardTitle, PlanCell, HORAS, horaDe, fmtHora, periodoDe, PERIODO_ICON, DIAS_PLAN, startOfWeekPlan, isoOfPlan } from './facultad2.jsx';
 
 /* ============================================================
    ORGANIZAR LA SEMANA — planificador general de TAREAS.
@@ -18,8 +18,6 @@ import { Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPl
    viva) y se sincroniza sola con el Calendario, así se ve igual
    acá y en la materia — es el mismo dato, no una copia.
    ============================================================ */
-
-const FRANJA_ICON = { m: "sun", t: "sunset", n: "moon" };
 
 /* encuentra dónde vive de verdad una tarea (global o adentro de una materia) */
 function findTaskLocation(s, taskId) {
@@ -114,9 +112,9 @@ const WeekPlanner = ({ onBack }) => {
   const onDragEnd = ({ active, over }) => {
     setActiveId(null);
     if (!over) return;
-    const [, iso, franja] = String(over.id).split("|");
+    const [, iso, horaStr] = String(over.id).split("|");
     const { taskId } = active.data.current;
-    placeTask(taskId, iso, franja);
+    placeTask(taskId, iso, parseInt(horaStr, 10));
   };
 
   /* tocar-y-colocar: con una tarea seleccionada, tocar la celda la ubica ahí */
@@ -166,23 +164,26 @@ const WeekPlanner = ({ onBack }) => {
         </Card>
 
         <Card style={{ overflowX: "auto" }}>
-          <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
+          <div className="grid planner-grid" style={{ gridTemplateColumns: "60px repeat(7,minmax(0,1fr))", gap: 6, minWidth: 900 }}>
               <div></div>
               {DIAS_PLAN.map((d, i) => {
                 const esHoy = weekIsos[i] === todayISO;
                 return (
-                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>
+                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)", paddingBottom: 6 }}>
                     {d} <span className={esHoy ? "plan-hoy" : undefined} style={!esHoy ? { color: "var(--ink)", fontWeight: 700 } : undefined}>{weekDays[i].getDate()}</span>
                   </div>
                 );
               })}
-              {FRANJAS.map(([fk, flabel]) => (
-                <React.Fragment key={fk}>
-                  <div className="mono plan-franja-label"><Icon name={FRANJA_ICON[fk]} size={12} />{flabel.toUpperCase()}</div>
+              {HORAS.map(hora => (
+                <React.Fragment key={hora}>
+                  <div className={`mono plan-hora-label periodo-${periodoDe(hora)}`}>
+                    {hora % 3 === 0 && <Icon name={PERIODO_ICON[periodoDe(hora)]} size={11} />}
+                    {fmtHora(hora)}
+                  </div>
                   {weekIsos.map(iso => {
-                    const items = placedThisWeek.filter(t => t.dueDate === iso && (t.franja || "m") === fk);
+                    const items = placedThisWeek.filter(t => t.dueDate === iso && horaDe(t.franja) === hora);
                     return (
-                      <PlanCell key={iso + fk} id={`cell|${iso}|${fk}`} onClick={sel ? () => placeSelected(iso, fk) : undefined}>
+                      <PlanCell key={iso + hora} id={`cell|${iso}|${hora}`} periodo={periodoDe(hora)} onClick={sel ? () => placeSelected(iso, hora) : undefined}>
                         {items.map(t => (
                           <div key={t.id} className="row" style={{ gap: 4 }}>
                             <div style={{ flex: 1, minWidth: 0 }}><TaskChip task={t} subj={subjById(t.subject)} placedId={t.id} /></div>

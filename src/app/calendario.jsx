@@ -532,15 +532,20 @@ const DayEventsModal = ({ iso, events, subjects, onClose, onEventClick, onNew })
   );
 };
 
-/* ---------- bloques "Estudiar · materia" derivados del planificador (Fase 5) ---------- */
-const FRANJA_TIME = { m: "09:00", t: "15:00", n: "20:00" };
+/* ---------- bloques "Estudiar · materia" derivados del planificador (Fase 5) ----------
+   El planificador ahora ubica por HORA real (antes eran 3 franjas fijas
+   Mañana/Tarde/Noche). p.franja es un número de hora (9, 14, 21…) desde
+   ese cambio; los planes viejos con "m"/"t"/"n" siguen andando mapeados
+   a una hora representativa, para no perder lo ya ubicado. */
+const FRANJA_TIME_LEGACY = { m: "09:00", t: "15:00", n: "20:00" };
+const horaAtime = (franja) => typeof franja === "number" ? `${String(franja).padStart(2, "0")}:00` : (FRANJA_TIME_LEGACY[franja] || "");
 function deriveStudyEvents(subjects) {
   const out = [];
   (subjects || []).forEach(s => {
     (s.studyPlan || []).forEach(p => {
       const tema = (s.lists?.temas || []).find(t => t.id === p.temaId);
       if (!tema) return;
-      out.push({ id: `study-${p.id}`, title: `Estudiar · ${tema.t}`, date: p.date, time: FRANJA_TIME[p.franja] || "", kind: "estudio", color: s.color, subjectId: s.id, studyPlanSubjectId: s.id });
+      out.push({ id: `study-${p.id}`, title: `Estudiar · ${tema.t}`, date: p.date, time: horaAtime(p.franja), kind: "estudio", color: s.color, subjectId: s.id, studyPlanSubjectId: s.id });
     });
   });
   return out;

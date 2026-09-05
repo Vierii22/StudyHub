@@ -96,12 +96,23 @@ const TemaDetail = ({ subject, tema, onBack, onUpdate }) => (
    Temas sin ubicar (solo de esta materia) + grilla Lun-Dom ×
    Mañana/Tarde/Noche, arrastrando con dnd-kit.
    ============================================================ */
-const FRANJAS = [["m", "Mañana"], ["t", "Tarde"], ["n", "Noche"]];
+/* Grilla por HORA (7:00 a 23:00) — antes eran 3 franjas fijas
+   (Mañana/Tarde/Noche), muy poco lugar para elegir y hacía que todo el
+   calendario se viera chico. Cada hora es su propia fila, como un
+   calendario de verdad. Los datos viejos con franja "m"/"t"/"n" (de
+   antes de este cambio) se siguen mostrando via LEGACY_HORA, mapeados
+   a una hora representativa — no desaparecen. */
+const HORAS = Array.from({ length: 17 }, (_, i) => i + 7); // 7,8,…,23
+const LEGACY_HORA = { m: 9, t: 15, n: 20 };
+const horaDe = (franja) => typeof franja === "number" ? franja : (LEGACY_HORA[franja] ?? 9);
+const fmtHora = (h) => `${String(h).padStart(2, "0")}:00`;
+/* franja del día para el tinte de fondo sutil de cada fila (solo visual) */
+const periodoDe = (h) => h < 12 ? "m" : h < 19 ? "t" : "n";
+const PERIODO_ICON = { m: "sun", t: "sunset", n: "moon" };
+
 const DIAS_PLAN = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const startOfWeekPlan = (d) => { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x; };
 const isoOfPlan = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-const FRANJA_ICON = { m: "sun", t: "sunset", n: "moon" };
 
 /* apariencia separada del "agarre" arrastrable — se reusa tal cual en
    el DragOverlay (el fantasma que sigue al dedo/mouse mientras se
@@ -125,13 +136,13 @@ const PlanChip = ({ tema, planId, selected, onSelect }) => {
   );
 };
 
-const PlanCell = ({ id, children, onClick }) => {
+const PlanCell = ({ id, children, onClick, periodo }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const vacia = !Array.isArray(children) || children.length === 0;
   return (
     <div ref={setNodeRef} onClick={onClick}
-      className={`plan-cell${onClick ? " clickable" : ""}${isOver ? " over" : ""}${vacia ? " vacia" : ""}`}
-      style={{ minHeight: 56, borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+      className={`plan-cell${onClick ? " clickable" : ""}${isOver ? " over" : ""}${vacia ? " vacia" : ""}${periodo ? " periodo-" + periodo : ""}`}
+      style={{ minHeight: 42, borderRadius: 8, padding: 5, display: "flex", flexDirection: "column", gap: 4 }}>
       {children}
     </div>
   );
@@ -161,17 +172,18 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
   const onDragEnd = ({ active, over }) => {
     setActiveId(null);
     if (!over) return;
-    const [, iso, franja] = over.id.split("|");
+    const [, iso, horaStr] = over.id.split("|");
+    const franja = parseInt(horaStr, 10);
     const { temaId, planId } = active.data.current;
     if (planId) onChangePlan(plan.map(p => p.id === planId ? { ...p, date: iso, franja } : p));
     else onChangePlan([...plan, { id: uid(), temaId, date: iso, franja }]);
   };
   const removeFromPlan = (planId) => onChangePlan(plan.filter(p => p.id !== planId));
   /* tocar-y-colocar: si hay un tema seleccionado, al tocar una celda lo pone ahí */
-  const placeSelected = (iso, franja) => {
+  const placeSelected = (iso, hora) => {
     if (!sel) return;
-    if (!placedThisWeek.some(p => p.temaId === sel && p.date === iso && p.franja === franja)) {
-      onChangePlan([...plan, { id: uid(), temaId: sel, date: iso, franja }]);
+    if (!placedThisWeek.some(p => p.temaId === sel && p.date === iso && horaDe(p.franja) === hora)) {
+      onChangePlan([...plan, { id: uid(), temaId: sel, date: iso, franja: hora }]);
     }
     setSel(null);
   };
@@ -222,23 +234,26 @@ const StudyPlanner = ({ subject, onBack, onChangePlan }) => {
         </Card>
 
         <Card style={{ overflowX: "auto" }}>
-          <div className="grid planner-grid" style={{ gridTemplateColumns: "70px repeat(7,minmax(0,1fr))", gap: 8, minWidth: 720 }}>
+          <div className="grid planner-grid" style={{ gridTemplateColumns: "60px repeat(7,minmax(0,1fr))", gap: 6, minWidth: 900 }}>
               <div></div>
               {DIAS_PLAN.map((d, i) => {
                 const esHoy = weekIsos[i] === todayISO;
                 return (
-                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)" }}>
+                  <div key={d} className="mono" style={{ textAlign: "center", fontSize: 10.5, color: "var(--tx-3)", paddingBottom: 6 }}>
                     {d} <span className={esHoy ? "plan-hoy" : undefined} style={!esHoy ? { color: "var(--ink)", fontWeight: 700 } : undefined}>{weekDays[i].getDate()}</span>
                   </div>
                 );
               })}
-              {FRANJAS.map(([fk, flabel]) => (
-                <React.Fragment key={fk}>
-                  <div className="mono plan-franja-label"><Icon name={FRANJA_ICON[fk]} size={12} />{flabel.toUpperCase()}</div>
+              {HORAS.map(hora => (
+                <React.Fragment key={hora}>
+                  <div className={`mono plan-hora-label periodo-${periodoDe(hora)}`}>
+                    {hora % 3 === 0 && <Icon name={PERIODO_ICON[periodoDe(hora)]} size={11} />}
+                    {fmtHora(hora)}
+                  </div>
                   {weekIsos.map(iso => {
-                    const items = placedThisWeek.filter(p => p.date === iso && p.franja === fk);
+                    const items = placedThisWeek.filter(p => p.date === iso && horaDe(p.franja) === hora);
                     return (
-                      <PlanCell key={iso + fk} id={`cell|${iso}|${fk}`} onClick={sel ? () => placeSelected(iso, fk) : undefined}>
+                      <PlanCell key={iso + hora} id={`cell|${iso}|${hora}`} periodo={periodoDe(hora)} onClick={sel ? () => placeSelected(iso, hora) : undefined}>
                         {items.map(p => {
                           const tema = temas.find(t => t.id === p.temaId);
                           if (!tema) return null;
@@ -348,6 +363,7 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const [pDate, setPDate] = React.useState("");
   const [pImportant, setPImportant] = React.useState(false);
   const [editFechaIdx, setEditFechaIdx] = React.useState(null); /* qué parcial/TP se está editando */
+  const [openSub, setOpenSub] = React.useState({}); /* subtemas abiertos — declarado ACÁ, antes del "if (!s) return null" de abajo: un hook después de un return condicional rompe las reglas de React (orden de hooks distinto entre renders) */
   React.useEffect(() => {
     if (autoOpenPlanner) { setPlannerOpen(true); onPlannerConsumed && onPlannerConsumed(); }
   }, [autoOpenPlanner]);
@@ -406,7 +422,6 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   const delTema = (id) => setList("temas", temas.filter(t => t.id !== id));
 
   /* ── subtemas dentro de cada tema ── */
-  const [openSub, setOpenSub] = React.useState({});
   const addSubtema = (temaId, t) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: [...(tm?.subtemas || []), { id: uid(), t, done: false }] }); setOpenSub(o => ({ ...o, [temaId]: true })); };
   const upSubtema  = (temaId, subId, patch) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: (tm?.subtemas || []).map(s => s.id === subId ? { ...s, ...patch } : s) }); };
   const delSubtema = (temaId, subId) => { const tm = temas.find(x => x.id === temaId); upTemaById(temaId, { subtemas: (tm?.subtemas || []).filter(s => s.id !== subId) }); };
@@ -690,4 +705,4 @@ const SubjectView = ({ subjectId, onBack, autoOpenPlanner, onPlannerConsumed }) 
   );
 };
 
-export { SubjectView, Card, CardTitle, PlanCell, FRANJAS, DIAS_PLAN, startOfWeekPlan, isoOfPlan };
+export { SubjectView, Card, CardTitle, PlanCell, HORAS, horaDe, fmtHora, periodoDe, PERIODO_ICON, DIAS_PLAN, startOfWeekPlan, isoOfPlan };

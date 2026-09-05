@@ -1152,8 +1152,12 @@ a{ color:inherit; text-decoration:none; }
 .plan-cell.clickable.vacia:hover{ background:var(--field); border-color:var(--org); }
 .plan-cell.clickable.vacia:hover::after{ content:"+"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--org); font-size:19px; font-weight:700; opacity:.5; }
 .plan-hoy{ display:inline-flex; align-items:center; justify-content:center; min-width:19px; height:19px; padding:0 3px; border-radius:99px; background:var(--org); color:#fff; font-weight:700; }
-.plan-franja-label{ font-size:10px; color:var(--tx-3); display:flex; align-items:center; gap:5px; }
-.plan-franja-label svg{ opacity:.7; flex:0 0 auto; }
+.plan-hora-label{ font-size:9.5px; color:var(--tx-3); display:flex; align-items:center; gap:4px; height:42px; font-variant-numeric:tabular-nums; }
+.plan-hora-label svg{ opacity:.6; flex:0 0 auto; }
+/* tinte apenas perceptible por momento del día — solo para orientarse
+   de un vistazo en una grilla de 17 filas, nada de colores fuertes */
+.plan-cell.periodo-m{ background:rgba(217,85,31,.02); }
+.plan-cell.periodo-n{ background:rgba(58,51,43,.025); }
 .plan-tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
 .plan-tray > *{ flex:0 0 auto; }
 .plan-count{ font-size:10.5px; font-weight:700; background:var(--org); color:#fff; border-radius:20px; padding:2px 8px; flex:0 0 auto; }
