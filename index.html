@@ -1158,7 +1158,14 @@ a{ color:inherit; text-decoration:none; }
    de un vistazo en una grilla de 17 filas, nada de colores fuertes */
 .plan-cell.periodo-m{ background:rgba(217,85,31,.02); }
 .plan-cell.periodo-n{ background:rgba(58,51,43,.025); }
-.plan-tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+/* OJO: esto era "overflow-x:auto" en una sola fila — con pocas tareas
+   se veía bien, pero con muchas (varias materias con cosas pendientes)
+   las de más allá del borde quedaban tapadas y había que adivinar que
+   se podía scrollear horizontal, algo que casi nadie descubre. Ahora
+   envuelve en varias filas: TODO queda visible sin scroll oculto, con
+   un límite de altura + scroll vertical como red de seguridad para una
+   lista realmente enorme. */
+.plan-tray{ display:flex; flex-wrap:wrap; gap:8px; max-height:180px; overflow-y:auto; padding-bottom:2px; }
 .plan-tray > *{ flex:0 0 auto; }
 .plan-count{ font-size:10.5px; font-weight:700; background:var(--org); color:#fff; border-radius:20px; padding:2px 8px; flex:0 0 auto; }
 
